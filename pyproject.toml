@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "Non-Euclidean-Gradient-Methods-for-Matrix-Completion-in-Gene-Prioritization"
+readme = "README.md"
+description = "A package for my master thesis"
+classifiers = ["Programming Language :: Python :: 3.11"]
+requires-python = ">=3.11"
+dependencies = [
+  "scipy",
+  "pandas",
+  "numpy",
+  "smurff"
+]
+dynamic = ["version"]
+
+
+[tool.setuptools]
+packages = [
+'matrix_completion',
+]
+
+
+[tool.pytest.ini_options]
+pythonpath = [
+  "."
+]
+ 
