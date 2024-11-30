@@ -55,5 +55,3 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 **Contact**
 
 For questions or issues, please open an issue in this repository.
-
-This enhanced README provides a clearer understanding of the repository's purpose, installation process, usage, structure, and licensing, facilitating easier engagement for users and contributors. 
