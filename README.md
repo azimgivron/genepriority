@@ -1,4 +1,4 @@
-The repository [Non-Euclidean Gradient Methods for Matrix Completion in Gene Prioritization](https://github.com/azimgivron/Non-Euclidean-Gradient-Methods-for-Matrix-Completion-in-Gene-Prioritization) provides code and data to reproduce the results presented in the paper "Gene prioritization using Bayesian matrix factorization with genomic and phenotypic side information." This study introduces a novel method for gene prioritization by combining Bayesian matrix factorization (BMF) with additional genomic and phenotypic side information, enabling robust predictions and improved identification of disease-associated genes.
+The repository `NEGradient-GenePriority`, short for `Non-Euclidean Gradient Methods for Matrix Completion in Gene Prioritization`, provides code and data to reproduce the results presented in the paper "Gene prioritization using Bayesian matrix factorization with genomic and phenotypic side information." This study introduces a novel method for gene prioritization by combining Bayesian matrix factorization (BMF) with additional genomic and phenotypic side information, enabling robust predictions and improved identification of disease-associated genes.
 
 **Installation**
 
@@ -12,6 +12,7 @@ pip install .
 
 - Python 3.11 or higher
 - pip
+- requirements.txt
 
 **Usage**
 
