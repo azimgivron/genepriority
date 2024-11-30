@@ -3,9 +3,9 @@ from typing import List
 
 import scipy.sparse as sp
 import smurff
-from metrics import bedroc_score
 from sklearn import metrics
 
+from NEGradient_GenePriority.metrics import bedroc_score
 from NEGradient_GenePriority.preprocessing import Indices
 
 

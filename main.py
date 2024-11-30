@@ -21,6 +21,7 @@ from NEGradient_GenePriority import (
 def setup_logger(log_file: str) -> logging.Logger:
     """
     Configures and returns a logger that writes to both the console and a file.
+    The log file is overwritten each time the logger is set up.
 
     Args:
         log_file (str): Path to the log file.
@@ -31,24 +32,23 @@ def setup_logger(log_file: str) -> logging.Logger:
     logger = logging.getLogger("main_logger")
     logger.setLevel(logging.DEBUG)
 
-    # Create file handler
-    file_handler = logging.FileHandler(log_file)
-    file_handler.setLevel(logging.DEBUG)
+    # Remove existing handlers to avoid duplicate logs
+    if logger.hasHandlers():
+        logger.handlers.clear()
 
-    # Create console handler
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.INFO)
+    # Create file handler with write mode
+    file_handler = logging.FileHandler(log_file, mode='w')  # 'w' ensures the file is overwritten
+    file_handler.setLevel(logging.DEBUG)
 
     # Formatter
     formatter = logging.Formatter(
         "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
     file_handler.setFormatter(formatter)
-    console_handler.setFormatter(formatter)
 
     # Add handlers to logger
     logger.addHandler(file_handler)
-    logger.addHandler(console_handler)
+
     return logger
 
 
@@ -56,7 +56,7 @@ def main():
     # Setup paths and logger
     log_file = "pipeline.log"
     logger = setup_logger(log_file)
-    input_path = Path("data/postprocessed/").absolute()
+    input_path = Path("/home/TheGreatestCoder/code/data/postprocessed/").absolute()
 
     if not input_path.exists():
         logger.error("The input path does not exist: %s", input_path)
@@ -64,14 +64,14 @@ def main():
 
     try:
         # Load data
-        logger.info("Loading gene-disease data from %s", input_path)
+        logger.debug("Loading gene-disease data from %s", input_path)
         gene_disease = pd.read_csv(input_path / "gene-disease.csv")
         logger.debug(
             "Loaded gene-disease data with %d rows and %d columns", *gene_disease.shape
         )
 
         # Convert gene-disease DataFrame to sparse matrix
-        logger.info("Converting gene-disease data to a sparse matrix")
+        logger.debug("Converting gene-disease data to a sparse matrix")
         omim1_1s = convert_dataframe_to_sparse_matrix(gene_disease)
         logger.debug(
             "Sparse matrix shape: %s, non-zero entries: %d",
@@ -81,7 +81,7 @@ def main():
 
         # Calculate sparsity
         sparsity = omim1_1s.count_nonzero() / (omim1_1s.shape[0] * omim1_1s.shape[1])
-        logger.info("Data sparsity: %.2f%%", sparsity * 100)
+        logger.debug("Data sparsity: %.2f%%", sparsity * 100)
 
         # Set parameters
         alphas = [228.5, 160.9, 32.2, 16.1, 5.3]
@@ -90,7 +90,7 @@ def main():
         zero_sampling_factor = 5
 
         # Sample zeros and generate random splits
-        logger.info(
+        logger.debug(
             "Sampling zeros with factor %d and creating random splits",
             zero_sampling_factor,
         )
@@ -111,16 +111,16 @@ def main():
         omim1_splits_indices = combine_splits(
             omim1_1s_splits_indices, omim1_0s_splits_indices
         )
-        logger.info("Generated combined splits for OMIM1 data")
+        logger.debug("Generated combined splits for OMIM1 data")
 
         # Compute disease count statistics
-        disease_stats = compute_statistics(omim1_1s_splits_indices)
-        logger.info(
-            "Disease count statistics (on the 1s):\n%s", disease_stats.to_markdown()
+        logger.debug(
+            "Number of gene disease associations in each test set: %s",
+            len(omim1_splits_indices[0].testing_indices)
         )
 
         # Filter diseases and create folds
-        logger.info("Filtering gene-disease data by association threshold")
+        logger.debug("Filtering gene-disease data by association threshold")
         filtered_gene_disease = filter_by_number_of_association(
             gene_disease, threshold=10, col_name="disease ID"
         )
@@ -136,24 +136,24 @@ def main():
         omim2_splits_indices = combine_splits(
             omim2_1s_splits_indices, omim2_0s_splits_indices
         )
-        logger.info("Processed OMIM2 data and created folds")
+        logger.debug("Processed OMIM2 data and created folds")
 
         # Configure and run BPMF
-        logger.info("Configuring BPMF session")
+        logger.debug("Configuring BPMF session")
         num_samples = 3500
         burnin_period = 500
 
         omim1_results = {}
         omim2_results = {}
-        for num_latent in latent_dimensions:
-            logger.info("Running BPMF for %d latent dimensions", num_latent)
-            omim1_results[num_latent] = train_and_test_splits(
-                omim1, omim1_splits_indices, num_samples, burnin_period, num_latent, alphas
-            )
-            omim2_results[num_latent] = train_and_test_folds(
-                omim2, omim2_splits_indices, num_samples, burnin_period, num_latent, alphas
-            )
-        logger.info("BPMF session completed successfully")
+        # for num_latent in latent_dimensions:
+        #     logger.debug("Running BPMF for %d latent dimensions", num_latent)
+        #     omim1_results[num_latent] = train_and_test_splits(
+        #         omim1, omim1_splits_indices, num_samples, burnin_period, num_latent, alphas
+        #     )
+        #     omim2_results[num_latent] = train_and_test_folds(
+        #         omim2, omim2_splits_indices, num_samples, burnin_period, num_latent, alphas
+        #     )
+        logger.debug("BPMF session completed successfully")
 
     except Exception as e:
         logger.exception("An error occurred during processing")
