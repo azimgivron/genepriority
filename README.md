@@ -1,6 +1,6 @@
 # NEGradient-GenePriority
 
-The repository **NEGradient-GenePriority** (short for "Non-Euclidean Gradient Methods for Matrix Completion in Gene Prioritization") provides code and data to reproduce the results presented in the paper "Gene prioritization using Bayesian matrix factorization with genomic and phenotypic side information." This study introduces a novel method for gene prioritization by combining Bayesian matrix factorization (BMF) with genomic and phenotypic side information, enabling robust predictions and improved identification of disease-associated genes.
+The repository **NEGradient-GenePriority** (short for "Non-Euclidean Gradient Methods for Matrix Completion in Gene Prioritization") provides code and data to reproduce the results presented in the paper "[Gene prioritization using Bayesian matrix factorization with genomic and phenotypic side information.](https://pubmed.ncbi.nlm.nih.gov/29949967/)" This study introduces a novel method for gene prioritization by combining Bayesian matrix factorization (BMF) with genomic and phenotypic side information, enabling robust predictions and improved identification of disease-associated genes.
 
 ---
 
@@ -10,8 +10,8 @@ To set up the environment and install necessary dependencies, follow these steps
 
 1. **Clone the Repository**:
    ```bash
-   git clone https://github.com/azimgivron/Non-Euclidean-Gradient-Methods-for-Matrix-Completion-in-Gene-Prioritization.git
-   cd Non-Euclidean-Gradient-Methods-for-Matrix-Completion-in-Gene-Prioritization
+   git clone https://github.com/azimgivron/NEGradient-GenePriority.git
+   cd NEGradient-GenePriority
    ```
 
 2. **Create and Activate a Virtual Environment**:
@@ -44,7 +44,7 @@ After installation, you can reproduce the results by running the main script:
 python main.py
 ```
 
-This script performs gene prioritization using Bayesian matrix factorization, leveraging the genomic and phenotypic data provided in the repository.
+This script performs gene prioritization using Bayesian matrix factorization, leveraging the genomic and phenotypic side information.
 
 ---
 
