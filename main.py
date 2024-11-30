@@ -84,7 +84,7 @@ def main():
         logger.info("Data sparsity: %.2f%%", sparsity * 100)
 
         # Set parameters
-        alpha_values = [228.5, 160.9, 32.2, 16.1, 5.3]
+        alphas = [228.5, 160.9, 32.2, 16.1, 5.3]
         latent_dimensions = [25, 30, 40]
         num_splits = 6
         zero_sampling_factor = 5
@@ -148,10 +148,10 @@ def main():
         for num_latent in latent_dimensions:
             logger.info("Running BPMF for %d latent dimensions", num_latent)
             omim1_results[num_latent] = train_and_test_splits(
-                omim1, omim1_splits_indices, num_samples, burnin_period, num_latent
+                omim1, omim1_splits_indices, num_samples, burnin_period, num_latent, alphas
             )
             omim2_results[num_latent] = train_and_test_folds(
-                omim2, omim2_splits_indices, num_samples, burnin_period, num_latent
+                omim2, omim2_splits_indices, num_samples, burnin_period, num_latent, alphas
             )
         logger.info("BPMF session completed successfully")
 
