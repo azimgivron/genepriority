@@ -84,19 +84,11 @@ RUN apt-get update && \
 
 # Switch to the new user
 USER $USERNAME
-
+COPY requirements.txt requirements.txt
 # Set up Python environment and install libraries in a single RUN command
 RUN python3 -m venv /home/$USERNAME/venv && \
     /home/$USERNAME/venv/bin/pip install --upgrade pip && \
-    /home/$USERNAME/venv/bin/pip install \
-        numpy==1.26.0 \
-        scipy==1.11.3 \
-        pandas==2.1.1 \
-        scikit-learn==1.3.0 \
-        pytest==7.4.2 \
-        pylint==2.17.5 \
-        docformatter==1.7.2 \
-        black==23.9.1 && \
+    /home/$USERNAME/venv/bin/pip install -r requirements && \
     sudo /home/$USERNAME/venv/bin/pip install /tmp/smurff && \
     sudo rm -rf smurff && \
     echo "source /home/$USERNAME/venv/bin/activate" >> /home/$USERNAME/.zshrc
