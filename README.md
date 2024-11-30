@@ -2,8 +2,6 @@
 
 The repository **NEGradient-GenePriority** (short for "Non-Euclidean Gradient Methods for Matrix Completion in Gene Prioritization") provides code and data to reproduce the results presented in the paper "[Gene prioritization using Bayesian matrix factorization with genomic and phenotypic side information.](https://pubmed.ncbi.nlm.nih.gov/29949967/)" This study introduces a novel method for gene prioritization by combining Bayesian matrix factorization (BMF) with genomic and phenotypic side information, enabling robust predictions and improved identification of disease-associated genes.
 
-To make it more pseudo-code-like, use a structure that emphasizes step-by-step procedural logic with clear labels and concise actions. Add indentation and emphasize decision points or operations. Here's an improved version:
-
 ## Datasets Generation
 
 ### OMIM1 Dataset Construction
