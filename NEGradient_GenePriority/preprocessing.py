@@ -1,5 +1,9 @@
 # pylint: disable=R0914
-"""Preprocessing module"""
+"""
+Contains classes and functions for data preprocessing, such as managing dataset indices,
+creating train-test splits, and converting data formats, facilitating the preparation of
+data for analysis.
+"""
 from __future__ import annotations
 
 from dataclasses import dataclass

@@ -1,5 +1,11 @@
 # pylint: disable=R0913,R0914
-"""Evaluation module"""
+"""
+This module orchestrates model training and evaluation across train-test splits
+or cross-validation folds. It integrates preprocessing and metrics functionalities
+to compute and log performance metrics. Key components include the EvaluationResult
+data class to store metrics and functions like evaluate_scores, train_and_test_splits,
+and train_and_test_folds to streamline the evaluation process.
+"""
 import logging
 from dataclasses import dataclass
 from typing import List
