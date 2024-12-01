@@ -21,6 +21,7 @@ class EvaluationResult:
         auc_loss (float): 1 - AUC score (represents loss based on AUC).
         bedroc (List[float]): BEDROC scores for the specified alpha values.
     """
+
     fpr: List[float]
     tpr: List[float]
     thresholds: List[float]
@@ -63,7 +64,7 @@ def train_and_test_splits(
     num_samples: int,
     burnin_period: int,
     num_latent: int,
-    alphas: List[float]
+    alphas: List[float],
 ) -> List[EvaluationResult]:
     """
     Trains and evaluates BPMF on dataset splits using specified evaluation metrics.
@@ -107,7 +108,7 @@ def train_and_test_folds(
     num_samples: int,
     burnin_period: int,
     num_latent: int,
-    alphas: List[float]
+    alphas: List[float],
 ) -> List[EvaluationResult]:
     """
     Trains and evaluates BPMF on dataset folds using specified evaluation metrics.

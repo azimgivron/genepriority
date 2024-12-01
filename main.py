@@ -37,7 +37,9 @@ def setup_logger(log_file: str) -> logging.Logger:
         logger.handlers.clear()
 
     # Create file handler with write mode
-    file_handler = logging.FileHandler(log_file, mode='w')  # 'w' ensures the file is overwritten
+    file_handler = logging.FileHandler(
+        log_file, mode="w"
+    )  # 'w' ensures the file is overwritten
     file_handler.setLevel(logging.DEBUG)
 
     # Formatter
@@ -84,6 +86,7 @@ def main():
         logger.debug("Data sparsity: %.2f%%", sparsity * 100)
 
         # Set parameters
+        logger.debug("Setting parameters for splits and BPMF")
         alphas = [228.5, 160.9, 32.2, 16.1, 5.3]
         latent_dimensions = [25, 30, 40]
         num_splits = 6
@@ -94,30 +97,22 @@ def main():
             "Sampling zeros with factor %d and creating random splits",
             zero_sampling_factor,
         )
-        omim1_1s_splits_indices = create_random_splits(
-            np.vstack((omim1_1s.row, omim1_1s.col)).T, num_splits=num_splits
-        )
         omim1_0s = sample_zeros(omim1_1s, zero_sampling_factor)
         logger.debug(
             "Sampled zeros shape: %s, non-zero entries: %d",
             omim1_0s.shape,
             omim1_0s.count_nonzero(),
         )
-
-        omim1_0s_splits_indices = create_random_splits(
-            np.vstack((omim1_0s.row, omim1_0s.col)).T, num_splits=num_splits
-        )
         omim1 = combine_matrices(omim1_1s, omim1_0s)
-        omim1_splits_indices = combine_splits(
-            omim1_1s_splits_indices, omim1_0s_splits_indices
-        )
-        logger.debug("Generated combined splits for OMIM1 data")
+        logger.debug("Combined sparse matrix shape: %s", omim1.shape)
 
-        # Compute disease count statistics
-        logger.debug(
-            "Number of gene disease associations in each test set: %s",
-            len(omim1_splits_indices[0].testing_indices)
+        omim1_splits_indices = create_random_splits(
+            np.vstack((omim1.row, omim1.col)).T, num_splits=num_splits
         )
+        logger.debug("Generated random splits for OMIM1 data")
+
+        counts = compute_statistics(omim1, omim1_splits_indices)
+        logger.debug("Disease count statistics:\n%s", counts)
 
         # Filter diseases and create folds
         logger.debug("Filtering gene-disease data by association threshold")
@@ -129,14 +124,11 @@ def main():
         )
 
         omim2_1s = convert_dataframe_to_sparse_matrix(filtered_gene_disease)
-        omim2_1s_splits_indices = create_folds(omim2_1s, num_folds=num_splits)
         omim2_0s = sample_zeros(omim2_1s, zero_sampling_factor)
-        omim2_0s_splits_indices = create_folds(omim2_0s, num_folds=num_splits)
         omim2 = combine_matrices(omim2_1s, omim2_0s)
-        omim2_splits_indices = combine_splits(
-            omim2_1s_splits_indices, omim2_0s_splits_indices
-        )
-        logger.debug("Processed OMIM2 data and created folds")
+        logger.debug("Combined sparse matrix for OMIM2 created")
+        omim2_splits_indices = create_folds(omim2, num_folds=num_splits)
+        logger.debug("Created folds for OMIM2 data")
 
         # Configure and run BPMF
         logger.debug("Configuring BPMF session")

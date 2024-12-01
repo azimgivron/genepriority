@@ -7,9 +7,9 @@ from .evaluation import (
 from .metrics import bedroc_score
 from .preprocessing import (
     Indices,
+    combine_indices,
     combine_matrices,
     combine_splits,
-    combine_indices,
     compute_statistics,
     convert_dataframe_to_sparse_matrix,
     create_folds,

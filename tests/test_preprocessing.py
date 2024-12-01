@@ -1,18 +1,19 @@
-import pytest
-import pandas as pd
 import numpy as np
+import pandas as pd
+import pytest
 import scipy.sparse as sp
+
 from NEGradient_GenePriority import (
     Indices,
-    convert_dataframe_to_sparse_matrix,
-    sample_zeros,
     combine_indices,
-    combine_splits,
     combine_matrices,
-    filter_by_number_of_association,
-    create_random_splits,
-    create_folds,
+    combine_splits,
     compute_statistics,
+    convert_dataframe_to_sparse_matrix,
+    create_folds,
+    create_random_splits,
+    filter_by_number_of_association,
+    sample_zeros,
 )
 
 

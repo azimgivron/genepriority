@@ -4,7 +4,6 @@ import numpy as np
 import pandas as pd
 import scipy.sparse as sp
 from sklearn.model_selection import KFold, train_test_split
-from sklearn.utils.extmath import cartesian
 
 
 class Indices:
@@ -49,7 +48,7 @@ class Indices:
         Returns:
             sp.coo_matrix: Sparse matrix containing only the rows corresponding to the training indices.
         """
-        return dataset_matrix[self.training_indices]
+        return from_indices(dataset_matrix, self.training_indices)
 
     def get_testing_data(self, dataset_matrix: sp.coo_matrix) -> sp.coo_matrix:
         """
@@ -59,9 +58,43 @@ class Indices:
             dataset_matrix (sp.coo_matrix): The full dataset represented as a COO sparse matrix.
 
         Returns:
-            sp.coo_matrix: Sparse matrix containing only the rows corresponding to the testing indices.
+            sp.coo_matrix: Sparse matrix containing only the elements corresponding to the testing indices.
         """
-        return dataset_matrix[self.testing_indices]
+        return from_indices(dataset_matrix, self.testing_indices)
+
+
+def from_indices(dataset_matrix: sp.coo_matrix, indices: np.ndarray) -> sp.coo_matrix:
+    """
+    Extracts a submatrix from the given sparse matrix based on specified row-column indices.
+
+    Args:
+        dataset_matrix (sp.coo_matrix): The input sparse matrix from which elements are to be extracted.
+        indices (np.ndarray): A 2D array of shape (n, 2) containing the indices of the elements
+                              to extract. Each row is a pair of integers representing the
+                              (row, column) coordinates.
+
+    Returns:
+        sp.coo_matrix: A sparse matrix in COO format containing only the elements specified by
+                       the indices array. The submatrix will have the same shape as the original
+                       matrix, but only the specified elements will be retained.
+    """
+    # Create a set of (row, column) pairs for quick lookup
+    indices_set = set(zip(indices[:, 0], indices[:, 1]))
+
+    # Create a mask for entries in dataset_matrix that match the indices
+    mask = [
+        (row, col) in indices_set
+        for row, col in zip(dataset_matrix.row, dataset_matrix.col)
+    ]
+
+    # Filter out only the relevant entries
+    rows = dataset_matrix.row[mask]
+    cols = dataset_matrix.col[mask]
+    data = dataset_matrix.data[mask]
+
+    # Create a new sparse matrix from the filtered data
+    submatrix = sp.coo_matrix((data, (rows, cols)), shape=dataset_matrix.shape)
+    return submatrix
 
 
 def convert_dataframe_to_sparse_matrix(dataframe: pd.DataFrame) -> sp.coo_matrix:
@@ -93,28 +126,45 @@ def sample_zeros(sparse_matrix: sp.coo_matrix, sampling_factor: int) -> sp.coo_m
                                of the current number of non-zero entries.
 
     Returns:
-        sp.coo_matrix: Sparse matrix with additional sampled zero entries.
+        sp.coo_matrix: Sparse matrix of sampled zeros.
     """
-    num_existing_ones = sparse_matrix.count_nonzero()
+    # Get the number of existing non-zero entries
+    num_existing_ones = sparse_matrix.nnz
     num_sampled_zeros = num_existing_ones * sampling_factor
 
+    # Get the matrix dimensions and existing non-zero indices
     total_rows, total_cols = sparse_matrix.shape
-    full_indices = cartesian([np.arange(total_rows), np.arange(total_cols)])
     non_zero_indices = set(zip(sparse_matrix.row, sparse_matrix.col))
-    zero_indices = np.array(
-        [idx for idx in full_indices if tuple(idx) not in non_zero_indices]
-    )
 
-    sampled_indices = zero_indices[
-        np.random.choice(len(zero_indices), size=num_sampled_zeros, replace=False)
-    ]
+    # Initialize sampling
+    sampled_zeros = []
+    sampled_count = 0
 
-    zero_data = np.zeros(len(sampled_indices))
-    sampled_zeros = sp.coo_matrix(
-        (zero_data, (sampled_indices[:, 0], sampled_indices[:, 1])),
+    while sampled_count < num_sampled_zeros:
+        # Randomly sample row and column indices
+        row_indices = np.random.randint(
+            0, total_rows, size=num_sampled_zeros - sampled_count
+        )
+        col_indices = np.random.randint(
+            0, total_cols, size=num_sampled_zeros - sampled_count
+        )
+        new_indices = zip(row_indices, col_indices)
+
+        # Filter out indices that already exist in the sparse matrix
+        unique_indices = [idx for idx in new_indices if idx not in non_zero_indices]
+
+        # Add unique indices to the sampled set
+        sampled_zeros.extend(unique_indices)
+        sampled_count += len(unique_indices)
+
+    # Convert sampled indices to sparse COO matrix
+    sampled_zeros = np.array(sampled_zeros[:num_sampled_zeros])
+    zero_data = np.zeros(len(sampled_zeros))
+    result = sp.coo_matrix(
+        (zero_data, (sampled_zeros[:, 0], sampled_zeros[:, 1])),
         shape=sparse_matrix.shape,
     )
-    return sampled_zeros
+    return result
 
 
 def combine_indices(indices1: Indices, indices2: Indices) -> Indices:
@@ -230,24 +280,31 @@ def create_folds(sparse_matrix: sp.coo_matrix, num_folds: int) -> List[Indices]:
     ]
 
 
-def compute_statistics(splits: List[Indices]) -> pd.DataFrame:
+def compute_statistics(
+    sparse_matrix: sp.coo_matrix, splits: List[Indices]
+) -> pd.DataFrame:
     """
     Computes summary statistics (mean, variance) of unique testing entries across splits.
 
     Args:
+        sparse_matrix (sp.coo_matrix): The input sparse matrix.
         splits (List[Indices]): List of Indices objects.
 
     Returns:
         pd.DataFrame: DataFrame summarizing the counts and statistics of testing entries
                       across all splits.
     """
-    counts = [len(split.testing_indices) for split in splits]
+    counts = []
+    for split in splits:
+        data = split.get_testing_data(sparse_matrix)
+        columns_with_ones = np.unique(data.col[data.data == 1])
+        counts.append(len(columns_with_ones))
     average_count = np.mean(counts)
-    variance_count = np.var(counts)
+    variance_count = np.std(counts)
     return pd.DataFrame(
         [[*counts, average_count, variance_count]],
         columns=(
             [f"Count (Split {i+1})" for i in range(len(counts))]
-            + ["Average Count", "Variance of Count"]
+            + ["Average Count", "Standard deviation of Count"]
         ),
     )

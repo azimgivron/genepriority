@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def bedroc_score(y_true, y_pred, decreasing=True, alpha=20.0):
     """
     Calculate the BEDROC (Boltzmann Enhanced Discrimination of the Receiver Operator Characteristic) score.
@@ -38,7 +39,9 @@ def bedroc_score(y_true, y_pred, decreasing=True, alpha=20.0):
     sum_exp = np.sum(np.exp(-alpha * positive_ranks / total_instances))
 
     positive_ratio = positive_instances / total_instances
-    random_sum = positive_ratio * (1 - np.exp(-alpha)) / (np.exp(alpha / total_instances) - 1)
+    random_sum = (
+        positive_ratio * (1 - np.exp(-alpha)) / (np.exp(alpha / total_instances) - 1)
+    )
     scaling_factor = (
         positive_ratio
         * np.sinh(alpha / 2)
