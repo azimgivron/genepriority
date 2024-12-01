@@ -1,9 +1,13 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
 from typing import List, Set, Tuple
+
 import numpy as np
 import pandas as pd
 import scipy.sparse as sp
 from sklearn.model_selection import KFold, train_test_split
-from dataclasses import dataclass
+
 
 class Indices:
     """
@@ -11,7 +15,8 @@ class Indices:
 
     This class is designed to manage a collection of row-column indices representing a subset
     of a dataset. It provides methods to retrieve the corresponding data from a given sparse
-    matrix, as well as a set representation for efficient operations.
+    matrix, as well as a set representation for efficient operations. Additionally, it supports
+    merging multiple indices.
 
     Attributes:
         indices (np.ndarray): A 2D array of shape (n, 2), where each row represents
@@ -20,6 +25,7 @@ class Indices:
     Methods:
         indices_set: Converts the indices into a set of (row, column) tuples for efficient lookups.
         get_data: Retrieves the subset of a dataset corresponding to the stored indices.
+        merge: Merges another Indices object into the current one.
     """
 
     def __init__(self, indices: np.ndarray) -> None:
@@ -55,23 +61,80 @@ class Indices:
         """
         return from_indices(dataset_matrix, self.indices_set)
 
+    def merge(self, indices: Indices) -> None:
+        """
+        Merges another Indices object into the current one.
+
+        Args:
+            indices (Indices): Another Indices object to merge.
+
+        Updates:
+            Adds the indices from the given Indices object to the current object.
+        """
+        self.indices = np.vstack((self.indices, indices.indices))
+
 
 @dataclass
-class TrainingTestIndices:
+class TrainTestIndices:
     """
     Represents training and testing indices for dataset splitting.
 
     This class encapsulates two sets of indices: one for training and one for testing.
     It provides methods to interact with both subsets and retrieve the associated data
-    from a sparse matrix.
+    from a sparse matrix. It also supports merging with another TrainTestIndices object.
 
     Attributes:
         training_indices (Indices): An Indices object representing the training data indices.
         testing_indices (Indices): An Indices object representing the testing data indices.
+
+    Methods:
+        get_training_data: Retrieves the training subset from a given sparse matrix.
+        get_testing_data: Retrieves the testing subset from a given sparse matrix.
+        merge: Merges another TrainTestIndices object into the current one.
     """
 
     training_indices: Indices
     testing_indices: Indices
+
+    def get_training_data(self, dataset_matrix: sp.coo_matrix) -> sp.coo_matrix:
+        """
+        Retrieves the subset of the dataset corresponding to the training indices.
+
+        Args:
+            dataset_matrix (sp.coo_matrix): The full dataset represented as a COO sparse matrix.
+
+        Returns:
+            sp.coo_matrix: A sparse matrix containing only the elements specified
+                           by the training indices.
+        """
+        return self.training_indices.get_data(dataset_matrix)
+
+    def get_testing_data(self, dataset_matrix: sp.coo_matrix) -> sp.coo_matrix:
+        """
+        Retrieves the subset of the dataset corresponding to the testing indices.
+
+        Args:
+            dataset_matrix (sp.coo_matrix): The full dataset represented as a COO sparse matrix.
+
+        Returns:
+            sp.coo_matrix: A sparse matrix containing only the elements specified
+                           by the testing indices.
+        """
+        return self.testing_indices.get_data(dataset_matrix)
+
+    def merge(self, train_test_indices: TrainTestIndices) -> TrainTestIndices:
+        """
+        Merges another TrainTestIndices object into the current one.
+
+        Args:
+            train_test_indices (TrainTestIndices): Another TrainTestIndices object to merge.
+
+        Returns:
+            TrainTestIndices: A new TrainTestIndices object with merged training and testing indices.
+        """
+        self.training_indices.merge(train_test_indices.training_indices)
+        self.testing_indices.merge(train_test_indices.testing_indices)
+        return self
 
 
 def from_indices(
@@ -82,29 +145,37 @@ def from_indices(
 
     Args:
         dataset_matrix (sp.coo_matrix): The input sparse matrix from which elements are to be extracted.
-        indices (Set[Tuple[int, int]]): A set of indices of the elements
-                              to extract. Each element of the set is representing the
-                              (row, column) coordinates.
+        indices_set (Set[Tuple[int, int]]): A set of (row, column) tuples specifying the elements to extract.
 
     Returns:
         sp.coo_matrix: A sparse matrix in COO format containing only the elements specified by
-                       the indices array. The submatrix will have the same shape as the original
+                       the indices_set. The submatrix will have the same shape as the original
                        matrix, but only the specified elements will be retained.
     """
-    # Create a mask for entries in dataset_matrix that match the indices
     mask = [
         (row, col) in indices_set
         for row, col in zip(dataset_matrix.row, dataset_matrix.col)
     ]
-
-    # Filter out only the relevant entries
     rows = dataset_matrix.row[mask]
     cols = dataset_matrix.col[mask]
     data = dataset_matrix.data[mask]
+    return sp.coo_matrix((data, (rows, cols)), shape=dataset_matrix.shape)
 
-    # Create a new sparse matrix from the filtered data
-    submatrix = sp.coo_matrix((data, (rows, cols)), shape=dataset_matrix.shape)
-    return submatrix
+
+def combine_splits(
+    splits1: List[TrainTestIndices], splits2: List[TrainTestIndices]
+) -> List[TrainTestIndices]:
+    """
+    Combines corresponding train-test splits from two lists of TrainTestIndices.
+
+    Args:
+        splits1 (List[TrainTestIndices]): The first list of TrainTestIndices.
+        splits2 (List[TrainTestIndices]): The second list of TrainTestIndices.
+
+    Returns:
+        List[TrainTestIndices]: A new list of TrainTestIndices objects with combined training and testing indices.
+    """
+    return [split1.merge(split2) for split1, split2 in zip(splits1, splits2)]
 
 
 def convert_dataframe_to_sparse_matrix(dataframe: pd.DataFrame) -> sp.coo_matrix:
@@ -113,7 +184,7 @@ def convert_dataframe_to_sparse_matrix(dataframe: pd.DataFrame) -> sp.coo_matrix
 
     Args:
         dataframe (pd.DataFrame): DataFrame containing two columns of IDs representing
-                           associations.
+                                  associations.
 
     Returns:
         sp.coo_matrix: Sparse matrix where rows and columns correspond to the
@@ -122,11 +193,12 @@ def convert_dataframe_to_sparse_matrix(dataframe: pd.DataFrame) -> sp.coo_matrix
     """
     col1_ids, col2_ids = dataframe.to_numpy().T
     association_data = np.ones(len(col1_ids))
-    sparse_matrix = sp.coo_matrix((association_data, (col1_ids, col2_ids)))
-    return sparse_matrix
+    return sp.coo_matrix((association_data, (col1_ids, col2_ids)))
 
 
-def sample_zeros(sparse_matrix: sp.coo_matrix, sampling_factor: int, seed: int = None) -> sp.coo_matrix:
+def sample_zeros(
+    sparse_matrix: sp.coo_matrix, sampling_factor: int, seed: int = None
+) -> sp.coo_matrix:
     """
     Randomly samples zero entries from the complement of the sparse matrix's non-zero entries.
 
@@ -221,18 +293,21 @@ def filter_by_number_of_association(
     return dataframe[dataframe[col_name].isin(valid_ids)].reset_index(drop=True)
 
 
-def create_random_splits(indices: np.ndarray, num_splits: int) -> List[Indices]:
+def create_random_splits(
+    sparse_matrix: sp.coo_matrix, num_splits: int
+) -> List[Indices]:
     """
     Creates random train-test splits from an indices matrix.
 
     Args:
-        indices (np.ndarray): Indices matrix to be split into random subsets.
+        sparse_matrix (sp.coo_matrix): Sparse matrix to be split into random subsets.
         num_splits (int): Number of random splits to create.
 
     Returns:
         List[Indices]: List of Indices objects containing
                     training and testing subsets for each split.
     """
+    indices = np.vstack((sparse_matrix.row, sparse_matrix.col)).T
     splits = []
     for random_state in range(num_splits):
         train_idx, test_idx = train_test_split(
@@ -241,7 +316,7 @@ def create_random_splits(indices: np.ndarray, num_splits: int) -> List[Indices]:
             random_state=random_state,
             shuffle=True,
         )
-        train_test_indices = TrainingTestIndices(Indices(train_idx), Indices(test_idx))
+        train_test_indices = TrainTestIndices(Indices(train_idx), Indices(test_idx))
         splits.append(train_test_indices)
     return splits
 
@@ -261,7 +336,7 @@ def create_folds(sparse_matrix: sp.coo_matrix, num_folds: int) -> List[Indices]:
     kfold = KFold(n_splits=num_folds, shuffle=True, random_state=42)
     indices = np.vstack((sparse_matrix.row, sparse_matrix.col)).T
     return [
-        TrainingTestIndices(Indices(indices[train_idx]), Indices(indices[test_idx]))
+        TrainTestIndices(Indices(indices[train_idx]), Indices(indices[test_idx]))
         for train_idx, test_idx in kfold.split(indices)
     ]
 
@@ -290,7 +365,8 @@ def compute_statistics(
     return pd.DataFrame(
         [[*counts, average_count, variance_count]],
         columns=(
-            [f"Count (Split {i+1})" for i in range(len(counts))]
-            + ["Average Count", "Standard deviation of Count"]
+            [f"Split {i+1}" for i in range(len(counts))]
+            + ["Average", "Standard Deviation"]
         ),
-    )
+        index=["Counts"]
+    ).T

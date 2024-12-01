@@ -6,7 +6,7 @@ import smurff
 from sklearn import metrics
 
 from NEGradient_GenePriority.metrics import bedroc_score
-from NEGradient_GenePriority.preprocessing import TrainingTestIndices
+from NEGradient_GenePriority.preprocessing import TrainTestIndices
 
 
 @dataclass
@@ -60,7 +60,7 @@ def evaluate(
 
 def train_and_test_splits(
     sparse_matrix: sp.coo_matrix,
-    splits_list: List[TrainingTestIndices],
+    splits_list: List[TrainTestIndices],
     num_samples: int,
     burnin_period: int,
     num_latent: int,
@@ -71,7 +71,7 @@ def train_and_test_splits(
 
     Args:
         sparse_matrix (sp.coo_matrix): Sparse matrix representation of the dataset.
-        splits_list (List[TrainingTestIndices]): List of train-test splits.
+        splits_list (List[TrainTestIndices]): List of train-test splits.
         num_samples (int): Number of samples for the BPMF model.
         burnin_period (int): Burn-in period for the BPMF model.
         num_latent (int): Number of latent dimensions for the BPMF model.
@@ -104,7 +104,7 @@ def train_and_test_splits(
 
 def train_and_test_folds(
     sparse_matrix: sp.coo_matrix,
-    folds_list: List[TrainingTestIndices],
+    folds_list: List[TrainTestIndices],
     num_samples: int,
     burnin_period: int,
     num_latent: int,
@@ -115,7 +115,7 @@ def train_and_test_folds(
 
     Args:
         sparse_matrix (sp.coo_matrix): Sparse matrix representation of the dataset.
-        folds_list (List[TrainingTestIndices]): List of train-test folds.
+        folds_list (List[TrainTestIndices]): List of train-test folds.
         num_samples (int): Number of samples for the BPMF model.
         burnin_period (int): Burn-in period for the BPMF model.
         num_latent (int): Number of latent dimensions for the BPMF model.
