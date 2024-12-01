@@ -1,91 +1,77 @@
 from typing import List, Set, Tuple
-
 import numpy as np
 import pandas as pd
 import scipy.sparse as sp
 from sklearn.model_selection import KFold, train_test_split
-
+from dataclasses import dataclass
 
 class Indices:
     """
-    Represents the train and test indices for dataset splitting.
+    Encapsulates a set of indices for a dataset.
 
-    This class encapsulates the indices used for splitting a dataset into
-    training and testing subsets. It provides methods to retrieve the corresponding
-    subsets from a given sparse matrix. The indices are stored as arrays and can
-    be accessed as sets of coordinate tuples for efficient operations.
+    This class is designed to manage a collection of row-column indices representing a subset
+    of a dataset. It provides methods to retrieve the corresponding data from a given sparse
+    matrix, as well as a set representation for efficient operations.
 
     Attributes:
-        training_indices (np.ndarray): A 2D array of shape (n, 2) containing the indices
-            of the training data. Each row represents a (row, column) pair.
-        testing_indices (np.ndarray): A 2D array of shape (m, 2) containing the indices
-            of the testing data. Each row represents a (row, column) pair.
+        indices (np.ndarray): A 2D array of shape (n, 2), where each row represents
+                              a (row, column) pair of indices.
+
+    Methods:
+        indices_set: Converts the indices into a set of (row, column) tuples for efficient lookups.
+        get_data: Retrieves the subset of a dataset corresponding to the stored indices.
     """
 
-    def __init__(
-        self,
-        training_indices: np.ndarray,
-        testing_indices: np.ndarray,
-    ) -> None:
+    def __init__(self, indices: np.ndarray) -> None:
         """
-        Initializes the Indices object with training and testing indices.
+        Initializes the Indices object with the given array of indices.
 
         Args:
-            training_indices (np.ndarray): A 2D array of shape (n, 2) where each row is
-                a (row, column) pair indicating the indices of the training data.
-            testing_indices (np.ndarray): A 2D array of shape (m, 2) where each row is
-                a (row, column) pair indicating the indices of the testing data.
+            indices (np.ndarray): A 2D array of shape (n, 2) containing row-column pairs.
         """
-        self.training_indices = training_indices
-        self.testing_indices = testing_indices
+        self.indices = indices
 
     @property
-    def training_indices_set(self) -> Set[Tuple[int, int]]:
+    def indices_set(self) -> Set[Tuple[int, int]]:
         """
-        Converts the training indices into a set of (row, column) tuples.
+        Converts the indices into a set of (row, column) tuples.
 
         Returns:
-            Set[Tuple[int, int]]: A set of (row, column) tuples for the training indices.
+            Set[Tuple[int, int]]: A set of (row, column) tuples for the indices.
         """
-        return set(zip(self.training_indices[:, 0], self.training_indices[:, 1]))
+        return set(zip(self.indices[:, 0], self.indices[:, 1]))
 
-    @property
-    def testing_indices_set(self) -> Set[Tuple[int, int]]:
+    def get_data(self, dataset_matrix: sp.coo_matrix) -> sp.coo_matrix:
         """
-        Converts the testing indices into a set of (row, column) tuples.
-
-        Returns:
-            Set[Tuple[int, int]]: A set of (row, column) tuples for the testing indices.
-        """
-        return set(zip(self.testing_indices[:, 0], self.testing_indices[:, 1]))
-
-    def get_training_data(self, dataset_matrix: sp.coo_matrix) -> sp.coo_matrix:
-        """
-        Retrieves the training subset of the dataset as a sparse matrix.
+        Retrieves the subset of the dataset corresponding to the stored indices.
 
         Args:
             dataset_matrix (sp.coo_matrix): The full dataset represented as a COO sparse matrix.
 
         Returns:
             sp.coo_matrix: A sparse matrix in COO format containing only the elements
-                specified by the training indices. The shape of the returned matrix matches
-                the shape of the original dataset.
+                           specified by the indices. The shape of the returned matrix
+                           matches the shape of the original dataset.
         """
-        return from_indices(dataset_matrix, self.training_indices_set)
+        return from_indices(dataset_matrix, self.indices_set)
 
-    def get_testing_data(self, dataset_matrix: sp.coo_matrix) -> sp.coo_matrix:
-        """
-        Retrieves the testing subset of the dataset as a sparse matrix.
 
-        Args:
-            dataset_matrix (sp.coo_matrix): The full dataset represented as a COO sparse matrix.
+@dataclass
+class TrainingTestIndices:
+    """
+    Represents training and testing indices for dataset splitting.
 
-        Returns:
-            sp.coo_matrix: A sparse matrix in COO format containing only the elements
-                specified by the testing indices. The shape of the returned matrix matches
-                the shape of the original dataset.
-        """
-        return from_indices(dataset_matrix, self.testing_indices_set)
+    This class encapsulates two sets of indices: one for training and one for testing.
+    It provides methods to interact with both subsets and retrieve the associated data
+    from a sparse matrix.
+
+    Attributes:
+        training_indices (Indices): An Indices object representing the training data indices.
+        testing_indices (Indices): An Indices object representing the testing data indices.
+    """
+
+    training_indices: Indices
+    testing_indices: Indices
 
 
 def from_indices(
@@ -196,36 +182,6 @@ def sample_zeros(sparse_matrix: sp.coo_matrix, sampling_factor: int, seed: int =
     return result
 
 
-def combine_indices(indices1: Indices, indices2: Indices) -> Indices:
-    """
-    Combines two sets of train-test indices.
-
-    Args:
-        indices1 (Indices): The first set of indices.
-        indices2 (Indices): The second set of indices.
-
-    Returns:
-        Indices: A new Indices object with combined training and testing indices.
-    """
-    training_indices = np.vstack((indices1.training_indices, indices2.training_indices))
-    testing_indices = np.vstack((indices1.testing_indices, indices2.testing_indices))
-    return Indices(training_indices, testing_indices)
-
-
-def combine_splits(splits1: List[Indices], splits2: List[Indices]) -> List[Indices]:
-    """
-    Combines corresponding train-test splits from two lists of splits.
-
-    Args:
-        splits1 (List[Indices]): The first list of splits.
-        splits2 (List[Indices]): The second list of splits.
-
-    Returns:
-        List[Indices]: A new list of Indices objects with combined training and testing indices.
-    """
-    return [combine_indices(split1, split2) for split1, split2 in zip(splits1, splits2)]
-
-
 def combine_matrices(matrix1: sp.coo_matrix, matrix2: sp.coo_matrix) -> sp.coo_matrix:
     """
     Combines two sparse matrices into a single sparse matrix.
@@ -285,7 +241,8 @@ def create_random_splits(indices: np.ndarray, num_splits: int) -> List[Indices]:
             random_state=random_state,
             shuffle=True,
         )
-        splits.append(Indices(train_idx, test_idx))
+        train_test_indices = TrainingTestIndices(Indices(train_idx), Indices(test_idx))
+        splits.append(train_test_indices)
     return splits
 
 
@@ -304,7 +261,7 @@ def create_folds(sparse_matrix: sp.coo_matrix, num_folds: int) -> List[Indices]:
     kfold = KFold(n_splits=num_folds, shuffle=True, random_state=42)
     indices = np.vstack((sparse_matrix.row, sparse_matrix.col)).T
     return [
-        Indices(indices[train_idx], indices[test_idx])
+        TrainingTestIndices(Indices(indices[train_idx]), Indices(indices[test_idx]))
         for train_idx, test_idx in kfold.split(indices)
     ]
 
@@ -325,7 +282,7 @@ def compute_statistics(
     """
     counts = []
     for split in splits:
-        data = split.get_testing_data(sparse_matrix)
+        data = split.testing_indices.get_data(sparse_matrix)
         columns_with_ones = np.unique(data.col[data.data == 1])
         counts.append(len(columns_with_ones))
     average_count = np.mean(counts)

@@ -6,7 +6,7 @@ import smurff
 from sklearn import metrics
 
 from NEGradient_GenePriority.metrics import bedroc_score
-from NEGradient_GenePriority.preprocessing import Indices
+from NEGradient_GenePriority.preprocessing import TrainingTestIndices
 
 
 @dataclass
@@ -60,7 +60,7 @@ def evaluate(
 
 def train_and_test_splits(
     sparse_matrix: sp.coo_matrix,
-    splits_list: List[Indices],
+    splits_list: List[TrainingTestIndices],
     num_samples: int,
     burnin_period: int,
     num_latent: int,
@@ -71,7 +71,7 @@ def train_and_test_splits(
 
     Args:
         sparse_matrix (sp.coo_matrix): Sparse matrix representation of the dataset.
-        splits_list (List[Indices]): List of train-test splits (Indices objects).
+        splits_list (List[TrainingTestIndices]): List of train-test splits.
         num_samples (int): Number of samples for the BPMF model.
         burnin_period (int): Burn-in period for the BPMF model.
         num_latent (int): Number of latent dimensions for the BPMF model.
@@ -85,8 +85,8 @@ def train_and_test_splits(
     results = []
     for split in splits_list:
         session = smurff.BPMFSession(
-            Ytrain=split.get_training_data(sparse_matrix),
-            Ytest=split.get_testing_data(sparse_matrix),
+            Ytrain=split.training_indices.get_data(sparse_matrix),
+            Ytest=split.testing_indices.get_data(sparse_matrix),
             is_scarce=False,
             direct=True,
             univariate=True,
@@ -104,7 +104,7 @@ def train_and_test_splits(
 
 def train_and_test_folds(
     sparse_matrix: sp.coo_matrix,
-    folds_list: List[Indices],
+    folds_list: List[TrainingTestIndices],
     num_samples: int,
     burnin_period: int,
     num_latent: int,
@@ -115,7 +115,7 @@ def train_and_test_folds(
 
     Args:
         sparse_matrix (sp.coo_matrix): Sparse matrix representation of the dataset.
-        folds_list (List[Indices]): List of train-test folds (Indices objects).
+        folds_list (List[TrainingTestIndices]): List of train-test folds.
         num_samples (int): Number of samples for the BPMF model.
         burnin_period (int): Burn-in period for the BPMF model.
         num_latent (int): Number of latent dimensions for the BPMF model.
@@ -129,8 +129,8 @@ def train_and_test_folds(
     results = []
     for fold in folds_list:
         session = smurff.BPMFSession(
-            Ytrain=fold.get_training_data(sparse_matrix),
-            Ytest=fold.get_testing_data(sparse_matrix),
+            Ytrain=fold.training_indices.get_data(sparse_matrix),
+            Ytest=fold.testing_indices.get_data(sparse_matrix),
             is_scarce=False,
             direct=True,
             univariate=True,
