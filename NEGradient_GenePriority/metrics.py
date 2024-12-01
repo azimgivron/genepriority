@@ -1,18 +1,22 @@
+"""Metrics module"""
 import numpy as np
 
 
 def bedroc_score(y_true, y_pred, decreasing=True, alpha=20.0):
     """
-    Calculate the BEDROC (Boltzmann Enhanced Discrimination of the Receiver Operator Characteristic) score.
+    Calculate the BEDROC (Boltzmann Enhanced Discrimination of the
+    Receiver Operator Characteristic) score.
 
-    The BEDROC metric evaluates a predictive model's ability to prioritize positive class instances,
-    particularly focusing on early recognition.
+    The BEDROC metric evaluates a predictive model's ability to
+    prioritize positive class instances, particularly focusing on
+    early recognition.
 
     References:
         This code was adapted from:
         https://scikit-chem.readthedocs.io/en/latest/_modules/skchem/metrics.html
 
-        Original paper: Truchon and Bayley (2007), `10.1021/ci600426e <http://dx.doi.org/10.1021/ci600426e>`_.
+        Original paper: Truchon and Bayley (2007),
+        `10.1021/ci600426e <http://dx.doi.org/10.1021/ci600426e>`_.
 
     Args:
         y_true (array_like): Binary class labels (1 for positive class, 0 for negative class).
@@ -21,7 +25,8 @@ def bedroc_score(y_true, y_pred, decreasing=True, alpha=20.0):
         alpha (float): Early recognition parameter.
 
     Returns:
-        float: BEDROC score in [0, 1], indicating the degree of early recognition of positive class instances.
+        float: BEDROC score in [0, 1], indicating the degree of early recognition
+            of positive class instances.
     """
     assert len(y_true) == len(
         y_pred

@@ -1,3 +1,5 @@
+# pylint: disable=R0914
+"""Preprocessing module"""
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -47,7 +49,7 @@ class Indices:
         """
         return set(zip(self.indices[:, 0], self.indices[:, 1]))
 
-    def get_data(self, dataset_matrix: sp.coo_matrix) -> sp.coo_matrix:
+    def get_data(self, dataset_matrix: sp.coo_matrix) -> sp.csr_matrix:
         """
         Retrieves the subset of the dataset corresponding to the stored indices.
 
@@ -55,23 +57,35 @@ class Indices:
             dataset_matrix (sp.coo_matrix): The full dataset represented as a COO sparse matrix.
 
         Returns:
-            sp.coo_matrix: A sparse matrix in COO format containing only the elements
+            sp.csr_matrix: A sparse matrix in CSR format containing only the elements
                            specified by the indices. The shape of the returned matrix
                            matches the shape of the original dataset.
         """
-        return from_indices(dataset_matrix, self.indices_set)
+        return from_indices(dataset_matrix, self.indices_set).tocsr()
 
-    def merge(self, indices: Indices) -> None:
+    def merge(self, indices: Indices) -> Indices:
         """
         Merges another Indices object into the current one.
 
         Args:
             indices (Indices): Another Indices object to merge.
 
-        Updates:
-            Adds the indices from the given Indices object to the current object.
+        Returns:
+            Indices: A new instance of Indices with merged indices.
         """
-        self.indices = np.vstack((self.indices, indices.indices))
+        return Indices(np.vstack((self.indices, indices.indices)))
+
+    def mask(self, data: np.ndarray) -> np.ndarray:
+        """Mask over the indices.
+
+        Args:
+            data (np.ndarray): The data to mask.
+
+        Returns:
+            np.ndarray: Masked data.
+        """
+        rows, cols = zip(*self.indices.tolist())
+        return data[np.array(rows), np.array(cols)]
 
 
 @dataclass
@@ -96,32 +110,6 @@ class TrainTestIndices:
     training_indices: Indices
     testing_indices: Indices
 
-    def get_training_data(self, dataset_matrix: sp.coo_matrix) -> sp.coo_matrix:
-        """
-        Retrieves the subset of the dataset corresponding to the training indices.
-
-        Args:
-            dataset_matrix (sp.coo_matrix): The full dataset represented as a COO sparse matrix.
-
-        Returns:
-            sp.coo_matrix: A sparse matrix containing only the elements specified
-                           by the training indices.
-        """
-        return self.training_indices.get_data(dataset_matrix)
-
-    def get_testing_data(self, dataset_matrix: sp.coo_matrix) -> sp.coo_matrix:
-        """
-        Retrieves the subset of the dataset corresponding to the testing indices.
-
-        Args:
-            dataset_matrix (sp.coo_matrix): The full dataset represented as a COO sparse matrix.
-
-        Returns:
-            sp.coo_matrix: A sparse matrix containing only the elements specified
-                           by the testing indices.
-        """
-        return self.testing_indices.get_data(dataset_matrix)
-
     def merge(self, train_test_indices: TrainTestIndices) -> TrainTestIndices:
         """
         Merges another TrainTestIndices object into the current one.
@@ -130,11 +118,14 @@ class TrainTestIndices:
             train_test_indices (TrainTestIndices): Another TrainTestIndices object to merge.
 
         Returns:
-            TrainTestIndices: A new TrainTestIndices object with merged training and testing indices.
+            TrainTestIndices: A new TrainTestIndices object with merged training
+                and testing indices.
         """
-        self.training_indices.merge(train_test_indices.training_indices)
-        self.testing_indices.merge(train_test_indices.testing_indices)
-        return self
+        training_indices = self.training_indices.merge(
+            train_test_indices.training_indices
+        )
+        testing_indices = self.testing_indices.merge(train_test_indices.testing_indices)
+        return TrainTestIndices(training_indices, testing_indices)
 
 
 def from_indices(
@@ -144,8 +135,10 @@ def from_indices(
     Extracts a submatrix from the given sparse matrix based on specified row-column indices.
 
     Args:
-        dataset_matrix (sp.coo_matrix): The input sparse matrix from which elements are to be extracted.
-        indices_set (Set[Tuple[int, int]]): A set of (row, column) tuples specifying the elements to extract.
+        dataset_matrix (sp.coo_matrix): The input sparse matrix from which
+            elements are to be extracted.
+        indices_set (Set[Tuple[int, int]]): A set of (row, column) tuples specifying
+            the elements to extract.
 
     Returns:
         sp.coo_matrix: A sparse matrix in COO format containing only the elements specified by
@@ -173,7 +166,8 @@ def combine_splits(
         splits2 (List[TrainTestIndices]): The second list of TrainTestIndices.
 
     Returns:
-        List[TrainTestIndices]: A new list of TrainTestIndices objects with combined training and testing indices.
+        List[TrainTestIndices]: A new list of TrainTestIndices objects with
+            combined training and testing indices.
     """
     return [split1.merge(split2) for split1, split2 in zip(splits1, splits2)]
 
@@ -235,10 +229,14 @@ def sample_zeros(
         col_indices = np.random.randint(
             0, total_cols, size=num_sampled_zeros - sampled_count
         )
-        new_indices = zip(row_indices, col_indices)
+        new_indices = set(zip(row_indices, col_indices))
 
         # Filter out indices that already exist in the sparse matrix
-        unique_indices = [idx for idx in new_indices if idx not in non_zero_indices]
+        unique_indices = [
+            idx
+            for idx in new_indices
+            if idx not in non_zero_indices.union(set(sampled_zeros))
+        ]
 
         # Add unique indices to the sampled set
         sampled_zeros.extend(unique_indices)
@@ -357,7 +355,7 @@ def compute_statistics(
     """
     counts = []
     for split in splits:
-        data = split.testing_indices.get_data(sparse_matrix)
+        data = split.testing_indices.get_data(sparse_matrix).tocoo()
         columns_with_ones = np.unique(data.col[data.data == 1])
         counts.append(len(columns_with_ones))
     average_count = np.mean(counts)
@@ -368,5 +366,5 @@ def compute_statistics(
             [f"Split {i+1}" for i in range(len(counts))]
             + ["Average", "Standard Deviation"]
         ),
-        index=["Counts"]
+        index=["Counts"],
     ).T

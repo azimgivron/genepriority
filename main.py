@@ -1,7 +1,9 @@
 import logging
+import os
+import pickle
+import traceback
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 
 from NEGradient_GenePriority import (
@@ -18,47 +20,29 @@ from NEGradient_GenePriority import (
 )
 
 
-def setup_logger(log_file: str) -> logging.Logger:
+def setup_logger(log_file: str) -> None:
     """
-    Configures and returns a logger that writes to both the console and a file.
-    The log file is overwritten each time the logger is set up.
-
-    Args:
-        log_file (str): Path to the log file.
-
-    Returns:
-        logging.Logger: Configured logger.
+    Configures the root logger to write to a log file and console.
     """
-    logger = logging.getLogger("main_logger")
-    logger.setLevel(logging.DEBUG)
-
-    # Remove existing handlers to avoid duplicate logs
-    if logger.hasHandlers():
-        logger.handlers.clear()
-
-    # Create file handler with write mode
-    file_handler = logging.FileHandler(
-        log_file, mode="w"
-    )  # 'w' ensures the file is overwritten
-    file_handler.setLevel(logging.DEBUG)
-
-    # Formatter
-    formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        handlers=[
+            logging.FileHandler(log_file, mode="w"),
+        ],
     )
-    file_handler.setFormatter(formatter)
-
-    # Add handlers to logger
-    logger.addHandler(file_handler)
-
-    return logger
 
 
 def main():
-    # Setup paths and logger
-    log_file = "pipeline.log"
-    logger = setup_logger(log_file)
+    # Setup paths
     input_path = Path("/home/TheGreatestCoder/code/data/postprocessed/").absolute()
+    output_path = Path("/home/TheGreatestCoder/code/output/").absolute()
+    os.makedirs(output_path, exist_ok=True)
+
+    # Setup logger
+    log_file = output_path / "pipeline.log"
+    setup_logger(log_file)
+    logger = logging.getLogger(__name__)
 
     if not input_path.exists():
         logger.error("The input path does not exist: %s", input_path)
@@ -73,15 +57,16 @@ def main():
         )
 
         # Set parameters
-        logger.debug("Setting parameters for splits and BPMF")
+        logger.debug("Setting parameters for splits and MACAU")
         alphas = [228.5, 160.9, 32.2, 16.1, 5.3]
-        latent_dimensions = [25, 30, 40]
+        latent_dimensions = [25]  # [25, 30, 40]
         num_splits = 6
         zero_sampling_factor = 5
+        seed = 42
 
         # Convert gene-disease DataFrame to sparse matrix
         omim1_1s = convert_dataframe_to_sparse_matrix(gene_disease)
-        omim1_0s = sample_zeros(omim1_1s, zero_sampling_factor, seed=42)
+        omim1_0s = sample_zeros(omim1_1s, zero_sampling_factor, seed=seed)
         omim1 = combine_matrices(omim1_1s, omim1_0s)
         logger.debug("Combined sparse matrix for OMIM1 created")
         omim1_1s_splits_indices = create_random_splits(omim1_1s, num_splits=num_splits)
@@ -104,11 +89,12 @@ def main():
             gene_disease, threshold=10, col_name="disease ID"
         )
         logger.debug(
-            "Filtered gene-disease data contains %d rows", len(filtered_gene_disease)
+            "Filtered gene-disease data contains %d genes-disease associations",
+            len(filtered_gene_disease),
         )
 
         omim2_1s = convert_dataframe_to_sparse_matrix(filtered_gene_disease)
-        omim2_0s = sample_zeros(omim2_1s, zero_sampling_factor, seed=42)
+        omim2_0s = sample_zeros(omim2_1s, zero_sampling_factor, seed=seed)
         omim2 = combine_matrices(omim2_1s, omim2_0s)
         logger.debug("Combined sparse matrix for OMIM2 created")
         omim2_1s_splits_indices = create_folds(omim2_1s, num_folds=num_splits)
@@ -118,25 +104,55 @@ def main():
         )
         logger.debug("Created folds for OMIM2 data")
 
-        # Configure and run BPMF
-        logger.debug("Configuring BPMF session")
-        num_samples = 3500
-        burnin_period = 500
+        # Configure and run MACAU
+        logger.debug("Configuring MACAU session")
+        num_samples = 200  # 3500
+        burnin_period = 50  # 500
+        save_freq = 100
+        verbose = 0
 
         omim1_results = {}
         omim2_results = {}
-        # for num_latent in latent_dimensions:
-        #     logger.debug("Running BPMF for %d latent dimensions", num_latent)
-        #     omim1_results[num_latent] = train_and_test_splits(
-        #         omim1, omim1_splits_indices, num_samples, burnin_period, num_latent, alphas
-        #     )
-        #     omim2_results[num_latent] = train_and_test_folds(
-        #         omim2, omim2_splits_indices, num_samples, burnin_period, num_latent, alphas
-        #     )
-        logger.debug("BPMF session completed successfully")
+        for num_latent in latent_dimensions:
+            logger.debug("Running MACAU for %d latent dimensions", num_latent)
+            logger.debug("Starting training on OMIM1")
+            omim1_results[num_latent] = train_and_test_splits(
+                omim1,
+                omim1_splits_indices,
+                num_samples,
+                burnin_period,
+                num_latent,
+                alphas,
+                seed=seed,
+                save_freq=save_freq,
+                output_path=output_path,
+                save_name="macau-omim1.hdf5",
+                verbose=verbose,
+            )
+            logger.debug("Starting training on OMIM2")
+            omim2_results[num_latent] = train_and_test_folds(
+                omim2,
+                omim2_splits_indices,
+                num_samples,
+                burnin_period,
+                num_latent,
+                alphas,
+                seed=seed,
+                save_freq=save_freq,
+                output_path=output_path,
+                save_name="macau-omim2.hdf5",
+                verbose=verbose,
+            )
+        logger.debug("MACAU session completed successfully")
 
+        with open(output_path / "omim1_results.pickle", "wb") as handler:
+            pickle.dump(omim1_results, handler)
+        with open(output_path / "omim2_results.pickle", "wb") as handler:
+            pickle.dump(omim2_results, handler)
+        logger.debug("Results serialization completed successfully")
     except Exception as e:
-        logger.exception("An error occurred during processing")
+        logger.error("An error occurred during processing: %s", e)
+        logger.error("%s", traceback.format_exc())
         raise
 
 

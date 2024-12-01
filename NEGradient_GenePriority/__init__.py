@@ -1,6 +1,7 @@
+# pylint: disable=C0114, C0103
 from .evaluation import (
     EvaluationResult,
-    evaluate,
+    evaluate_scores,
     train_and_test_folds,
     train_and_test_splits,
 )
@@ -15,5 +16,6 @@ from .preprocessing import (
     create_folds,
     create_random_splits,
     filter_by_number_of_association,
+    from_indices,
     sample_zeros,
 )
