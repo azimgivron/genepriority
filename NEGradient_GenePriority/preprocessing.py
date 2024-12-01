@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Set, Tuple
 
 import numpy as np
 import pandas as pd
@@ -12,15 +12,14 @@ class Indices:
 
     This class encapsulates the indices used for splitting a dataset into
     training and testing subsets. It provides methods to retrieve the corresponding
-    subsets from a given sparse matrix.
+    subsets from a given sparse matrix. The indices are stored as arrays and can
+    be accessed as sets of coordinate tuples for efficient operations.
 
     Attributes:
-        training_indices (np.ndarray): Array of indices representing the training data.
-        testing_indices (np.ndarray): Array of indices representing the testing data.
-
-    Methods:
-        get_training_data: Retrieves the subset of the dataset corresponding to the training indices.
-        get_testing_data: Retrieves the subset of the dataset corresponding to the testing indices.
+        training_indices (np.ndarray): A 2D array of shape (n, 2) containing the indices
+            of the training data. Each row represents a (row, column) pair.
+        testing_indices (np.ndarray): A 2D array of shape (m, 2) containing the indices
+            of the testing data. Each row represents a (row, column) pair.
     """
 
     def __init__(
@@ -32,11 +31,33 @@ class Indices:
         Initializes the Indices object with training and testing indices.
 
         Args:
-            training_indices (np.ndarray): Indices for the training subset.
-            testing_indices (np.ndarray): Indices for the testing subset.
+            training_indices (np.ndarray): A 2D array of shape (n, 2) where each row is
+                a (row, column) pair indicating the indices of the training data.
+            testing_indices (np.ndarray): A 2D array of shape (m, 2) where each row is
+                a (row, column) pair indicating the indices of the testing data.
         """
         self.training_indices = training_indices
         self.testing_indices = testing_indices
+
+    @property
+    def training_indices_set(self) -> Set[Tuple[int, int]]:
+        """
+        Converts the training indices into a set of (row, column) tuples.
+
+        Returns:
+            Set[Tuple[int, int]]: A set of (row, column) tuples for the training indices.
+        """
+        return set(zip(self.training_indices[:, 0], self.training_indices[:, 1]))
+
+    @property
+    def testing_indices_set(self) -> Set[Tuple[int, int]]:
+        """
+        Converts the testing indices into a set of (row, column) tuples.
+
+        Returns:
+            Set[Tuple[int, int]]: A set of (row, column) tuples for the testing indices.
+        """
+        return set(zip(self.testing_indices[:, 0], self.testing_indices[:, 1]))
 
     def get_training_data(self, dataset_matrix: sp.coo_matrix) -> sp.coo_matrix:
         """
@@ -46,9 +67,11 @@ class Indices:
             dataset_matrix (sp.coo_matrix): The full dataset represented as a COO sparse matrix.
 
         Returns:
-            sp.coo_matrix: Sparse matrix containing only the rows corresponding to the training indices.
+            sp.coo_matrix: A sparse matrix in COO format containing only the elements
+                specified by the training indices. The shape of the returned matrix matches
+                the shape of the original dataset.
         """
-        return from_indices(dataset_matrix, self.training_indices)
+        return from_indices(dataset_matrix, self.training_indices_set)
 
     def get_testing_data(self, dataset_matrix: sp.coo_matrix) -> sp.coo_matrix:
         """
@@ -58,19 +81,23 @@ class Indices:
             dataset_matrix (sp.coo_matrix): The full dataset represented as a COO sparse matrix.
 
         Returns:
-            sp.coo_matrix: Sparse matrix containing only the elements corresponding to the testing indices.
+            sp.coo_matrix: A sparse matrix in COO format containing only the elements
+                specified by the testing indices. The shape of the returned matrix matches
+                the shape of the original dataset.
         """
-        return from_indices(dataset_matrix, self.testing_indices)
+        return from_indices(dataset_matrix, self.testing_indices_set)
 
 
-def from_indices(dataset_matrix: sp.coo_matrix, indices: np.ndarray) -> sp.coo_matrix:
+def from_indices(
+    dataset_matrix: sp.coo_matrix, indices_set: Set[Tuple[int, int]]
+) -> sp.coo_matrix:
     """
     Extracts a submatrix from the given sparse matrix based on specified row-column indices.
 
     Args:
         dataset_matrix (sp.coo_matrix): The input sparse matrix from which elements are to be extracted.
-        indices (np.ndarray): A 2D array of shape (n, 2) containing the indices of the elements
-                              to extract. Each row is a pair of integers representing the
+        indices (Set[Tuple[int, int]]): A set of indices of the elements
+                              to extract. Each element of the set is representing the
                               (row, column) coordinates.
 
     Returns:
@@ -78,9 +105,6 @@ def from_indices(dataset_matrix: sp.coo_matrix, indices: np.ndarray) -> sp.coo_m
                        the indices array. The submatrix will have the same shape as the original
                        matrix, but only the specified elements will be retained.
     """
-    # Create a set of (row, column) pairs for quick lookup
-    indices_set = set(zip(indices[:, 0], indices[:, 1]))
-
     # Create a mask for entries in dataset_matrix that match the indices
     mask = [
         (row, col) in indices_set
@@ -116,7 +140,7 @@ def convert_dataframe_to_sparse_matrix(dataframe: pd.DataFrame) -> sp.coo_matrix
     return sparse_matrix
 
 
-def sample_zeros(sparse_matrix: sp.coo_matrix, sampling_factor: int) -> sp.coo_matrix:
+def sample_zeros(sparse_matrix: sp.coo_matrix, sampling_factor: int, seed: int = None) -> sp.coo_matrix:
     """
     Randomly samples zero entries from the complement of the sparse matrix's non-zero entries.
 
@@ -124,10 +148,15 @@ def sample_zeros(sparse_matrix: sp.coo_matrix, sampling_factor: int) -> sp.coo_m
         sparse_matrix (sp.coo_matrix): The input sparse matrix with existing non-zero entries.
         sampling_factor (int): The number of zero entries to sample, expressed as a multiple
                                of the current number of non-zero entries.
+        seed (int, optional): Random seed for reproducibility. Defaults to None.
 
     Returns:
         sp.coo_matrix: Sparse matrix of sampled zeros.
     """
+    # Set the random seed for reproducibility
+    if seed is not None:
+        np.random.seed(seed)
+
     # Get the number of existing non-zero entries
     num_existing_ones = sparse_matrix.nnz
     num_sampled_zeros = num_existing_ones * sampling_factor

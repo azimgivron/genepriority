@@ -10,11 +10,10 @@ Input: Gene-disease DataFrame
 Output: Unified sparse matrix and combined splits
 
 1. Convert gene-disease DataFrame to sparse matrix `omim1_1s`.
-2. Split `omim1_1s` indices randomly into multiple subsets.
-3. Sample zeros from `omim1_1s` using sparsity factor.
+2. Sample zeros from `omim1_1s` using sparsity factor.
    - Generate splits for sampled zeros (`omim1_0s`).
-4. Combine `omim1_1s` and `omim1_0s` into a unified matrix.
-5. Merge splits from positive (`omim1_1s`) and zero (`omim1_0s`) samples.
+3. Combine `omim1_1s` and `omim1_0s` into a unified matrix `omim1`.
+4. Split `omim1` indices randomly into multiple subsets.
 ```
 
 ### OMIM2 Dataset Construction
@@ -24,11 +23,10 @@ Output: Unified sparse matrix and combined folds
 
 1. Filter diseases with fewer than the specified association threshold.
 2. Convert filtered data to sparse matrix `omim2_1s`.
-3. Partition `omim2_1s` indices into folds for cross-validation.
-4. Sample zeros from `omim2_1s`:
+3. Sample zeros from `omim2_1s`:
    - Create folds for sampled zeros (`omim2_0s`).
-5. Combine `omim2_1s` and `omim2_0s` into a unified matrix.
-6. Merge folds from positive (`omim2_1s`) and zero (`omim2_0s`) samples.
+4. Combine `omim2_1s` and `omim2_0s` into a unified matrix `omim2`.
+5. Partition `omim2_1s` indices into folds for cross-validation.
 ```
 
 ---

@@ -97,7 +97,7 @@ def main():
             "Sampling zeros with factor %d and creating random splits",
             zero_sampling_factor,
         )
-        omim1_0s = sample_zeros(omim1_1s, zero_sampling_factor)
+        omim1_0s = sample_zeros(omim1_1s, zero_sampling_factor, seed=42)
         logger.debug(
             "Sampled zeros shape: %s, non-zero entries: %d",
             omim1_0s.shape,
@@ -124,7 +124,7 @@ def main():
         )
 
         omim2_1s = convert_dataframe_to_sparse_matrix(filtered_gene_disease)
-        omim2_0s = sample_zeros(omim2_1s, zero_sampling_factor)
+        omim2_0s = sample_zeros(omim2_1s, zero_sampling_factor, seed=42)
         omim2 = combine_matrices(omim2_1s, omim2_0s)
         logger.debug("Combined sparse matrix for OMIM2 created")
         omim2_splits_indices = create_folds(omim2, num_folds=num_splits)
