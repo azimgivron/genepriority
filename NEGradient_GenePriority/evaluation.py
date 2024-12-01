@@ -8,7 +8,7 @@ and train_and_test_folds to streamline the evaluation process.
 """
 import logging
 from dataclasses import dataclass
-from typing import List
+from typing import Dict, List
 
 import numpy as np
 import scipy.sparse as sp
@@ -29,14 +29,15 @@ class EvaluationResult:
         tpr (List[float]): True positive rates at various thresholds from the ROC curve.
         thresholds (List[float]): Threshold values corresponding to FPR and TPR.
         auc_loss (float): Loss metric defined as 1 - AUC score.
-        bedroc (List[float]): BEDROC scores computed for the provided alpha values.
+        bedroc (Dict[float, float]): BEDROC scores computed for the provided alpha values.
+            Keys are alpha values.
     """
 
     fpr: List[float]
     tpr: List[float]
     thresholds: List[float]
     auc_loss: float
-    bedroc: List[float]
+    bedroc: Dict[float, float]
 
 
 def evaluate_scores(
@@ -57,9 +58,9 @@ def evaluate_scores(
                           - AUC loss (1 - AUC score).
                           - BEDROC scores for the given alpha values.
     """
-    bedroc = [
-        bedroc_score(y_true, y_pred, decreasing=True, alpha=alpha) for alpha in alphas
-    ]
+    bedroc = {
+        f"{alpha:.3f}": bedroc_score(y_true, y_pred, decreasing=True, alpha=alpha) for alpha in alphas
+    }
     fpr, tpr, thresholds = metrics.roc_curve(
         y_true, y_pred, pos_label=1, drop_intermediate=True
     )
@@ -126,7 +127,7 @@ def train_and_test_splits(
             Ytest=split.testing_indices.get_data(sparse_matrix),
             is_scarce=False,
             direct=True,
-            univariate=True,
+            univariate=False,
             num_latent=num_latent,
             burnin=burnin_period,
             nsamples=num_samples,

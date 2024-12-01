@@ -59,7 +59,7 @@ def main():
         # Set parameters
         logger.debug("Setting parameters for splits and MACAU")
         alphas = [228.5, 160.9, 32.2, 16.1, 5.3]
-        latent_dimensions = [25]  # [25, 30, 40]
+        latent_dimensions = [25, 30, 40]
         num_splits = 6
         zero_sampling_factor = 5
         seed = 42
@@ -106,8 +106,8 @@ def main():
 
         # Configure and run MACAU
         logger.debug("Configuring MACAU session")
-        num_samples = 200  # 3500
-        burnin_period = 50  # 500
+        num_samples = 1500
+        burnin_period = 100
         save_freq = 100
         verbose = 0
 
