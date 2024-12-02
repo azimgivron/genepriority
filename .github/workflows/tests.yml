@@ -6,16 +6,15 @@ on:
   pull_request:
     branches: [main, develop]
 
+    
 jobs:
   build:
     runs-on: ubuntu-latest
+    container:
+      image: azimgivron/smurff
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
+      - name: Check out code
+        uses: actions/checkout@v4
 
       - name: Install dependencies
         run: |
