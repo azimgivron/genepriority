@@ -1,4 +1,9 @@
-"""Post-processing producing dataframes."""
+"""
+Dataframes module
+=================
+
+Post-processing producing dataframes.
+"""
 from typing import Dict, List
 
 import numpy as np

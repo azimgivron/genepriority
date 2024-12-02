@@ -7,7 +7,6 @@ import traceback
 from pathlib import Path
 
 import pandas as pd
-
 from NEGradient_GenePriority import (
     combine_matrices,
     combine_splits,
@@ -63,6 +62,7 @@ def main():
         alphas = [228.5, 160.9, 32.2, 16.1, 5.3]
         latent_dimensions = [25, 30, 40]
         num_splits = 6
+        num_folds = 5
         zero_sampling_factor = 5
         seed = 42
 
@@ -99,10 +99,10 @@ def main():
         omim2_0s = sample_zeros(omim2_1s, zero_sampling_factor, seed=seed)
         omim2 = combine_matrices(omim2_1s, omim2_0s)
         logger.debug("Combined sparse matrix for OMIM2 created")
-        omim2_1s_splits_indices = create_folds(omim2_1s, num_folds=num_splits)
-        omim2_0s_splits_indices = create_folds(omim2_0s, num_folds=num_splits)
-        omim2_splits_indices = combine_splits(
-            omim2_1s_splits_indices, omim2_0s_splits_indices
+        omim2_1s_folds_indices = create_folds(omim2_1s, num_folds=num_folds)
+        omim2_0s_folds_indices = create_folds(omim2_0s, num_folds=num_folds)
+        omim2_folds_indices = combine_splits(
+            omim2_1s_folds_indices, omim2_0s_folds_indices
         )
         logger.debug("Created folds for OMIM2 data")
 
@@ -134,13 +134,13 @@ def main():
                 seed=seed,
                 save_freq=save_freq,
                 output_path=output_path,
-                save_name="macau-omim1.hdf5",
+                save_name=f"latent={num_latent}:macau-omim1.hdf5",
                 verbose=verbose,
             )
             logger.debug("Starting training on OMIM2")
             omim2_results[num_latent] = train_and_test(
                 omim2,
-                omim2_splits_indices,
+                omim2_folds_indices,
                 num_samples,
                 burnin_period,
                 direct,
@@ -150,7 +150,7 @@ def main():
                 seed=seed,
                 save_freq=save_freq,
                 output_path=output_path,
-                save_name="macau-omim2.hdf5",
+                save_name=f"latent={num_latent}:macau-omim2.hdf5",
                 verbose=verbose,
             )
         logger.debug("MACAU session completed successfully")

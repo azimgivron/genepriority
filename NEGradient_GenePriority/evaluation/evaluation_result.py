@@ -1,4 +1,10 @@
-"""EvaluationResult module"""
+"""
+EvaluationResult module
+=======================
+
+Defines the `EvaluationResult` class for storing and managing evaluation metrics 
+such as ROC curve data, AUC loss, and BEDROC scores.
+"""
 from dataclasses import dataclass
 from typing import Dict, List
 

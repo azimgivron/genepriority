@@ -1,5 +1,8 @@
 # pylint: disable=R0913,R0914
 """
+Evaluation module
+=================
+
 This module orchestrates model training and evaluation across train-test splits
 or cross-validation folds. It integrates preprocessing and metrics functionalities
 to compute and log performance metrics. Key components include the EvaluationResult
@@ -12,11 +15,10 @@ from typing import List
 import numpy as np
 import scipy.sparse as sp
 import smurff
-from sklearn import metrics
-
 from NEGradient_GenePriority.evaluation.evaluation_result import EvaluationResult
 from NEGradient_GenePriority.evaluation.metrics import bedroc_score
 from NEGradient_GenePriority.preprocessing import Indices, TrainTestIndices
+from sklearn import metrics
 
 
 def evaluate_scores(
@@ -38,12 +40,8 @@ def evaluate_scores(
             - BEDROC scores for the given alpha values.
     """
     bedroc = {
-        f"{alpha:.3f}": bedroc_score(
-            y_true,
-            y_pred,
-            decreasing=True,
-            alpha=alpha
-        ) for alpha in alphas
+        f"{alpha:.3f}": bedroc_score(y_true, y_pred, decreasing=True, alpha=alpha)
+        for alpha in alphas
     }
     fpr, tpr, thresholds = metrics.roc_curve(
         y_true, y_pred, pos_label=1, drop_intermediate=True

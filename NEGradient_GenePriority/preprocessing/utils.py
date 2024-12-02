@@ -1,7 +1,12 @@
-"""Utils module"""
+"""
+Utils module
+=============
+
+This module defines the utility functions.
+"""
 from typing import Set, Tuple
 
-import scipy as sp
+import scipy.sparse as sp
 
 
 def from_indices(

@@ -1,4 +1,7 @@
 """
+Metrics module
+===============
+
 Implements evaluation metrics for model predictions, including ROC curves and BEDROC scores,
 to assess the performance of gene prioritization models.
 """

@@ -1,8 +1,11 @@
 # pylint: disable=R0914
 """
-Contains classes and functions for data preprocessing, such as managing dataset indices,
-creating train-test splits, and converting data formats, facilitating the preparation of
-data for analysis.
+Preprocessing module
+=====================
+
+Provides utilities for data preprocessing, including dataset index management, 
+train-test splitting, data format conversions, and statistical analysis, 
+streamlining data preparation workflows.
 """
 from __future__ import annotations
 
@@ -11,9 +14,8 @@ from typing import List
 import numpy as np
 import pandas as pd
 import scipy.sparse as sp
-from sklearn.model_selection import KFold, train_test_split
-
 from NEGradient_GenePriority.preprocessing.train_test_indices import TrainTestIndices
+from sklearn.model_selection import KFold, train_test_split
 
 
 def combine_splits(
@@ -175,7 +177,7 @@ def create_random_splits(
             random_state=random_state,
             shuffle=True,
         )
-        train_test_indices = TrainTestIndices(train_idx, test_idx)
+        train_test_indices = TrainTestIndices.from_ndarray(train_idx, test_idx)
         splits.append(train_test_indices)
     return splits
 
@@ -197,7 +199,7 @@ def create_folds(
     kfold = KFold(n_splits=num_folds, shuffle=True, random_state=42)
     indices = np.vstack((sparse_matrix.row, sparse_matrix.col)).T
     return [
-        TrainTestIndices(indices[train_idx], indices[test_idx])
+        TrainTestIndices.from_ndarray(indices[train_idx], indices[test_idx])
         for train_idx, test_idx in kfold.split(indices)
     ]
 

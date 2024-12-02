@@ -1,26 +1,25 @@
+"""Preprocessing test module"""
 import numpy as np
 import pandas as pd
 import pytest
 import scipy.sparse as sp
-from typing import Generator
-
 from NEGradient_GenePriority import (
     Indices,
     TrainTestIndices,
     combine_matrices,
+    combine_splits,
     compute_statistics,
     convert_dataframe_to_sparse_matrix,
     create_folds,
     create_random_splits,
     filter_by_number_of_association,
-    sample_zeros,
     from_indices,
-    combine_splits,
+    sample_zeros,
 )
 
 
-@pytest.fixture
-def sample_sparse_matrix() -> sp.coo_matrix:
+@pytest.fixture(name="sample_sparse_matrix")
+def get_sparse_matrix() -> sp.coo_matrix:
     """Fixture: Create a sample sparse COO matrix."""
     rows = [0, 1, 2]
     cols = [0, 1, 2]
@@ -28,14 +27,14 @@ def sample_sparse_matrix() -> sp.coo_matrix:
     return sp.coo_matrix((data, (rows, cols)), shape=(5, 5))
 
 
-@pytest.fixture
-def sample_dataframe() -> pd.DataFrame:
+@pytest.fixture(name="sample_dataframe")
+def get_dataframe() -> pd.DataFrame:
     """Fixture: Create a sample pandas DataFrame."""
     return pd.DataFrame({"gene": [0, 1, 2], "disease": [1, 2, 3]})
 
 
-@pytest.fixture
-def sample_indices() -> np.ndarray:
+@pytest.fixture(name="sample_indices")
+def get_indices() -> np.ndarray:
     """Fixture: Create sample indices for testing."""
     return np.array([[0, 0], [1, 1], [2, 2]])
 
@@ -70,8 +69,8 @@ def test_indices_get_data(
 ### Tests for `TrainTestIndices` class
 
 
-@pytest.fixture
-def training_test_indices(sample_indices: np.ndarray) -> TrainTestIndices:
+@pytest.fixture(name="training_test_indices")
+def tt_indices(sample_indices: np.ndarray) -> TrainTestIndices:
     """Fixture: Create a TrainTestIndices object."""
     training_indices = sample_indices[:2]
     testing_indices = sample_indices[1:]
@@ -112,16 +111,24 @@ def test_sample_zeros(sample_sparse_matrix: sp.coo_matrix) -> None:
 
 def test_combine_indices(sample_indices: np.ndarray) -> None:
     """Test merging of TrainTestIndices objects."""
-    indices1 = TrainTestIndices(Indices(sample_indices[:2]), Indices(sample_indices[2:]))
-    indices2 = TrainTestIndices(Indices(sample_indices[:1]), Indices(sample_indices[1:]))
+    indices1 = TrainTestIndices(
+        Indices(sample_indices[:2]), Indices(sample_indices[2:])
+    )
+    indices2 = TrainTestIndices(
+        Indices(sample_indices[:1]), Indices(sample_indices[1:])
+    )
     combined = indices1.merge(indices2)
     assert isinstance(combined, TrainTestIndices)
 
 
 def test_combine_splits(sample_indices: np.ndarray) -> None:
     """Test combining splits of TrainTestIndices."""
-    splits1 = [TrainTestIndices(Indices(sample_indices[:2]), Indices(sample_indices[2:]))]
-    splits2 = [TrainTestIndices(Indices(sample_indices[:1]), Indices(sample_indices[1:]))]
+    splits1 = [
+        TrainTestIndices(Indices(sample_indices[:2]), Indices(sample_indices[2:]))
+    ]
+    splits2 = [
+        TrainTestIndices(Indices(sample_indices[:1]), Indices(sample_indices[1:]))
+    ]
     combined = combine_splits(splits1, splits2)
     assert len(combined) == len(splits1)
     assert isinstance(combined[0], TrainTestIndices)

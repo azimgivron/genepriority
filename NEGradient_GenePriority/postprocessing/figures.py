@@ -1,5 +1,10 @@
 # pylint: disable=R0913
-"""Post-processing producing figures"""
+"""
+Figures module
+==============
+
+Post-processing producing figures
+"""
 from typing import Dict, List, Tuple
 
 import matplotlib.pyplot as plt
@@ -7,8 +12,12 @@ import numpy as np
 import seaborn as sns
 from NEGradient_GenePriority.evaluation.evaluation_result import EvaluationResult
 
+
 def plot_roc_curves(
-    result: Dict[int, List[EvaluationResult]], output_file: str, cmap: str = "Set2", figsize=(8, 6)
+    result: Dict[int, List[EvaluationResult]],
+    output_file: str,
+    cmap: str = "Set2",
+    figsize=(8, 6),
 ):
     """
     Plots ROC curves for each latent dimension and split and saves to file.
@@ -48,8 +57,8 @@ def plot_bedroc_boxplots(
     alphas: List[float],
     alpha_map: Dict[float, str],
     output_file: str,
-    cmap: str="Set2",
-    figsize: Tuple[int, int]=(10, 8),
+    cmap: str = "Set2",
+    figsize: Tuple[int, int] = (10, 8),
 ):
     """
     Plots boxplots of BEDROC scores for various alpha values and latent

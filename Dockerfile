@@ -4,9 +4,11 @@ FROM --platform=linux/arm64 debian:bookworm
 ENV HOSTNAME=thesis-server
 ENV DEBIAN_FRONTEND=noninteractive
 ENV USERNAME=TheGreatestCoder
-ENV PATH="/home/$USERNAME/venv/bin:$PATH"
+ENV VENV_NAME=NEGradient_GenePriority_venv
+ENV VENV_PATH="/home/$USERNAME/$VENV_NAME"
+ENV PATH="$VENV_PATH/bin:$PATH"
 
-# Consolidate updates, package installation, Catch2, HighFive, and user setup into a single RUN command
+# Updates, package installation, Catch2, HighFive, and user setup
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         build-essential \
@@ -84,14 +86,16 @@ RUN apt-get update && \
 
 # Switch to the new user
 USER $USERNAME
-COPY requirements.txt requirements.txt
-# Set up Python environment and install libraries in a single RUN command
-RUN python3 -m venv /home/$USERNAME/venv && \
-    /home/$USERNAME/venv/bin/pip install --upgrade pip && \
-    /home/$USERNAME/venv/bin/pip install -r requirements.txt && \
-    sudo /home/$USERNAME/venv/bin/pip install /tmp/smurff && \
-    sudo rm -rf smurff && \
-    echo "source /home/$USERNAME/venv/bin/activate" >> /home/$USERNAME/.zshrc
+
+# Copy requirements.txt to the user's home directory
+COPY --chown=$USERNAME:$USERNAME requirements.txt /home/$USERNAME/requirements.txt
+
+# Set up Python environment and install libraries
+RUN python3 -m venv $VENV_PATH && \
+    $VENV_PATH/bin/pip install --upgrade pip && \
+    $VENV_PATH/bin/pip install -r /home/$USERNAME/requirements.txt && \
+    sudo $VENV_PATH/bin/pip install /tmp/smurff && \
+    sudo rm -rf /tmp/smurff
 
 # Default shell and command
 SHELL ["/bin/zsh", "-c"]
