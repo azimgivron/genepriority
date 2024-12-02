@@ -1,4 +1,5 @@
+# pylint: disable=C0114
 from .indices import Indices
-from .train_test_indices import TrainTestIndices
 from .preprocessing import *
+from .train_test_indices import TrainTestIndices
 from .utils import from_indices

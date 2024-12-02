@@ -1,8 +1,11 @@
+# pylint: disable=R0903
+"""TrainTestIndices module"""
 from __future__ import annotations
 
 import numpy as np
 
 from NEGradient_GenePriority.preprocessing.indices import Indices
+
 
 class TrainTestIndices:
     """

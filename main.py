@@ -1,3 +1,5 @@
+# pylint: disable=R0914, R0915
+"""Main module"""
 import logging
 import os
 import pickle
@@ -15,8 +17,7 @@ from NEGradient_GenePriority import (
     create_random_splits,
     filter_by_number_of_association,
     sample_zeros,
-    train_and_test_folds,
-    train_and_test_splits,
+    train_and_test,
 )
 
 
@@ -34,6 +35,7 @@ def setup_logger(log_file: str) -> None:
 
 
 def main():
+    """Main"""
     # Setup paths
     input_path = Path("/home/TheGreatestCoder/code/data/postprocessed/").absolute()
     output_path = Path("/home/TheGreatestCoder/code/output/").absolute()
@@ -63,7 +65,7 @@ def main():
         num_splits = 6
         zero_sampling_factor = 5
         seed = 42
-        
+
         # Convert gene-disease DataFrame to sparse matrix
         omim1_1s = convert_dataframe_to_sparse_matrix(gene_disease)
         omim1_0s = sample_zeros(omim1_1s, zero_sampling_factor, seed=seed)
@@ -112,7 +114,7 @@ def main():
         # Whether to use a Cholesky instead of conjugate gradient (CG) solver.
         # Keep false until the column features side information (F_e) reaches ~20,000.
         direct = False
-        univariate = False # Whether to use univariate or multivariate sampling.
+        univariate = False  # Whether to use univariate or multivariate sampling.
         verbose = 0
 
         omim1_results = {}
@@ -120,7 +122,7 @@ def main():
         for num_latent in latent_dimensions:
             logger.debug("Running MACAU for %d latent dimensions", num_latent)
             logger.debug("Starting training on OMIM1")
-            omim1_results[num_latent] = train_and_test_splits(
+            omim1_results[num_latent] = train_and_test(
                 omim1,
                 omim1_splits_indices,
                 num_samples,
@@ -136,7 +138,7 @@ def main():
                 verbose=verbose,
             )
             logger.debug("Starting training on OMIM2")
-            omim2_results[num_latent] = train_and_test_folds(
+            omim2_results[num_latent] = train_and_test(
                 omim2,
                 omim2_splits_indices,
                 num_samples,
@@ -158,8 +160,8 @@ def main():
         with open(output_path / "omim2_results.pickle", "wb") as handler:
             pickle.dump(omim2_results, handler)
         logger.debug("Results serialization completed successfully")
-    except Exception as e:
-        logger.error("An error occurred during processing: %s", e)
+    except Exception as exception:
+        logger.error("An error occurred during processing: %s", exception)
         logger.error("%s", traceback.format_exc())
         raise
 

@@ -1,5 +1,8 @@
-import scipy as sp
+"""Utils module"""
 from typing import Set, Tuple
+
+import scipy as sp
+
 
 def from_indices(
     dataset_matrix: sp.coo_matrix, indices_set: Set[Tuple[int, int]]

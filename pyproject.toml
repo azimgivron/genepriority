@@ -13,6 +13,8 @@ dynamic = ["version", "dependencies"]
 [tool.setuptools]
 packages = [
     "NEGradient_GenePriority",
+    "NEGradient_GenePriority.evaluation",
+    "NEGradient_GenePriority.postprocessing",
     "NEGradient_GenePriority.preprocessing"
 ]
 

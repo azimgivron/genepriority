@@ -1,8 +1,13 @@
+"""Indices module"""
 from __future__ import annotations
-import numpy as np
+
 from typing import Set, Tuple
+
+import numpy as np
 import scipy as sp
+
 from NEGradient_GenePriority.preprocessing.utils import from_indices
+
 
 class Indices:
     """
@@ -74,4 +79,3 @@ class Indices:
         """
         rows, cols = zip(*self.indices.tolist())
         return data[np.array(rows), np.array(cols)]
-    

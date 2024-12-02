@@ -5,13 +5,16 @@ creating train-test splits, and converting data formats, facilitating the prepar
 data for analysis.
 """
 from __future__ import annotations
+
 from typing import List
 
 import numpy as np
 import pandas as pd
 import scipy.sparse as sp
 from sklearn.model_selection import KFold, train_test_split
+
 from NEGradient_GenePriority.preprocessing.train_test_indices import TrainTestIndices
+
 
 def combine_splits(
     splits1: List[TrainTestIndices], splits2: List[TrainTestIndices]
@@ -177,7 +180,9 @@ def create_random_splits(
     return splits
 
 
-def create_folds(sparse_matrix: sp.coo_matrix, num_folds: int) -> List[TrainTestIndices]:
+def create_folds(
+    sparse_matrix: sp.coo_matrix, num_folds: int
+) -> List[TrainTestIndices]:
     """
     Splits a sparse matrix into K train-test folds using K-Fold cross-validation.
 
