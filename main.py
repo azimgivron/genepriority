@@ -63,7 +63,7 @@ def main():
         num_splits = 6
         zero_sampling_factor = 5
         seed = 42
-
+        
         # Convert gene-disease DataFrame to sparse matrix
         omim1_1s = convert_dataframe_to_sparse_matrix(gene_disease)
         omim1_0s = sample_zeros(omim1_1s, zero_sampling_factor, seed=seed)
@@ -109,6 +109,10 @@ def main():
         num_samples = 1500
         burnin_period = 100
         save_freq = 100
+        # Whether to use a Cholesky instead of conjugate gradient (CG) solver.
+        # Keep false until the column features side information (F_e) reaches ~20,000.
+        direct = False
+        univariate = False # Whether to use univariate or multivariate sampling.
         verbose = 0
 
         omim1_results = {}
@@ -121,6 +125,8 @@ def main():
                 omim1_splits_indices,
                 num_samples,
                 burnin_period,
+                direct,
+                univariate,
                 num_latent,
                 alphas,
                 seed=seed,
@@ -135,6 +141,8 @@ def main():
                 omim2_splits_indices,
                 num_samples,
                 burnin_period,
+                direct,
+                univariate,
                 num_latent,
                 alphas,
                 seed=seed,

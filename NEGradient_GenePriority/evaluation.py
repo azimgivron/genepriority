@@ -50,13 +50,13 @@ def evaluate_scores(
         y_true (List[int]): Ground truth binary labels (1 for positive, 0 for negative).
         y_pred (List[float]): Model's predicted scores or probabilities.
         alphas (List[float]): Alpha values for calculating BEDROC scores,
-                              where larger values emphasize early correct predictions.
+            where larger values emphasize early correct predictions.
 
     Returns:
         EvaluationResult: Contains:
-                          - FPR, TPR, and thresholds from the ROC curve.
-                          - AUC loss (1 - AUC score).
-                          - BEDROC scores for the given alpha values.
+            - FPR, TPR, and thresholds from the ROC curve.
+            - AUC loss (1 - AUC score).
+            - BEDROC scores for the given alpha values.
     """
     bedroc = {
         f"{alpha:.3f}": bedroc_score(y_true, y_pred, decreasing=True, alpha=alpha) for alpha in alphas
@@ -75,6 +75,8 @@ def train_and_test_splits(
     splits_list: List[TrainTestIndices],
     num_samples: int,
     burnin_period: int,
+    direct: bool,
+    univariate: bool,
     num_latent: int,
     alphas: List[float],
     seed: int,
@@ -83,7 +85,7 @@ def train_and_test_splits(
     save_name: str,
     verbose: int,
 ) -> List[EvaluationResult]:
-    """
+    r"""
     Trains and evaluates the model using multiple train-test splits.
 
     This function runs the algorithm for each train-test split provided in the
@@ -95,12 +97,18 @@ def train_and_test_splits(
             the dataset to be factored. Rows and columns correspond to features
             and samples, respectively.
         splits_list (List[TrainTestIndices]): A list of `TrainTestIndices` objects defining
-                                            the train-test splits for the dataset.
+            the train-test splits for the dataset.
         num_samples (int): The number of posterior samples to draw during training.
         burnin_period (int): The number of burn-in iterations before collecting posterior samples.
+        direct (bool): Whether to use a Cholesky instead of conjugate gradient (CG) solver.
+            Cholesky is recommanded up to $dim(F_e) \approx 20,000$. 
+        univariate (bool): Whether to use univariate or multivariate sampling.
+            Multivariate sampling require computing the whole precision matrix 
+            $D \cdot F_e \times D \cdot F_e$ where $D$ is the latent vector size and $F_e$
+            is the dimensionality of the entity features. If True, it uses a Gibbs sampler.
         num_latent (int): The number of latent factors to be used by the model.
         alphas (List[float]): A list of alpha values for computing BEDROC scores, where larger
-                            alpha emphasizes early recognition of positive cases.
+            alpha emphasizes early recognition of positive cases.
         seed (int): The random seed to ensure reproducibility in stochastic operations.
         save_freq (int): The frequency at which the model state is saved (e.g., every N samples).
         output_path (str): The path to the directory where the snapshots will be saved.
@@ -109,10 +117,10 @@ def train_and_test_splits(
 
     Returns:
         List[EvaluationResult]: A list of `EvaluationResult` objects, each containing the
-                                evaluation metrics for the corresponding split. Metrics include:
-                                - ROC curve metrics (FPR, TPR, thresholds).
-                                - AUC loss (1 - AUC score).
-                                - BEDROC scores for the specified alpha values.
+            evaluation metrics for the corresponding split. Metrics include:
+            - ROC curve metrics (FPR, TPR, thresholds).
+            - AUC loss (1 - AUC score).
+            - BEDROC scores for the specified alpha values.
 
     Raises:
         ValueError: If the sizes of `y_true` and `y_pred` are mismatched after prediction.
@@ -126,8 +134,8 @@ def train_and_test_splits(
             Ytrain=split.training_indices.get_data(sparse_matrix),
             Ytest=split.testing_indices.get_data(sparse_matrix),
             is_scarce=False,
-            direct=True,
-            univariate=False,
+            direct=direct,
+            univariate=univariate,
             num_latent=num_latent,
             burnin=burnin_period,
             nsamples=num_samples,
@@ -156,6 +164,8 @@ def train_and_test_folds(
     folds_list: List[TrainTestIndices],
     num_samples: int,
     burnin_period: int,
+    direct: bool,
+    univariate: bool,
     num_latent: int,
     alphas: List[float],
     seed: int,
@@ -164,7 +174,7 @@ def train_and_test_folds(
     save_name: str,
     verbose: int,
 ) -> List[EvaluationResult]:
-    """
+    r"""
     Trains and evaluates the model across multiple folds for cross-validation.
 
     This function performs cross-validation using a provided list of train-test
@@ -175,9 +185,15 @@ def train_and_test_folds(
         sparse_matrix (sp.coo_matrix): The sparse matrix representation of the dataset
             to be factored. Rows and columns correspond to features and samples, respectively.
         folds_list (List[TrainTestIndices]): A list of `TrainTestIndices` objects defining
-                                             the train-test folds for cross-validation.
+            the train-test folds for cross-validation.
         num_samples (int): The number of posterior samples to draw during training.
         burnin_period (int): The number of burn-in iterations before collecting posterior samples.
+        direct (bool): Whether to use a Cholesky instead of conjugate gradient (CG) solver.
+            Cholesky is recommanded up to $dim(F_e) \approx 20,000$. 
+        univariate (bool): Whether to use univariate or multivariate sampling.
+            Multivariate sampling require computing the whole precision matrix 
+            $D \cdot F_e \times D \cdot F_e$ where $D$ is the latent vector size and $F_e$
+            is the dimensionality of the entity features. If True, it uses a Gibbs sampler.
         num_latent (int): The number of latent factors to be used by the model.
         alphas (List[float]): A list of alpha values for computing BEDROC scores, where larger
                               alpha emphasizes early recognition of positive cases.
@@ -206,8 +222,8 @@ def train_and_test_folds(
         session = smurff.MacauSession(
             Ytrain=fold.training_indices.get_data(sparse_matrix),
             is_scarce=False,
-            direct=True,
-            univariate=False,
+            direct=direct,
+            univariate=univariate,
             num_latent=num_latent,
             burnin=burnin_period,
             nsamples=num_samples,

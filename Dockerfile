@@ -88,7 +88,7 @@ COPY requirements.txt requirements.txt
 # Set up Python environment and install libraries in a single RUN command
 RUN python3 -m venv /home/$USERNAME/venv && \
     /home/$USERNAME/venv/bin/pip install --upgrade pip && \
-    /home/$USERNAME/venv/bin/pip install -r requirements && \
+    /home/$USERNAME/venv/bin/pip install -r requirements.txt && \
     sudo /home/$USERNAME/venv/bin/pip install /tmp/smurff && \
     sudo rm -rf smurff && \
     echo "source /home/$USERNAME/venv/bin/activate" >> /home/$USERNAME/.zshrc
