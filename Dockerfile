@@ -95,7 +95,8 @@ RUN python3 -m venv $VENV_PATH && \
     $VENV_PATH/bin/pip install --upgrade pip && \
     $VENV_PATH/bin/pip install -r /home/$USERNAME/requirements.txt && \
     sudo $VENV_PATH/bin/pip install /tmp/smurff && \
-    sudo rm -rf /tmp/smurff
+    sudo rm -rf /tmp/smurff && \
+    echo "source $VENV_PATH/bin/activate" >> /home/$USERNAME/.zshrc
 
 # Default shell and command
 SHELL ["/bin/zsh", "-c"]
