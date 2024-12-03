@@ -93,7 +93,7 @@ def train_and_test(
     results = []
     for i, fold in enumerate(folds_list):
         logger = logging.getLogger(__name__)
-        logger.debug("Initiating training on fold %s", i + 1)
+        logger.debug("Initiating training on fold/split %s", i + 1)
 
         session = smurff.MacauSession(
             Ytrain=fold.training_indices.get_data(sparse_matrix),
@@ -109,10 +109,10 @@ def train_and_test(
             verbose=verbose,
         )
         session.run()  # run training
-        logger.debug("Training on fold %s ended successfully.", i + 1)
+        logger.debug("Training on fold/split %s ended successfully.", i + 1)
 
         y_true_pred = extract_results(session, sparse_matrix, fold.testing_indices)
 
-        logger.debug("Evaluation on fold %s ended successfully.", i + 1)
+        logger.debug("Evaluation on fold/split %s ended successfully.", i + 1)
         results.append(y_true_pred)
     return Evaluation(results)

@@ -51,9 +51,9 @@ def plot_roc_curves(
     plt.ylabel("Average TPR")
     plt.legend()
     plt.grid(alpha=0.3)
-    fig.suptitle("Average ROC Curve")
+    fig.suptitle("Average ROC Curve", fontsize=14)
     plt.tight_layout()
-    fig.subplots_adjust(hspace=0.3, wspace=0.4, top=0.85)
+    fig.subplots_adjust(hspace=0.3, wspace=0.4, top=0.9)
     plt.savefig(output_file, dpi=300)
     plt.close()
 
@@ -79,7 +79,7 @@ def plot_bedroc_boxplots(
             Defaults to (10, 8).
 
     """
-    subplots_config = (2, np.ceil(Evaluation.alphas / 2))
+    subplots_config = (2, np.ceil(len(Evaluation.alphas) / 2).astype(int))
     fig, axs = plt.subplots(*subplots_config, figsize=figsize)
     axs = axs.flatten()
     for i, alpha in enumerate(Evaluation.alphas):
@@ -94,7 +94,7 @@ def plot_bedroc_boxplots(
     # Disable unused subplots
     if len(Evaluation.alphas) % 2 == 1:
         axs[-1].axis("off")
-    fig.subplots_adjust(hspace=0.3, wspace=0.4, top=0.85)
-    fig.suptitle("Averaged BEDROC", fontsize=16)
+    fig.subplots_adjust(hspace=0.3, wspace=0.4, top=0.9)
+    fig.suptitle("Averaged BEDROC", fontsize=14)
     plt.savefig(output_file, dpi=300)
     plt.close()

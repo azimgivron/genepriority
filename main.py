@@ -9,6 +9,7 @@ from pathlib import Path
 import pandas as pd
 
 from NEGradient_GenePriority import (
+    Evaluation,
     ModelEvaluationCollection,
     combine_matrices,
     combine_splits,
@@ -164,6 +165,12 @@ def main():
         logger.debug("Results serialization completed successfully")
 
         logger.debug("Starting figures and tables creation.")
+        
+        alphas = [228.5, 160.9, 32.2, 16.1, 5.3]
+        alpha_map = {228.5: '100', 160.9: '1%', 32.2: '5%', 16.1: '10%', 5.3: '30%'}
+        Evaluation.alphas = alphas
+        Evaluation.alpha_map = alpha_map
+
         omim1_collection = ModelEvaluationCollection(omim1_results)
         plot_roc_curves(
             evaluation_collection=omim1_collection,
@@ -176,7 +183,7 @@ def main():
         auc_loss_dataframe_omim1.to_csv(output_path / "auc_loss_omim1.csv")
         plot_bedroc_boxplots(
             omim1_collection.compute_bedroc_scores(),
-            model_names=omim1_collection.model_names,
+            model_names=latent_dimensions,
             output_file=(output_path / "bedroc_omim1.png"),
         )
 
@@ -192,7 +199,7 @@ def main():
         auc_loss_dataframe_omim2.to_csv(output_path / "auc_loss_omim2.csv")
         plot_bedroc_boxplots(
             omim2_collection.compute_bedroc_scores(),
-            model_names=omim2_collection.model_names,
+            model_names=latent_dimensions,
             output_file=(output_path / "bedroc_omim2.png"),
         )
         logger.debug("Figures and tables creation completed successfully")
