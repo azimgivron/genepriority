@@ -10,16 +10,16 @@ data class to store metrics and functions like `extract_results` and `train_and_
 to streamline the evaluation process.
 """
 import logging
+from dataclasses import dataclass
 from typing import List
 
 import numpy as np
 import scipy.sparse as sp
 import smurff
-from NEGradient_GenePriority.evaluation.evaluation_result import EvaluationResult
+
 from NEGradient_GenePriority.preprocessing import Indices, TrainTestIndices
 
-from dataclasses import dataclass
-    
+
 @dataclass
 class Results:
     """
@@ -29,9 +29,10 @@ class Results:
         y_true (np.ndarray): Ground truth values.
         y_pred (np.ndarray): Predicted values from the trained model.
     """
+
     y_true: np.ndarray
     y_pred: np.ndarray
-    
+
     def __iter__(self):
         """
         Makes the `Results` object iterable to allow unpacking with the `*` operator.
@@ -41,11 +42,12 @@ class Results:
         """
         return iter([self.y_true, self.y_pred])
 
+
 def extract_results(
     session: smurff.MacauSession,
     sparse_matrix: sp.coo_matrix,
     testing_indices: Indices,
-) -> EvaluationResult:
+) -> Results:
     """Extract predictions from the trained model for the specified
     testing indices.
 
@@ -131,9 +133,7 @@ def train_and_test(
         session.run()  # run training
         logger.debug("Training on fold %s ended successfully.", i + 1)
 
-        y_true_pred = extract_results(
-            session, sparse_matrix, fold.testing_indices
-        )
+        y_true_pred = extract_results(session, sparse_matrix, fold.testing_indices)
 
         logger.debug("Evaluation on fold %s ended successfully.", i + 1)
         results.append(y_true_pred)

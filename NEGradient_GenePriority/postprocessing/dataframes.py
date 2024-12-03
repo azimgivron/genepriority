@@ -2,36 +2,38 @@
 Dataframes module
 =================
 
-Post-processing producing dataframes.
+Post-processing producing dataframes for summarizing evaluation metrics and results.
 """
-from typing import Dict, List
+from typing import List, Tuple
 
-import numpy as np
 import pandas as pd
-from NEGradient_GenePriority.evaluation.evaluation_result import EvaluationResult
 
 
-def generate_auc_loss_table(result: Dict[int, List[EvaluationResult]]):
+def generate_auc_loss_table(
+    auc_loss: List[Tuple[float, float]],
+    model_names: List[str],
+    avg_auc_loss_name: str = "Averaged 1-AUC error",
+    std_auc_loss_name: str = "Std 1-AUC error",
+) -> pd.DataFrame:
     """
-    Generates a table summarizing 1-AUC loss averages and standard deviations and saves to file.
+    Generates a table summarizing AUC loss averages and standard
+    deviations for each model.
 
     Args:
-        result (Dict[int, List[EvaluationResult]]): A dictionary where keys are latent dimensions
-            and values are a list of evaluation results, one per fold/split.
+        auc_loss (List[Tuple[float, float]]): List of mean and standard
+            deviation of the AUC loss, for each model.
+        model_names (List[str]): Names of the models corresponding to the AUC losses.
+        avg_auc_loss_name (str, optional): Column name for averaged 1-AUC error.
+            Defaults to "Averaged 1-AUC error".
+        std_auc_loss_name (str, optional): Column name for standard deviation of 1-AUC error.
+            Defaults to "Std 1-AUC error".
 
     Returns:
-        (pd.DataFrame): A dataframe with the 'Averaged 1-AUC Error'.
+        pd.DataFrame: A dataframe summarizing AUC loss metrics.
     """
-    auc_loss = [[eval_res.auc_loss for eval_res in result[latent]] for latent in result]
-    mean_std_auc = np.hstack(
-        (
-            np.mean(auc_loss, axis=1).reshape(-1, 1),
-            np.std(auc_loss, axis=1).reshape(-1, 1),
-        )
-    )
     dataframe = pd.DataFrame(
-        mean_std_auc,
-        columns=["Averaged 1-AUC Error", "Std 1-AUC Error"],
-        index=[f"Latent Dim={dim}" for dim in result],
+        auc_loss, columns=[avg_auc_loss_name, std_auc_loss_name], index=model_names
     )
+    dataframe[avg_auc_loss_name] = dataframe[avg_auc_loss_name].map(lambda x: f"{x:.2e}")
+    dataframe[std_auc_loss_name] = dataframe[std_auc_loss_name].map(lambda x: f"{x:.2e}")
     return dataframe

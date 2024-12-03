@@ -3,106 +3,97 @@
 Figures module
 ==============
 
-Post-processing producing figures
+This module provides post-processing functions to generate and save visualizations 
+of evaluation metrics such as ROC curves and BEDROC boxplots. These visualizations 
+help in comparing model performance across different configurations, splits, and metrics.
+
 """
-from typing import Dict, List, Tuple
+from typing import List, Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
+
 from NEGradient_GenePriority.evaluation.evaluation_result import EvaluationResult
 
 
 def plot_roc_curves(
-    result: Dict[int, List[EvaluationResult]],
+    eval_res_per_model: List[EvaluationResult],
+    model_names: List[str],
     output_file: str,
     cmap: str = "Set2",
     figsize=(8, 6),
 ):
     """
-    Plots ROC curves for each latent dimension and split and saves to file.
+    Plots average ROC curves for multiple models and saves the plot to a file.
 
     Args:
-        result (Dict[int, List[EvaluationResult]]): A dictionary where keys are latent dimensions
-            and values are a list of evaluation results, one per fold/split.
-        output_file (str): Path to save the ROC curve plot.
-        cmap (str, optional): Matplotlib colormap to use for the plot. Defaults to "Set2".
-        figsize (tuple, optional): Size of the figure. Defaults to (8, 6).
+        eval_res_per_model (List[EvaluationResult]): A list of `EvaluationResult` objects,
+            each containing the evaluation metrics for a specific model.
+        model_names (List[str]): Names of the models being compared.
+        output_file (str): File path where the ROC curve plot will be saved.
+        cmap (str, optional): Matplotlib colormap to use for line colors. Defaults to "Set2".
+        figsize (tuple, optional): Figure size in inches (width, height). Defaults to (8, 6).
+
     """
-    plt.figure(figsize=figsize)
     colors = plt.get_cmap(cmap).colors
-
-    for latent in result:
-        for i, eval_res in enumerate(result[latent]):
-            plt.plot(
-                eval_res.fpr,
-                eval_res.tpr,
-                linewidth=2,
-                c=colors[i],
-                label=f"Split {i+1}",
-            )
-
+    fig = plt.figure(figsize=figsize)
+    for i, eval_res in enumerate(eval_res_per_model):
+        plt.plot(
+            *eval_res.compute_roc_curve(),
+            linewidth=2,
+            c=colors[i],
+            label=model_names[i],
+        )
     plt.plot([0, 1], [0, 1], linestyle="--", color="black", label="Random Guess")
-    plt.xlabel("FPR")
-    plt.ylabel("TPR")
-    plt.title("ROC Curve")
+    plt.xlabel("Average FPR")
+    plt.ylabel("Average TPR")
     plt.legend()
     plt.grid(alpha=0.3)
+    fig.suptitle("Average ROC Curve")
+    plt.tight_layout()
+    fig.subplots_adjust(hspace=0.3, wspace=0.4, top=0.85)
     plt.savefig(output_file, dpi=300)
     plt.close()
 
 
 def plot_bedroc_boxplots(
-    result: Dict[int, List[EvaluationResult]],
-    alphas: List[float],
-    alpha_map: Dict[float, str],
+    bedroc: np.ndarray,
+    model_names: List[str],
     output_file: str,
+    subplots_config: Tuple[int, int],
     cmap: str = "Set2",
     figsize: Tuple[int, int] = (10, 8),
 ):
     """
-    Plots boxplots of BEDROC scores for various alpha values and latent
-    dimensions and saves to file.
+    Plots boxplots of BEDROC scores for multiple alpha values and latent dimensions.
 
     Args:
-        result (Dict[int, List[EvaluationResult]]): A dictionary where keys are latent dimensions
-            and values are a list of evaluation results, one per fold/split.
-        alphas (list): List of alpha values for BEDROC computation.
-        alpha_map (dict): Mapping of alpha values to descriptive strings
-            (e.g., percentage labels).
-        output_file (str): Path to save the BEDROC boxplots.
-        cmap (str, optional): Matplotlib colormap for the boxplots. Defaults to "Set2".
-        figsize (Tuple[int, int], optional): Size of the figure. Defaults to (10, 8).
+        bedroc (np.ndarray): BEDROC scores array of shape (alphas, folds, latent).
+            Each entry represents the BEDROC score for a specific alpha value, fold,
+            and latent dimension.
+        model_names (List[str]): Names of the models being compared.
+        output_file (str): File path where the BEDROC boxplot figure will be saved.
+        subplots_config (Tuple[int, int]): Configuration for the subplots grid (rows, columns).
+        cmap (str, optional): Matplotlib colormap for the boxplot colors. Defaults to "Set2".
+        figsize (Tuple[int, int], optional): Figure size in inches (width, height).
+            Defaults to (10, 8).
+
     """
-    bedroc = np.array(
-        [[eval_res.bedroc for eval_res in result[latent]] for latent in result]
-    )  # latent, fold, alpha
-    bedroc = np.swapaxes(bedroc, 1, 2)  # latent, alpha, fold
-    bedroc = np.swapaxes(bedroc, 0, 1)  # alpha, latent, fold
-
-    fig, axes = plt.subplots(2, 3, figsize=figsize)
-    axes = axes.flatten()
-    num_latent = bedroc.shape[1]
-
-    for i, alpha in enumerate(alphas):
-        axis = axes[i]
-        data = bedroc[
-            i
-        ].T  # Transpose to align with boxplot expectations (methods on x-axis)
-        sns.boxplot(data=[data[:, j] for j in range(num_latent)], ax=axis, palette=cmap)
-        axis.set_xticks(range(num_latent))  # Set fixed positions for ticks
-        axis.set_xticklabels(
-            [f"{dim} latent dim." for dim in result.keys()],
-            rotation=0,
-            ha="center",
-            fontsize=10,
+    fig, axs = plt.subplots(*subplots_config, figsize=figsize)
+    axs = axs.flatten()
+    for i, alpha in enumerate(EvaluationResult.alphas):
+        sns.boxplot(data=bedroc[i], ax=axs[i], palette=cmap)
+        axs[i].set_xticks(range(bedroc.shape[2]))  # Set fixed positions for ticks
+        axs[i].set_xticklabels(model_names, rotation=0, ha="center", fontsize=10)
+        axs[i].set_title(
+            f"{float(alpha):.1f}\nTop {EvaluationResult.alpha_map[alpha]}", fontsize=12
         )
-        axis.set_title(f"{alpha}\nTop {alpha_map[alpha]}", fontsize=12)
-        axis.grid(axis="y", alpha=0.3)
+        axs[i].grid(axis="y", alpha=0.3)
 
-    axis[-1].axis("off")
-
-    # Increase padding between rows and columns
+    # Disable unused subplots
+    if len(EvaluationResult.alphas) % 2 == 1:
+        axs[-1].axis("off")
     fig.subplots_adjust(hspace=0.3, wspace=0.4, top=0.85)
     fig.suptitle("Averaged BEDROC", fontsize=16)
     plt.savefig(output_file, dpi=300)

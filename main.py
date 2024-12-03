@@ -59,7 +59,6 @@ def main():
 
         # Set parameters
         logger.debug("Setting parameters for splits and MACAU")
-        alphas = [228.5, 160.9, 32.2, 16.1, 5.3]
         latent_dimensions = [25, 30, 40]
         num_splits = 6
         num_folds = 5
