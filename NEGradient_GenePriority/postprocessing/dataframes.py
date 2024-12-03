@@ -34,6 +34,10 @@ def generate_auc_loss_table(
     dataframe = pd.DataFrame(
         auc_loss, columns=[avg_auc_loss_name, std_auc_loss_name], index=model_names
     )
-    dataframe[avg_auc_loss_name] = dataframe[avg_auc_loss_name].map(lambda x: f"{x:.2e}")
-    dataframe[std_auc_loss_name] = dataframe[std_auc_loss_name].map(lambda x: f"{x:.2e}")
+    dataframe[avg_auc_loss_name] = dataframe[avg_auc_loss_name].map(
+        lambda x: f"{x:.2e}"
+    )
+    dataframe[std_auc_loss_name] = dataframe[std_auc_loss_name].map(
+        lambda x: f"{x:.2e}"
+    )
     return dataframe
