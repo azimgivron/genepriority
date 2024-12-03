@@ -45,7 +45,7 @@ To set up the environment and install necessary dependencies, follow these steps
 
 2. **Create and Activate a Virtual Environment**:
    ```bash
-   python3.11 -m venv venv
+   python -m venv venv
    source venv/bin/activate
    ```
 
@@ -59,7 +59,7 @@ To set up the environment and install necessary dependencies, follow these steps
 
 ## Requirements
 
-- Python 3.11 or higher
+- Python 3.11
 - pip (Python package installer)
 - Virtual environment (venv) module
 
