@@ -22,17 +22,32 @@ from dataclasses import dataclass
     
 @dataclass
 class Results:
-    """Prediction results data structure."""
+    """
+    Prediction results data structure.
+
+    Attributes:
+        y_true (np.ndarray): Ground truth values.
+        y_pred (np.ndarray): Predicted values from the trained model.
+    """
     y_true: np.ndarray
     y_pred: np.ndarray
+    
+    def __iter__(self):
+        """
+        Makes the `Results` object iterable to allow unpacking with the `*` operator.
 
+        Returns:
+            Iterator: An iterator over the `y_true` and `y_pred` arrays.
+        """
+        return iter([self.y_true, self.y_pred])
 
 def extract_results(
     session: smurff.MacauSession,
     sparse_matrix: sp.coo_matrix,
     testing_indices: Indices,
 ) -> EvaluationResult:
-    """Extract the predictions of the trained model.
+    """Extract predictions from the trained model for the specified
+    testing indices.
 
     Args:
         session (smurff.MacauSession): The smurff session.
@@ -41,7 +56,7 @@ def extract_results(
             that must be used for testing.
 
     Returns:
-        Result: The results.
+        Results: Contains `y_true` (ground truth) and `y_pred` (predictions).
     """
     y_true = testing_indices.get_data(sparse_matrix).data
     predict_session = session.makePredictSession()
@@ -68,8 +83,8 @@ def train_and_test(
     Trains and evaluates the model across multiple folds for cross-validation.
 
     This function performs cross-validation using a provided list of train-test
-    folds (`folds_list`). For each fold, the algorithm is trained, predictions
-    are made, and the performance is evaluated using ROC and BEDROC metrics.
+    folds (`folds_list`). For each fold, the algorithm trains a model, makes predictions,
+    and extracts performance metrics.
 
     Args:
         sparse_matrix (sp.coo_matrix): The sparse matrix representation of the dataset
@@ -92,15 +107,8 @@ def train_and_test(
         verbose (int): The verbosity level of the algorithm (0: Silent, 1: Minimal, 2: Detailed).
 
     Returns:
-        List[EvaluationResult]: A list of `EvaluationResult` objects, each containing the
-                                evaluation metrics for the corresponding fold. Metrics include:
-                                - ROC curve metrics (FPR, TPR, thresholds).
-                                - AUC loss (1 - AUC score).
-                                - BEDROC scores for the specified alpha values.
+        List[Results]: List of `Results` objects containing ground truth and predictions.
 
-    Raises:
-        ValueError: If the sizes of `y_true` and `y_pred` are mismatched after prediction.
-        Exception: Any error encountered during training or evaluation is logged and re-raised.
     """
     results = []
     for i, fold in enumerate(folds_list):

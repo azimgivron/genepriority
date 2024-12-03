@@ -5,9 +5,6 @@ Metrics module
 Implements evaluation metrics for model predictions, including ROC curves and BEDROC scores,
 to assess the performance of gene prioritization models.
 """
-from NEGradient_GenePriority.evaluation.evaluation_result import EvaluationResult
-from NEGradient_GenePriority.evaluation.metrics import bedroc_score
-from sklearn import metrics
 import numpy as np
 
 
@@ -64,34 +61,3 @@ def bedroc_score(y_true, y_pred, decreasing=True, alpha=20.0):
     constant = 1 / (1 - np.exp(alpha * (1 - positive_ratio)))
 
     return sum_exp * scaling_factor / random_sum + constant
-
-
-def evaluate_scores(
-    y_true: List[int], y_pred: List[float], alphas: List[float]
-) -> EvaluationResult:
-    """
-    Evaluates a model's predictions using ROC and BEDROC metrics.
-
-    Args:
-        y_true (List[int]): Ground truth binary labels (1 for positive, 0 for negative).
-        y_pred (List[float]): Model's predicted scores or probabilities.
-        alphas (List[float]): Alpha values for calculating BEDROC scores,
-            where larger values emphasize early correct predictions.
-
-    Returns:
-        EvaluationResult: Contains:
-            - FPR, TPR, and thresholds from the ROC curve.
-            - AUC loss (1 - AUC score).
-            - BEDROC scores for the given alpha values.
-    """
-    bedroc = {
-        f"{alpha:.3f}": bedroc_score(y_true, y_pred, decreasing=True, alpha=alpha)
-        for alpha in alphas
-    }
-    fpr, tpr, thresholds = metrics.roc_curve(
-        y_true, y_pred, pos_label=1, drop_intermediate=True
-    )
-    auc = metrics.roc_auc_score(y_true, y_pred)
-    return EvaluationResult(
-        fpr=fpr, tpr=tpr, thresholds=thresholds, auc_loss=1 - auc, bedroc=bedroc
-    )
