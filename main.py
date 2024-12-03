@@ -25,7 +25,7 @@ from NEGradient_GenePriority import (
 )
 
 
-def setup_logger(log_file: str) -> None:
+def setup_logger(log_file: str):
     """
     Configures the root logger to write to a log file and console.
     """

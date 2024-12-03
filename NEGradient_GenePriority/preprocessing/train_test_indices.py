@@ -29,7 +29,7 @@ class TrainTestIndices:
         testing_indices (Indices): An Indices object representing the testing data indices.
     """
 
-    def __init__(self, training_indices: Indices, testing_indices: Indices) -> None:
+    def __init__(self, training_indices: Indices, testing_indices: Indices):
         """
         Initializes the TrainTestIndices object with training and testing indices.
 

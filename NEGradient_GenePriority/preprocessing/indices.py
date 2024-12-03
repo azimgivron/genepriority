@@ -30,7 +30,7 @@ class Indices:
                               a (row, column) pair of indices.
     """
 
-    def __init__(self, indices: np.ndarray) -> None:
+    def __init__(self, indices: np.ndarray):
         """
         Initializes the Indices object with the given array of indices.
 
