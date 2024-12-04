@@ -20,7 +20,8 @@ class Evaluation:
     Represents the evaluation metrics for model predictions.
 
     Attributes:
-        results (List[Results]): List of results, each corresponding to the results of a fold.
+        results (List[Results]): List of results, each corresponding to the results
+            of a fold/split.
         alphas (List[float]): Alpha values for computing BEDROC scores.
         alpha_map (Dict[float, str]): Mapping of alpha values to descriptive labels.
     """
@@ -48,10 +49,10 @@ class Evaluation:
         scores = np.array(
             [
                 [
-                    bedroc_score(*result, decreasing=True, alpha=alpha)
+                    bedroc_score(*result_per_fold, decreasing=True, alpha=alpha)
                     for alpha in self.alphas
                 ]
-                for result in self.results
+                for result_per_fold in self.results
             ]
         )
         return scores
@@ -64,7 +65,10 @@ class Evaluation:
             Tuple[float, float]: The computed mean and standard
                 deviation of the AUC loss.
         """
-        auc_loss = [1 - metrics.roc_auc_score(*result) for result in self.results]
+        auc_loss = [
+            1 - metrics.roc_auc_score(*result_per_fold)
+            for result_per_fold in self.results
+        ]
         return np.mean(auc_loss), np.std(auc_loss)
 
     def compute_roc_curve(self) -> Tuple[np.ndarray, np.ndarray]:
@@ -79,9 +83,9 @@ class Evaluation:
         fpr = []
         tpr = []
         nb_th = np.inf
-        for result in self.results:
+        for result_per_fold in self.results:
             fpr_fold, tpr_fold, threshold = metrics.roc_curve(
-                *result, pos_label=1, drop_intermediate=True
+                *result_per_fold, pos_label=1, drop_intermediate=True
             )
             fpr.append(fpr_fold)
             tpr.append(tpr_fold)
