@@ -16,13 +16,15 @@ from NEGradient_GenePriority import (
     compute_statistics,
     convert_dataframe_to_sparse_matrix,
     create_folds,
-    create_random_splits,
+    create_random_splits_from_matrices,
+    create_random_splits_from_matrix,
     filter_by_number_of_association,
     generate_auc_loss_table,
     plot_bedroc_boxplots,
     plot_roc_curves,
     sample_zeros,
-    train_and_test,
+    train_test_cross_validation,
+    train_test_splits,
 )
 
 
@@ -73,11 +75,19 @@ def main():
 
         # Convert gene-disease DataFrame to sparse matrix
         omim1_1s = convert_dataframe_to_sparse_matrix(gene_disease)
-        omim1_0s = sample_zeros(omim1_1s, zero_sampling_factor, seed=seed)
-        omim1 = combine_matrices(omim1_1s, omim1_0s)
+        omim1_0s = [
+            sample_zeros(omim1_1s, zero_sampling_factor, seed=seed)
+            for _ in range(num_splits)
+        ]
+        omim1 = [
+            combine_matrices(omim1_1s, omim1_0s_per_split)
+            for omim1_0s_per_split in omim1_0s
+        ]
         logger.debug("Combined sparse matrix for OMIM1 created")
-        omim1_1s_splits_indices = create_random_splits(omim1_1s, num_splits=num_splits)
-        omim1_0s_splits_indices = create_random_splits(omim1_0s, num_splits=num_splits)
+        omim1_1s_splits_indices = create_random_splits_from_matrix(
+            omim1_1s, num_splits=num_splits
+        )
+        omim1_0s_splits_indices = create_random_splits_from_matrices(omim1_0s)
         omim1_splits_indices = combine_splits(
             omim1_1s_splits_indices, omim1_0s_splits_indices
         )
@@ -87,7 +97,7 @@ def main():
         sparsity = omim1_1s.count_nonzero() / (omim1_1s.shape[0] * omim1_1s.shape[1])
         logger.debug("Data sparsity: %.2f%%", sparsity * 100)
 
-        counts = compute_statistics(omim1, omim1_splits_indices)
+        counts = compute_statistics(omim1_1s, omim1_1s_splits_indices)
         logger.debug("Disease count statistics:\n%s", counts)
 
         # Filter diseases and create folds
@@ -127,7 +137,7 @@ def main():
         for num_latent in latent_dimensions:
             logger.debug("Running MACAU for %d latent dimensions", num_latent)
             logger.debug("Starting training on OMIM1")
-            omim1_results[f"latent dim={num_latent}"] = train_and_test(
+            omim1_results[f"latent dim={num_latent}"] = train_test_splits(
                 omim1,
                 omim1_splits_indices,
                 num_samples,
@@ -142,7 +152,7 @@ def main():
                 verbose=verbose,
             )
             logger.debug("Starting training on OMIM2")
-            omim2_results[f"latent dim={num_latent}"] = train_and_test(
+            omim2_results[f"latent dim={num_latent}"] = train_test_cross_validation(
                 omim2,
                 omim2_folds_indices,
                 num_samples,
@@ -165,9 +175,9 @@ def main():
         logger.debug("Results serialization completed successfully")
 
         logger.debug("Starting figures and tables creation.")
-        
+
         alphas = [228.5, 160.9, 32.2, 16.1, 5.3]
-        alpha_map = {228.5: '100', 160.9: '1%', 32.2: '5%', 16.1: '10%', 5.3: '30%'}
+        alpha_map = {228.5: "100", 160.9: "1%", 32.2: "5%", 16.1: "10%", 5.3: "30%"}
         Evaluation.alphas = alphas
         Evaluation.alpha_map = alpha_map
 

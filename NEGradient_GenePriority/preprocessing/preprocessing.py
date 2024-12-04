@@ -155,7 +155,7 @@ def filter_by_number_of_association(
     return dataframe[dataframe[col_name].isin(valid_ids)].reset_index(drop=True)
 
 
-def create_random_splits(
+def create_random_splits_from_matrix(
     sparse_matrix: sp.coo_matrix, num_splits: int
 ) -> List[TrainTestIndices]:
     """
@@ -180,6 +180,26 @@ def create_random_splits(
         )
         train_test_indices = TrainTestIndices.from_ndarray(train_idx, test_idx)
         splits.append(train_test_indices)
+    return splits
+
+
+def create_random_splits_from_matrices(
+    sparse_matrix_list: List[sp.coo_matrix],
+) -> List[TrainTestIndices]:
+    """
+    Creates random train-test splits from a list of indices matrices.
+
+    Args:
+        sparse_matrix_list (List[sp.coo_matrix]): List of sparse matrices to be split
+            into random subsets.
+
+    Returns:
+        List[TrainTestIndices]: List of TrainTestIndices objects containing
+            training and testing subsets for each split.
+    """
+    splits = []
+    for sparse_matrix in sparse_matrix_list:
+        splits.extend(create_random_splits_from_matrix(sparse_matrix, num_splits=1))
     return splits
 
 

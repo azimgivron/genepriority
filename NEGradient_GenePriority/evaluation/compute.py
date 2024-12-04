@@ -6,8 +6,8 @@ Evaluation module
 This module orchestrates model training and evaluation across train-test splits
 or cross-validation folds. It integrates preprocessing and metrics functionalities
 to compute and log performance metrics. Key components include the `Evaluation`
-data class to store metrics and functions like `extract_results` and `train_and_test`
-to streamline the evaluation process.
+data class to store metrics and functions like `extract_results` and
+`train_test_cross_validation` to streamline the evaluation process.
 """
 import logging
 from typing import List
@@ -45,7 +45,7 @@ def extract_results(
     return Results(y_true, y_pred)
 
 
-def train_and_test(
+def train_test_cross_validation(
     sparse_matrix: sp.coo_matrix,
     folds_list: List[TrainTestIndices],
     num_samples: int,
@@ -93,11 +93,11 @@ def train_and_test(
     results = []
     for i, fold in enumerate(folds_list):
         logger = logging.getLogger(__name__)
-        logger.debug("Initiating training on fold/split %s", i + 1)
+        logger.debug("Initiating training on fold %s", i + 1)
 
         session = smurff.MacauSession(
             Ytrain=fold.training_indices.get_data(sparse_matrix),
-            is_scarce=False,
+            is_scarce=True,
             direct=direct,
             univariate=univariate,
             num_latent=num_latent,
@@ -109,10 +109,82 @@ def train_and_test(
             verbose=verbose,
         )
         session.run()  # run training
-        logger.debug("Training on fold/split %s ended successfully.", i + 1)
+        logger.debug("Training on fold %s ended successfully.", i + 1)
 
         y_true_pred = extract_results(session, sparse_matrix, fold.testing_indices)
 
-        logger.debug("Evaluation on fold/split %s ended successfully.", i + 1)
+        logger.debug("Evaluation on fold %s ended successfully.", i + 1)
+        results.append(y_true_pred)
+    return Evaluation(results)
+
+
+def train_test_splits(
+    sparse_matrix_list: List[sp.coo_matrix],
+    splits_list: List[TrainTestIndices],
+    num_samples: int,
+    burnin_period: int,
+    direct: bool,
+    univariate: bool,
+    num_latent: int,
+    seed: int,
+    save_freq: int,
+    output_path: str,
+    save_name: str,
+    verbose: int,
+) -> Evaluation:
+    r"""
+    Trains and evaluates the model across multiple splits.
+
+    For each split, the algorithm trains a model, makes predictions,
+    and extracts performance metrics.
+
+    Args:
+        sparse_matrix (sp.coo_matrix): The sparse matrix representation of the dataset
+            to be factored. Rows and columns correspond to features and samples, respectively.
+        splits_list (List[TrainTestIndices]): A list of `TrainTestIndices` objects defining
+            the train-test splits.
+        num_samples (int): The number of posterior samples to draw during training.
+        burnin_period (int): The number of burn-in iterations before collecting posterior samples.
+        direct (bool): Whether to use a Cholesky instead of conjugate gradient (CG) solver.
+            Cholesky is recommanded up to $dim(F_e) \approx 20,000$.
+        univariate (bool): Whether to use univariate or multivariate sampling.
+            Multivariate sampling require computing the whole precision matrix
+            $D \cdot F_e \times D \cdot F_e$ where $D$ is the latent vector size and $F_e$
+            is the dimensionality of the entity features. If True, it uses a Gibbs sampler.
+        num_latent (int): The number of latent factors to be used by the model.
+        seed (int): The random seed to ensure reproducibility in stochastic operations.
+        save_freq (int): The frequency at which the model state is saved (e.g., every N samples).
+        output_path (str): The path to the directory where the snapshots will be saved.
+        save_name (str): The base filename to use when saving model snapshots.
+        verbose (int): The verbosity level of the algorithm (0: Silent, 1: Minimal, 2: Detailed).
+
+    Returns:
+        Evaluation: The results of the evaluation.
+
+    """
+    results = []
+    for i, (split, sparse_matrix) in enumerate(zip(splits_list, sparse_matrix_list)):
+        logger = logging.getLogger(__name__)
+        logger.debug("Initiating training on split %s", i + 1)
+
+        session = smurff.MacauSession(
+            Ytrain=split.training_indices.get_data(sparse_matrix),
+            is_scarce=True,
+            direct=direct,
+            univariate=univariate,
+            num_latent=num_latent,
+            burnin=burnin_period,
+            nsamples=num_samples,
+            seed=seed,
+            save_freq=save_freq,
+            save_name=str(output_path / f"{i}:{save_name}"),
+            verbose=verbose,
+        )
+        session.run()  # run training
+        logger.debug("Training on split %s ended successfully.", i + 1)
+
+        y_true_pred = extract_results(session, sparse_matrix, split.testing_indices)
+
+        logger.debug("Evaluation on split %s ended successfully.", i + 1)
         results.append(y_true_pred)
     return Evaluation(results)
