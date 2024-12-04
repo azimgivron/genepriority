@@ -6,9 +6,37 @@
 
 The repository **NEGradient-GenePriority** (short for "Non-Euclidean Gradient Methods for Matrix Completion in Gene Prioritization") provides code and data to reproduce the results presented in the paper "[Gene prioritization using Bayesian matrix factorization with genomic and phenotypic side information.](https://pubmed.ncbi.nlm.nih.gov/29949967/)" This study introduces a novel method for gene prioritization by combining Bayesian matrix factorization (BMF) with genomic and phenotypic side information, enabling robust predictions and improved identification of disease-associated genes.
 
-## Datasets Generation
+1. **Problem Formulation**:  
+   - Input: Matrix $M$ of gene-disease associations ($M_{ij} = 1$ for known associations, $M_{ij} = 0$ otherwise).  
+   - Objective: Predict potential associations $\hat{M}$, with $\hat{M}_{ij}$ as floating-point scores.
 
-### OMIM1 Dataset Construction
+2. **Data Preparation**:  
+   - Positive Class: Use known gene-disease associations ($M_{ij} = 1$).  
+   - Negative Class: Sample negatives from $M_{ij} = 0$, avoiding overlap with positives.
+   - Unknown Class: Missing values in a sparse encoding. 
+   - Split the data into train and test sets:
+     - Split the Positive Class data.
+     - Split the Negative Class data.
+     - Merge the splits.
+
+3. **Model Training**:  
+   - Train a matrix completion model on $M$.
+
+4. **Model Testing**:  
+   - Use the trained model to complete $M$, yielding $\hat{M}$ with predicted scores.
+   - Rank genes for each disease based on $\hat{M}$. 
+   - Use only positive associations from the test set. For each disease, high-ranking
+   genes in $\hat{M}$ should correspond to true positive associations from the test set. 
+
+1. **Robustness Testing**:  
+   - Perform the procedure on six random splits with different matrices.  
+   - Aggregate metrics across splits for robustness.
+
+2. **Outcome**:  
+     
+
+## Datasets Generation
+#### OMIM1 Dataset Construction
 
 >
 **Input**: 
@@ -17,19 +45,19 @@ The repository **NEGradient-GenePriority** (short for "Non-Euclidean Gradient Me
 - Sparsity factor $\alpha$ that is the ratio of 0s over 1s.
 
 **Output**:
-- Unified sparse matrices: $O1_i \quad \forall i \in \set{1, N}$
-- Combined splits: $S1_i \quad \forall i \in \set{1, N}$
+- Unified sparse matrices: $M_{1_{i}} \quad \forall i \in \set{1, N}$
+- Combined splits: $S_{1_{i}} \quad \forall i \in \set{1, N}$
 
 **Execution**:
-1. Convert $d$ to sparse matrix $O1_{1s}$.
-2. Sample $N$ zero matrices $O1_{0s, i}$ from $O1_{1s}$ using $\alpha$. $\forall i \in \set{1, N}$
-3. Combine $O1_{1s}$ and $O1_{0s, i}$ into unified matrices $O1_i$. $\forall i \in \set{1, N}$
-4. Split $O1_{1s}$ indices randomly into multiple subsets $S1_{1s}$.
-5. Split $O1_{0s, i}$ indices randomly into multiple subsets $S1_{0s,i}$. $\forall i \in \set{1, N}$
-6. Merge splits from positive ($S1_{1s}$) and zero ($S1_{0s,i}$) samples into $S1_i$. $\forall i \in \set{1, N}$
+1. Convert $d$ to sparse matrix $M_{1_{1s}}$.
+2. Sample $N$ zero matrices $M_{1_{0s, i}}$ from $M_{1_{1s}}$ using $\alpha$. $\quad \forall i \in \set{1, N}$
+3. Combine $M_{1_{1s}}$ and $M_{1_{0s, i}}$ into unified matrices $M_{1_{i}}$. $\quad \forall i \in \set{1, N}$
+4. Split $M_{1_{1s}}$ indices randomly into multiple subsets $S_{1_{1s}}$.
+5. Split $M_{1_{0s, i}}$ indices randomly into multiple subsets $S_{1_{0s,i}}$. $\quad \forall i \in \set{1, N}$
+6. Merge splits from positive ($S_{1_{1s}}$) and zero ($S_{1_{0s,i}}$) samples into $S_{1_{i}}$. $\quad \forall i \in \set{1, N}$
 >
 
-### OMIM2 Dataset Construction
+#### OMIM2 Dataset Construction
 >
 **Input**: 
 - Gene-disease DataFrame: $d$
@@ -38,17 +66,17 @@ The repository **NEGradient-GenePriority** (short for "Non-Euclidean Gradient Me
 - Sparsity factor $\alpha$ that is the ratio of 0s over 1s.
 
 **Output**:
-- Unified sparse matricx: $O2$
-- Combined folds: $S2$
+- Unified sparse matricx: $M_2$
+- Combined folds: $S_2$
 
 **Execution**:
 1. Filter diseases with fewer than $T$.
-2. Convert $d$ to sparse matrix $O2_{1s}$.
-3. Sample zeros from $O2_{1s}$ using $\alpha$.
-4. Combine $O2_{1s}$ and $O2_{0s}$ into a unified matrix $O2$.
-5. Split $O2_{1s}$ indices randomly into multiple subsets $S2_{1s}$.
-6. Split $O2_{0s}$ indices randomly into multiple subsets $S2_{0s}$.
-7. Merge splits from positive ($S2_{1s}$) and zero ($S2_{0s}$) samples into $S2$.
+2. Convert $d$ to sparse matrix $M_{2_{1s}}$.
+3. Sample zeros from $M_{2_{1s}}$ using $\alpha$.
+4. Combine $M_{2_{1s}}$ and $M2_{0s}$ into a unified matrix $M_2$.
+5. Split $M_{2_{1s}}$ indices randomly into multiple subsets $S_{2_{1s}}$.
+6. Split $M_{2_{0s}}$ indices randomly into multiple subsets $S_{2_{0s}}$.
+7. Merge splits from positive ($S_{2_{1s}}$) and zero ($S_{2_{0s}}$) samples into $S_2$.
 >
 
 ---
