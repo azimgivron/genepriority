@@ -43,7 +43,7 @@ class Evaluation:
         Computes BEDROC scores for the given alpha values.
 
         Returns:
-            np.ndarray: Computed BEDROC scores. shape is (nb alpha, nb folds)
+            np.ndarray: Computed BEDROC scores. Shape is (folds, alphas).
         """
         scores = np.array(
             [
