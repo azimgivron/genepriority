@@ -9,31 +9,47 @@ The repository **NEGradient-GenePriority** (short for "Non-Euclidean Gradient Me
 ## Datasets Generation
 
 ### OMIM1 Dataset Construction
-```
-Input: Gene-disease DataFrame
-Output: Unified sparse matrix and combined splits
 
-1. Convert gene-disease DataFrame to sparse matrix `omim1_1s`.
-2. Sample zeros from `omim1_1s` using sparsity factor.
-3. Combine `omim1_1s` and `omim1_0s` into a unified matrix.
-4. Split `omim1_1s` indices randomly into multiple subsets.
-5. Split `omim1_0s` indices randomly into multiple subsets.
-6. Merge splits from positive (`omim1_1s`) and zero (`omim1_0s`) samples.
-```
+>
+**Input**: 
+- Gene-disease DataFrame: $d$
+- Number of splits: $N$
+- Sparsity factor $\alpha$ that is the ratio of 0s over 1s.
+
+**Output**:
+- Unified sparse matrices: $O1_i \quad \forall i \in \set{1, N}$
+- Combined splits: $S1_i \quad \forall i \in \set{1, N}$
+
+**Execution**:
+1. Convert $d$ to sparse matrix $O1_{1s}$.
+2. Sample $N$ zero matrices $O1_{0s, i}$ from $O1_{1s}$ using $\alpha$. $\forall i \in \set{1, N}$
+3. Combine $O1_{1s}$ and $O1_{0s, i}$ into unified matrices $O1_i$. $\forall i \in \set{1, N}$
+4. Split $O1_{1s}$ indices randomly into multiple subsets $S1_{1s}$.
+5. Split $O1_{0s, i}$ indices randomly into multiple subsets $S1_{0s,i}$. $\forall i \in \set{1, N}$
+6. Merge splits from positive ($S1_{1s}$) and zero ($S1_{0s,i}$) samples into $S1_i$. $\forall i \in \set{1, N}$
+>
 
 ### OMIM2 Dataset Construction
-```
-Input: Gene-disease DataFrame
-Output: Unified sparse matrix and combined folds
+>
+**Input**: 
+- Gene-disease DataFrame: $d$
+- Number of splits: $N$
+- Association threshold: $T$
+- Sparsity factor $\alpha$ that is the ratio of 0s over 1s.
 
-1. Filter diseases with fewer than the specified association threshold.
-2. Convert gene-disease DataFrame to sparse matrix `omim2_1s`.
-3. Sample zeros from `omim2_1s` using sparsity factor.
-4. Combine `omim2_1s` and `omim2_0s` into a unified matrix.
-5. Split `omim2_1s` indices randomly into multiple subsets.
-6. Split `omim2_0s` indices randomly into multiple subsets.
-7. Merge splits from positive (`omim2_1s`) and zero (`omim2_0s`) samples.
-```
+**Output**:
+- Unified sparse matricx: $O2$
+- Combined folds: $S2$
+
+**Execution**:
+1. Filter diseases with fewer than $T$.
+2. Convert $d$ to sparse matrix $O2_{1s}$.
+3. Sample zeros from $O2_{1s}$ using $\alpha$.
+4. Combine $O2_{1s}$ and $O2_{0s}$ into a unified matrix $O2$.
+5. Split $O2_{1s}$ indices randomly into multiple subsets $S2_{1s}$.
+6. Split $O2_{0s}$ indices randomly into multiple subsets $S2_{0s}$.
+7. Merge splits from positive ($S2_{1s}$) and zero ($S2_{0s}$) samples into $S2$.
+>
 
 ---
 
