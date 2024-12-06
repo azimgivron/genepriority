@@ -85,11 +85,16 @@ class Trainer:
             "verbose": self.verbose,
         }
 
-    def train(self) -> None:
-        """Train the model and serialize results to files."""
+    def train(self, omim2_filename: str="omim2_results.pickle", omim1_filename: str="omim1_results.pickle") -> None:
+        """Train the model and serialize results to files.
+
+        Args:
+            omim2_filename (str, optional): _description_. Defaults to "omim2_results.pickle".
+            omim1_filename (str, optional): _description_. Defaults to "omim1_results.pickle".
+        """
         omim1_results, omim2_results = self()
-        omim2_results_path = self.path / "omim2_results.pickle"
-        omim1_results_path = self.path / "omim1_results.pickle"
+        omim2_results_path = self.path / omim2_filename
+        omim1_results_path = self.path / omim1_filename
         self.to_file(omim2_results, omim2_results_path)
         self.to_file(omim1_results, omim1_results_path)
         self.logger.debug("Results serialization completed successfully")
