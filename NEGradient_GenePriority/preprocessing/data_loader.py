@@ -1,7 +1,7 @@
-        
-        
-import pandas as pd
 import logging
+
+import pandas as pd
+
 from NEGradient_GenePriority.preprocessing.preprocessing import (
     combine_matrices,
     combine_splits,
@@ -14,8 +14,17 @@ from NEGradient_GenePriority.preprocessing.preprocessing import (
     sample_zeros,
 )
 
+
 class DataLoader:
-    def __init__(self, path: str, seed: int, num_splits: int, zero_sampling_factor: int, num_folds:int, logger=None) -> None:
+    def __init__(
+        self,
+        path: str,
+        seed: int,
+        num_splits: int,
+        zero_sampling_factor: int,
+        num_folds: int,
+        logger=None,
+    ) -> None:
         self.omim1 = None
         self.omim2 = None
         self.omim1_splits_indices = None
@@ -25,23 +34,23 @@ class DataLoader:
         self.num_splits = num_splits
         self.zero_sampling_factor = zero_sampling_factor
         self.num_folds = num_folds
-        
+
         if logger is None:
             logger = logging.getLogger(__name__)
-        
+
         self.logger = logger
-        
+
     def __call__(self):
         # Load data
         self.logger.debug("Loading gene-disease data from %s", self.path)
         gene_disease = pd.read_csv(self.path)
-        
+
         self.logger.debug(
             "Loaded gene-disease data with %d rows and %d columns", *gene_disease.shape
         )
         self.load_omim1(gene_disease)
         self.load_omim2(gene_disease)
-        
+
     def load_omim1(self, gene_disease: pd.DataFrame):
         # Convert gene-disease DataFrame to sparse matrix
         omim1_1s = convert_dataframe_to_sparse_matrix(gene_disease)

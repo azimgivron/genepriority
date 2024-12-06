@@ -12,13 +12,14 @@ data class to store metrics and functions like `extract_results` and
 
 import logging
 import pickle
-from typing import List, Literal, Optional, Dict, Tuple
+from typing import Dict, List, Literal, Optional, Tuple
 
 import numpy as np
 import smurff
 
 from NEGradient_GenePriority.evaluation.evaluation import Evaluation
 from NEGradient_GenePriority.evaluation.results import Results
+
 
 class Trainer:
     def __init__(
@@ -32,9 +33,9 @@ class Trainer:
         seed: int,
         save_freq: int,
         verbose: Literal[0, 1, 2],
-        logger: Optional[logging.Logger] = None
+        logger: Optional[logging.Logger] = None,
     ):
-        """Initialize the Trainer class.
+        r"""Initialize the Trainer class.
 
         Args:
             path (str): The path to the directory where the snapshots will be saved.
@@ -85,12 +86,16 @@ class Trainer:
             "verbose": self.verbose,
         }
 
-    def train(self, omim2_filename: str="omim2_results.pickle", omim1_filename: str="omim1_results.pickle") -> None:
+    def train(
+        self,
+        omim2_filename: str = "omim2_results.pickle",
+        omim1_filename: str = "omim1_results.pickle",
+    ) -> None:
         """Train the model and serialize results to files.
 
         Args:
-            omim2_filename (str, optional): _description_. Defaults to "omim2_results.pickle".
-            omim1_filename (str, optional): _description_. Defaults to "omim1_results.pickle".
+            omim2_filename (str, optional): Filename for saving OMIM2 results. Defaults to "omim2_results.pickle".
+            omim1_filename (str, optional): Filename for saving OMIM1 results. Defaults to "omim1_results.pickle".
         """
         omim1_results, omim2_results = self()
         omim2_results_path = self.path / omim2_filename
@@ -98,8 +103,16 @@ class Trainer:
         self.to_file(omim2_results, omim2_results_path)
         self.to_file(omim1_results, omim1_results_path)
         self.logger.debug("Results serialization completed successfully")
+        omim1_results, omim2_results = self()
+        omim2_results_path = self.path / omim2_filename
+        omim1_results_path = self.path / omim1_filename
+        self.to_file(omim2_results, omim2_results_path)
+        self.to_file(omim1_results, omim1_results_path)
+        self.logger.debug("Results serialization completed successfully")
 
-    def __call__(self, latent_dimensions: List[int]) -> Tuple[Dict[str, Evaluation], Dict[str, Evaluation]]:
+    def __call__(
+        self, latent_dimensions: List[int]
+    ) -> Tuple[Dict[str, Evaluation], Dict[str, Evaluation]]:
         """Execute training for different latent dimensions.
 
         Args:
@@ -117,7 +130,9 @@ class Trainer:
                 save_name=f"latent={num_latent}:macau-omim1.hdf5",
             )
             self.logger.debug("Starting training on OMIM2")
-            omim2_results[f"latent dim={num_latent}"] = self.train_test_cross_validation(
+            omim2_results[
+                f"latent dim={num_latent}"
+            ] = self.train_test_cross_validation(
                 save_name=f"latent={num_latent}:macau-omim2.hdf5",
             )
         self.logger.debug("MACAU session completed successfully")
@@ -149,17 +164,16 @@ class Trainer:
         """
         predict_session = session.makePredictSession()
         y_pred = np.mean(predict_session.predict_all(), axis=0)[mask]
-        return y_pred 
+        return y_pred
 
     def train_test_cross_validation(
         self,
         save_name: str,
     ) -> Evaluation:
-        r"""
+        """
         Train and evaluate the model across multiple folds for cross-validation.
 
-        This function performs cross-validation using a provided list of train-test
-        folds (`folds_list`). For each fold, the algorithm trains a model, makes predictions,
+        For each fold, the algorithm trains a model, makes predictions,
         and extracts performance metrics.
 
         Args:
@@ -190,7 +204,7 @@ class Trainer:
         self,
         save_name: str,
     ) -> Evaluation:
-        r"""
+        """
         Train and evaluate the model across multiple splits.
 
         For each split, the algorithm trains a model, makes predictions,
