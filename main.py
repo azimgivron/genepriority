@@ -6,17 +6,14 @@ import pickle
 import traceback
 from pathlib import Path
 
-import pandas as pd
-
 from NEGradient_GenePriority import (
     Evaluation,
     ModelEvaluationCollection,
     DataLoader,
+    Trainer,
     generate_auc_loss_table,
     plot_bedroc_boxplots,
     plot_roc_curves,
-    train_test_cross_validation,
-    train_test_splits,
 )
 
 
@@ -50,6 +47,9 @@ def main():
         raise FileNotFoundError(f"The input path does not exist: {input_path}")
 
     try:
+        ############################
+        # LOAD DATA
+        ############################
         # Set parameters
         logger.debug("Setting parameters for splits and MACAU")
         latent_dimensions = [25, 30, 40]
@@ -61,6 +61,9 @@ def main():
         dataloader = DataLoader(input_path / "gene-disease.csv", seed, num_splits, zero_sampling_factor, num_folds)
         dataloader() #load the data
         
+        ############################
+        # RUN TRAINING AND PREDICT
+        ############################
         # Configure and run MACAU
         logger.debug("Configuring MACAU session")
         num_samples = 1500
@@ -71,43 +74,34 @@ def main():
         direct = False
         univariate = False  # Whether to use univariate or multivariate sampling.
         verbose = 0
-
         omim1_results = {}
         omim2_results = {}
         for num_latent in latent_dimensions:
+            trainer = Trainer(
+                output_path,
+                num_samples,
+                burnin_period,
+                direct,
+                univariate,
+                num_latent,
+                seed,
+                save_freq,
+                verbose,
+                logger
+            )
             logger.debug("Running MACAU for %d latent dimensions", num_latent)
             logger.debug("Starting training on OMIM1")
-            omim1_results[f"latent dim={num_latent}"] = train_test_splits(
-                omim1,
-                omim1_splits_indices,
-                num_samples,
-                burnin_period,
-                direct,
-                univariate,
-                num_latent,
-                seed=seed,
-                save_freq=save_freq,
-                output_path=output_path,
+            omim1_results[f"latent dim={num_latent}"] = trainer.train_test_cross_validation(
                 save_name=f"latent={num_latent}:macau-omim1.hdf5",
-                verbose=verbose,
             )
-            logger.debug("Starting training on OMIM2")
-            omim2_results[f"latent dim={num_latent}"] = train_test_cross_validation(
-                omim2,
-                omim2_folds_indices,
-                num_samples,
-                burnin_period,
-                direct,
-                univariate,
-                num_latent,
-                seed=seed,
-                save_freq=save_freq,
-                output_path=output_path,
+            omim2_results[f"latent dim={num_latent}"] = trainer.train_test_splits(
                 save_name=f"latent={num_latent}:macau-omim2.hdf5",
-                verbose=verbose,
             )
         logger.debug("MACAU session completed successfully")
 
+        ############################
+        # POST PROCESSING RESULTS
+        ############################
         with open(output_path / "omim1_results.pickle", "wb") as handler:
             pickle.dump(omim1_results, handler)
         with open(output_path / "omim2_results.pickle", "wb") as handler:
@@ -115,7 +109,6 @@ def main():
         logger.debug("Results serialization completed successfully")
 
         logger.debug("Starting figures and tables creation.")
-
         alphas = [228.5, 160.9, 32.2, 16.1, 5.3]
         alpha_map = {228.5: "100", 160.9: "1%", 32.2: "5%", 16.1: "10%", 5.3: "30%"}
         Evaluation.alphas = alphas

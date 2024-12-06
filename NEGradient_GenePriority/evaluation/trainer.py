@@ -6,12 +6,10 @@ Trainer module
 This module orchestrates model training and evaluation across train-test splits
 or cross-validation folds. It integrates preprocessing and metrics functionalities
 to compute and log performance metrics. Key components include the `Evaluation`
-data class to store metrics and functions like `extract_results` and
+data class to store metrics and functions like `predict` and
 `train_test_cross_validation` to streamline the evaluation process.
 """
-
 import logging
-import pickle
 from typing import Dict, List, Literal, Optional, Tuple
 
 import numpy as np
@@ -137,16 +135,6 @@ class Trainer:
             )
         self.logger.debug("MACAU session completed successfully")
         return omim1_results, omim2_results
-
-    def to_file(self, results: Dict[str, Evaluation], output_path: str) -> None:
-        """Serialize results to a file.
-
-        Args:
-            results (Dict[str, Evaluation]): The results to serialize.
-            output_path (str): Path to the output file.
-        """
-        with open(output_path, "wb") as handler:
-            pickle.dump(results, handler)
 
     def predict(
         self,
