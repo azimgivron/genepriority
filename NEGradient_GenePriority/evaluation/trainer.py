@@ -19,7 +19,6 @@ import smurff
 
 from NEGradient_GenePriority.evaluation.evaluation import Evaluation
 from NEGradient_GenePriority.evaluation.results import Results
-from NEGradient_GenePriority.preprocessing import Indices
 
 class Trainer:
     def __init__(
@@ -129,26 +128,23 @@ class Trainer:
         with open(output_path, "wb") as handler:
             pickle.dump(results, handler)
 
-    def extract_results(
+    def predict(
         self,
         session: smurff.MacauSession,
-        y_true: np.ndarray,
-        testing_indices: Indices,
+        mask: np.ndarray,
     ) -> Results:
         """Extract predictions from the trained model for the specified testing indices.
 
         Args:
             session (smurff.MacauSession): The smurff session.
-            y_true (np.ndarray): Ground truth values.
-            testing_indices (Indices): The indices in the matrix that must be used for testing.
+            mask (np.ndarray): Mask for keeping test values only.
 
         Returns:
             Results: Contains `y_true` (ground truth) and `y_pred` (predictions).
         """
         predict_session = session.makePredictSession()
-        y_pred_full = np.mean(predict_session.predict_all(), axis=0)
-        y_pred = testing_indices.mask(y_pred_full)
-        return Results(y_true, y_pred)
+        y_pred = np.mean(predict_session.predict_all(), axis=0)[mask]
+        return y_pred 
 
     def train_test_cross_validation(
         self,
@@ -168,7 +164,7 @@ class Trainer:
             Evaluation: The results of the evaluation.
         """
         results = []
-        for i, (y_train, y_true, testing_indices) in enumerate(self.dataloader.folds):
+        for i, (y_train, y_true, mask) in enumerate(self.dataloader.folds):
             self.logger.debug("Initiating training on fold %s", i + 1)
             session = smurff.MacauSession(
                 **self.macau_session_kwargs,
@@ -178,10 +174,11 @@ class Trainer:
             session.run()  # Run training
             self.logger.debug("Training on fold %s ended successfully.", i + 1)
 
-            y_true_pred = self.extract_results(session, y_true, testing_indices)
+            y_pred = self.predict(session, mask)
+            result = y_pred = Results(y_true, y_pred)
 
             self.logger.debug("Evaluation on fold %s ended successfully.", i + 1)
-            results.append(y_true_pred)
+            results.append(result)
         return Evaluation(results)
 
     def train_test_splits(
@@ -201,7 +198,7 @@ class Trainer:
             Evaluation: The results of the evaluation.
         """
         results = []
-        for i, (y_train, y_true, testing_indices) in enumerate(self.dataloader.splits):
+        for i, (y_train, y_true, mask) in enumerate(self.dataloader.splits):
             self.logger.debug("Initiating training on split %s", i + 1)
 
             session = smurff.MacauSession(
@@ -212,8 +209,9 @@ class Trainer:
             session.run()  # Run training
             self.logger.debug("Training on split %s ended successfully.", i + 1)
 
-            y_true_pred = self.extract_results(session, y_true, testing_indices)
+            y_pred = self.predict(session, mask)
+            result = y_pred = Results(y_true, y_pred)
 
             self.logger.debug("Evaluation on split %s ended successfully.", i + 1)
-            results.append(y_true_pred)
+            results.append(result)
         return Evaluation(results)
