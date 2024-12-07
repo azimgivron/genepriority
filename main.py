@@ -6,9 +6,9 @@ import traceback
 from pathlib import Path
 
 from NEGradient_GenePriority import (
+    DataLoader,
     Evaluation,
     ModelEvaluationCollection,
-    DataLoader,
     Trainer,
     generate_auc_loss_table,
     plot_bedroc_boxplots,
@@ -57,9 +57,15 @@ def main():
         zero_sampling_factor = 5
         seed = 42
 
-        dataloader = DataLoader(input_path / "gene-disease.csv", seed, num_splits, zero_sampling_factor, num_folds)
-        dataloader() #load the data
-        
+        dataloader = DataLoader(
+            input_path / "gene-disease.csv",
+            seed,
+            num_splits,
+            zero_sampling_factor,
+            num_folds,
+        )
+        dataloader()  # load the data
+
         ############################
         # RUN TRAINING AND PREDICT
         ############################
@@ -75,7 +81,7 @@ def main():
         verbose = 0
         omim1_results = {}
         omim2_results = {}
-        
+
         trainer = Trainer(
             dataloader=dataloader,
             path=output_path,
@@ -86,9 +92,11 @@ def main():
             seed=seed,
             save_freq=save_freq,
             verbose=verbose,
-            logger=logger
+            logger=logger,
         )
-        omim1_results, omim2_results = trainer(latent_dimensions=latent_dimensions, save_results=True)
+        omim1_results, omim2_results = trainer(
+            latent_dimensions=latent_dimensions, save_results=True
+        )
 
         ############################
         # POST PROCESSING RESULTS
@@ -101,9 +109,9 @@ def main():
 
         collections = [
             ModelEvaluationCollection(omim1_results),
-            ModelEvaluationCollection(omim2_results)
+            ModelEvaluationCollection(omim2_results),
         ]
-        for i, collection in enumerate(collections,1):
+        for i, collection in enumerate(collections, 1):
             plot_roc_curves(
                 evaluation_collection=collection,
                 output_file=(output_path / f"roc_curve_omim{i}"),

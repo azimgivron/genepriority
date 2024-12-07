@@ -1,17 +1,19 @@
-# pylint: disable=R0913,R0914
+# pylint: disable=R0913,R0914,R0902
 """
 Trainer module
 =================
 
-This module orchestrates the training and evaluation of predictive models for gene prioritization tasks.
-It integrates preprocessing and evaluation functionalities to compute and log performance metrics across
-train-test splits or cross-validation folds.
+This module orchestrates the training and evaluation of predictive models for gene
+prioritization tasks. It integrates preprocessing and evaluation functionalities
+to compute and log performance metrics across train-test splits or cross-validation
+folds.
 
 This module supports efficient and reproducible workflows by utilizing a `DataLoader`
 for preprocessing, and saving evaluation results for further analysis.
 """
 
 import logging
+import pickle
 from typing import Dict, List, Literal, Optional, Tuple
 
 import numpy as np
@@ -153,8 +155,8 @@ class Trainer:
         if save_results:
             omim2_results_path = self.path / omim2_filename
             omim1_results_path = self.path / omim1_filename
-            self.to_file(omim2_results, omim2_results_path)
-            self.to_file(omim1_results, omim1_results_path)
+            save_evaluations(omim2_results, omim2_results_path)
+            save_evaluations(omim1_results, omim1_results_path)
             self.logger.debug("Results serialization completed successfully")
         return omim1_results, omim2_results
 
@@ -234,3 +236,17 @@ class Trainer:
             y_pred = self.predict(session, mask)
             results.append(Results(y_true=y_true, y_pred=y_pred))
         return Evaluation(results)
+
+
+def save_evaluations(results: Dict[str, Evaluation], output_path: str):
+    """
+    Save evaluation results to a file in binary format using pickle.
+
+    Args:
+        results (Dict[str, Evaluation]): A dictionary where keys are descriptive strings
+            (e.g., latent dimensions or other identifiers) and values are `Evaluation` objects
+            containing evaluation metrics and results.
+        output_path (str): The file path where the results should be saved.
+    """
+    with open(output_path, "wb") as handler:
+        pickle.dump(results, handler)
