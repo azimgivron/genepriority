@@ -92,16 +92,11 @@ class Indices:
         merged_indices = np.vstack((self.indices, indices.indices))
         return Indices(merged_indices)
 
-    def mask(self, data: np.ndarray) -> np.ndarray:
+    def mask(self) -> np.ndarray:
         """
-        Applies a mask over the indices to extract the relevant elements from a 2D array.
-
-        Args:
-            data (np.ndarray): The data to mask. It must have the same shape as the dataset
-                               from which the indices were extracted.
+        Get a mask of indices to extract.
 
         Returns:
-            np.ndarray: A 1D array of elements from `data` corresponding to the stored indices.
+            np.ndarray: The mask.
         """
-        rows, cols = zip(*self.indices.tolist())
-        return data[np.array(rows), np.array(cols)]
+        return self.indices.T
