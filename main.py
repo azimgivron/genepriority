@@ -57,29 +57,33 @@ def main():
         num_folds = 5
         zero_sampling_factor = 5
         seed = 42
+        nb_genes = 14_195
+        nb_diseases = 314
 
         # load data
         dataloader = DataLoader(
-            input_path / "gene-disease.csv",
-            seed,
-            num_splits,
-            zero_sampling_factor,
-            num_folds,
+            nb_genes=nb_genes,
+            nb_diseases=nb_diseases,
+            path=input_path / "gene-disease.csv",
+            seed=seed,
+            num_splits=num_splits,
+            zero_sampling_factor=zero_sampling_factor,
+            num_folds=num_folds,
         )
-        dataloader()  # load the data
+        dataloader(filter_column="Disease ID")  # load the data
 
         # load side information
         interpro_path = input_path / "interpro.csv"
         uniprot_path = input_path / "uniprot.csv"
         go_path = input_path / "go.csv"
         phenotype_path = input_path / "phenotype.csv"
-        side_info_loader = SideInformationLoader(logger=logger)
+        side_info_loader = SideInformationLoader(
+            logger=logger, nb_genes=nb_genes, nb_diseases=nb_diseases
+        )
         side_info_loader.process_side_information(
-            gene_side_information_paths=[interpro_path, uniprot_path, go_path],
-            gene_add_1s=[True, True, True],
-            disease_side_information_paths=[phenotype_path],
-            disease_add_1s=[False],
-            names=["interpro", "uniprot", "GO", "phenotype"]
+            gene_side_info_paths=[interpro_path, uniprot_path, go_path],
+            disease_side_info_paths=[phenotype_path],
+            names=["interpro", "uniprot", "GO", "phenotype"],
         )
 
         ############################

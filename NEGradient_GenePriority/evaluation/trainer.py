@@ -219,19 +219,19 @@ class Trainer:
             Evaluation: Aggregated evaluation results across all folds.
         """
         results = []
-        for i, (y_train, y_true, mask) in enumerate(zip(*self.dataloader.folds)):
+        for i, (y_train, ys_test, mask) in enumerate(zip(*self.dataloader.folds)):
             self.logger.debug("Initiating training on fold %d", i + 1)
             session = smurff.MacauSession(
                 **self.macau_session_kwargs,
                 num_latent=num_latent,
                 Ytrain=y_train,
+                Ytest=ys_test,
                 save_name=str(self.path / f"{i}:{save_name}"),
+                side_info=self.side_info_loader.side_info,
             )
-            self.add_side_information(session)
-
             session.run()
             y_pred = self.predict(session, mask)
-            results.append(Results(y_true=y_true, y_pred=y_pred))
+            results.append(Results(y_true=ys_test.data, y_pred=y_pred))
         return Evaluation(results)
 
     def train_test_splits(
@@ -250,19 +250,19 @@ class Trainer:
             Evaluation: Aggregated evaluation results across all splits.
         """
         results = []
-        for i, (y_train, y_true, mask) in enumerate(zip(*self.dataloader.splits)):
+        for i, (y_train, ys_test, mask) in enumerate(zip(*self.dataloader.splits)):
             self.logger.debug("Initiating training on split %d", i + 1)
             session = smurff.MacauSession(
                 **self.macau_session_kwargs,
                 num_latent=num_latent,
                 Ytrain=y_train,
+                Ytest=ys_test,
                 save_name=str(self.path / f"{i}:{save_name}"),
+                side_info=self.side_info_loader.side_info,
             )
-            self.add_side_information(session)
-
             session.run()
             y_pred = self.predict(session, mask)
-            results.append(Results(y_true=y_true, y_pred=y_pred))
+            results.append(Results(y_true=ys_test.data, y_pred=y_pred))
         return Evaluation(results)
 
 
