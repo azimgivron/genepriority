@@ -9,6 +9,7 @@ from NEGradient_GenePriority import (
     DataLoader,
     Evaluation,
     ModelEvaluationCollection,
+    SideInformationLoader,
     Trainer,
     generate_auc_loss_table,
     plot_bedroc_boxplots,
@@ -57,6 +58,7 @@ def main():
         zero_sampling_factor = 5
         seed = 42
 
+        # load data
         dataloader = DataLoader(
             input_path / "gene-disease.csv",
             seed,
@@ -65,6 +67,19 @@ def main():
             num_folds,
         )
         dataloader()  # load the data
+
+        # load side information
+        interpro_path = input_path / "interpro.csv"
+        uniprot_path = input_path / "uniprot.csv"
+        go_path = input_path / "go.csv"
+        phenotype_path = input_path / "phenotype.csv"
+        side_information_loader = SideInformationLoader(logger=logger)
+        side_information_loader.process_side_information(
+            gene_side_information_paths=[interpro_path, uniprot_path, go_path],
+            gene_add_1s=[True, True, True],
+            disease_side_information_paths=[phenotype_path],
+            disease_add_1s=[False],
+        )
 
         ############################
         # RUN TRAINING AND PREDICT
