@@ -2,7 +2,6 @@
 """Main module"""
 import logging
 import os
-import pickle
 import traceback
 from pathlib import Path
 
@@ -89,7 +88,7 @@ def main():
             verbose=verbose,
             logger=logger
         )
-        trainer(latent_dimensions=latent_dimensions, save_results=True)
+        omim1_results, omim2_results = trainer(latent_dimensions=latent_dimensions, save_results=True)
 
         ############################
         # POST PROCESSING RESULTS
@@ -100,37 +99,25 @@ def main():
         Evaluation.alphas = alphas
         Evaluation.alpha_map = alpha_map
 
-        omim1_collection = ModelEvaluationCollection(omim1_results)
-        plot_roc_curves(
-            evaluation_collection=omim1_collection,
-            output_file=(output_path / "roc_curve_omim1.png"),
-        )
-        auc_loss_dataframe_omim1 = generate_auc_loss_table(
-            omim1_collection.compute_auc_losses(),
-            model_names=omim1_collection.model_names,
-        )
-        auc_loss_dataframe_omim1.to_csv(output_path / "auc_loss_omim1.csv")
-        plot_bedroc_boxplots(
-            omim1_collection.compute_bedroc_scores(),
-            model_names=latent_dimensions,
-            output_file=(output_path / "bedroc_omim1.png"),
-        )
-
-        omim2_collection = ModelEvaluationCollection(omim2_results)
-        plot_roc_curves(
-            evaluation_collection=omim2_collection,
-            output_file=(output_path / "roc_curve_omim2.png"),
-        )
-        auc_loss_dataframe_omim2 = generate_auc_loss_table(
-            omim2_collection.compute_auc_losses(),
-            model_names=omim2_collection.model_names,
-        )
-        auc_loss_dataframe_omim2.to_csv(output_path / "auc_loss_omim2.csv")
-        plot_bedroc_boxplots(
-            omim2_collection.compute_bedroc_scores(),
-            model_names=latent_dimensions,
-            output_file=(output_path / "bedroc_omim2.png"),
-        )
+        collections = [
+            ModelEvaluationCollection(omim1_results),
+            ModelEvaluationCollection(omim2_results)
+        ]
+        for i, collection in enumerate(collections,1):
+            plot_roc_curves(
+                evaluation_collection=collection,
+                output_file=(output_path / f"roc_curve_omim{i}"),
+            )
+            auc_loss_dataframe = generate_auc_loss_table(
+                collection.compute_auc_losses(),
+                model_names=collection.model_names,
+            )
+            auc_loss_dataframe.to_csv(output_path / f"auc_loss_omim{i}.csv")
+            plot_bedroc_boxplots(
+                collection.compute_bedroc_scores(),
+                model_names=latent_dimensions,
+                output_file=(output_path / f"bedroc_omim{i}.png"),
+            )
         logger.debug("Figures and tables creation completed successfully")
     except Exception as exception:
         logger.error("An error occurred during processing: %s", exception)
