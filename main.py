@@ -76,38 +76,24 @@ def main():
         verbose = 0
         omim1_results = {}
         omim2_results = {}
-        for num_latent in latent_dimensions:
-            trainer = Trainer(
-                output_path,
-                num_samples,
-                burnin_period,
-                direct,
-                univariate,
-                num_latent,
-                seed,
-                save_freq,
-                verbose,
-                logger
-            )
-            logger.debug("Running MACAU for %d latent dimensions", num_latent)
-            logger.debug("Starting training on OMIM1")
-            omim1_results[f"latent dim={num_latent}"] = trainer.train_test_cross_validation(
-                save_name=f"latent={num_latent}:macau-omim1.hdf5",
-            )
-            omim2_results[f"latent dim={num_latent}"] = trainer.train_test_splits(
-                save_name=f"latent={num_latent}:macau-omim2.hdf5",
-            )
-        logger.debug("MACAU session completed successfully")
+        
+        trainer = Trainer(
+            dataloader=dataloader,
+            path=output_path,
+            num_samples=num_samples,
+            burnin_period=burnin_period,
+            direct=direct,
+            univariate=univariate,
+            seed=seed,
+            save_freq=save_freq,
+            verbose=verbose,
+            logger=logger
+        )
+        trainer(latent_dimensions=latent_dimensions, save_results=True)
 
         ############################
         # POST PROCESSING RESULTS
         ############################
-        with open(output_path / "omim1_results.pickle", "wb") as handler:
-            pickle.dump(omim1_results, handler)
-        with open(output_path / "omim2_results.pickle", "wb") as handler:
-            pickle.dump(omim2_results, handler)
-        logger.debug("Results serialization completed successfully")
-
         logger.debug("Starting figures and tables creation.")
         alphas = [228.5, 160.9, 32.2, 16.1, 5.3]
         alpha_map = {228.5: "100", 160.9: "1%", 32.2: "5%", 16.1: "10%", 5.3: "30%"}

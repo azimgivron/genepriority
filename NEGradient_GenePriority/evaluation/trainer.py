@@ -3,12 +3,14 @@
 Trainer module
 =================
 
-This module orchestrates model training and evaluation across train-test splits
-or cross-validation folds. It integrates preprocessing and metrics functionalities
-to compute and log performance metrics. Key components include the `Evaluation`
-data class to store metrics and functions like `predict` and
-`train_test_cross_validation` to streamline the evaluation process.
+This module orchestrates the training and evaluation of predictive models for gene prioritization tasks.
+It integrates preprocessing and evaluation functionalities to compute and log performance metrics across
+train-test splits or cross-validation folds.
+
+This module supports efficient and reproducible workflows by utilizing a `DataLoader`
+for preprocessing, and saving evaluation results for further analysis.
 """
+
 import logging
 from typing import Dict, List, Literal, Optional, Tuple
 
@@ -17,46 +19,71 @@ import smurff
 
 from NEGradient_GenePriority.evaluation.evaluation import Evaluation
 from NEGradient_GenePriority.evaluation.results import Results
+from NEGradient_GenePriority.preprocessing.dataloader import DataLoader
 
 
 class Trainer:
+    """
+    Trainer Class
+
+    This class manages the training and evaluation of predictive models for gene
+    prioritization tasks. It supports evaluation across train-test splits or
+    cross-validation folds and integrates preprocessing and metrics functionalities
+    to compute and log performance.
+
+    Attributes:
+        dataloader (DataLoader): The data loader containing all data for training
+            and testing.
+        path (str): The path to the directory where model snapshots will be saved.
+        num_samples (int): The number of posterior samples to draw during training.
+        burnin_period (int): The number of burn-in iterations before collecting
+            posterior samples.
+        direct (bool): Whether to use a Cholesky or conjugate gradient (CG) solver.
+        univariate (bool): Whether to use univariate or multivariate sampling.
+        seed (int): The random seed for reproducibility.
+        save_freq (int): Frequency at which model state is saved (e.g., every N samples).
+        verbose (Literal[0, 1, 2]): Verbosity level of the algorithm
+            (0: Silent, 1: Minimal, 2: Detailed).
+        logger (logging.Logger): Logger instance for debug and info messages.
+    """
+
     def __init__(
         self,
+        dataloader: DataLoader,
         path: str,
         num_samples: int,
         burnin_period: int,
         direct: bool,
         univariate: bool,
-        num_latent: int,
         seed: int,
         save_freq: int,
         verbose: Literal[0, 1, 2],
         logger: Optional[logging.Logger] = None,
-    ):
-        r"""Initialize the Trainer class.
+    ) -> None:
+        """
+        Initialize the Trainer class with the given configuration.
 
         Args:
-            path (str): The path to the directory where the snapshots will be saved.
+            dataloader (DataLoader): The data loader containing all data for
+                training and testing.
+            path (str): The path to the directory where model snapshots will be saved.
             num_samples (int): The number of posterior samples to draw during training.
-            burnin_period (int): The number of burn-in iterations before collecting posterior samples.
-            direct (bool): Whether to use a Cholesky instead of conjugate gradient (CG) solver.
-                Cholesky is recommended up to $dim(F_e) \approx 20,000$.
+            burnin_period (int): The number of burn-in iterations before collecting
+                posterior samples.
+            direct (bool): Whether to use a Cholesky or CG solver.
             univariate (bool): Whether to use univariate or multivariate sampling.
-                Multivariate sampling requires computing the whole precision matrix
-                $D \cdot F_e \times D \cdot F_e$ where $D$ is the latent vector size and $F_e$
-                is the dimensionality of the entity features. If True, it uses a Gibbs sampler.
-            num_latent (int): The number of latent factors to be used by the model.
-            seed (int): The random seed to ensure reproducibility in stochastic operations.
-            save_freq (int): The frequency at which the model state is saved (e.g., every N samples).
-            verbose (Literal[0,1,2]): The verbosity level of the algorithm (0: Silent, 1: Minimal, 2: Detailed).
-            logger (Optional[logging.Logger], optional): Logger instance for debug and info messages. Defaults to None.
+            seed (int): The random seed for reproducibility.
+            save_freq (int): The frequency at which the model state is saved.
+            verbose (Literal[0, 1, 2]): The verbosity level of the algorithm.
+            logger (Optional[logging.Logger]): Logger instance for debug messages.
+                If None, a default logger is created.
         """
+        self.dataloader = dataloader
         self.path = path
         self.num_samples = num_samples
         self.burnin_period = burnin_period
         self.direct = direct
         self.univariate = univariate
-        self.num_latent = num_latent
         self.seed = seed
         self.save_freq = save_freq
         self.verbose = verbose
@@ -67,16 +94,18 @@ class Trainer:
 
     @property
     def macau_session_kwargs(self) -> Dict[str, any]:
-        """Generate keyword arguments for the Macau session.
+        """
+        Generate keyword arguments for configuring the SMURFF Macau session.
 
         Returns:
-            Dict[str, any]: A dictionary of parameters for configuring the Macau session.
+            Dict[str, any]: A dictionary of parameters for the Macau session,
+                including solver type, burn-in iterations, posterior sampling
+                parameters, and verbosity settings.
         """
         return {
             "is_scarce": True,
             "direct": self.direct,
             "univariate": self.univariate,
-            "num_latent": self.num_latent,
             "burnin": self.burnin_period,
             "nsamples": self.num_samples,
             "seed": self.seed,
@@ -84,56 +113,49 @@ class Trainer:
             "verbose": self.verbose,
         }
 
-    def train(
+    def __call__(
         self,
+        latent_dimensions: List[int],
+        save_results: bool,
         omim2_filename: str = "omim2_results.pickle",
         omim1_filename: str = "omim1_results.pickle",
-    ) -> None:
-        """Train the model and serialize results to files.
-
-        Args:
-            omim2_filename (str, optional): Filename for saving OMIM2 results. Defaults to "omim2_results.pickle".
-            omim1_filename (str, optional): Filename for saving OMIM1 results. Defaults to "omim1_results.pickle".
-        """
-        omim1_results, omim2_results = self()
-        omim2_results_path = self.path / omim2_filename
-        omim1_results_path = self.path / omim1_filename
-        self.to_file(omim2_results, omim2_results_path)
-        self.to_file(omim1_results, omim1_results_path)
-        self.logger.debug("Results serialization completed successfully")
-        omim1_results, omim2_results = self()
-        omim2_results_path = self.path / omim2_filename
-        omim1_results_path = self.path / omim1_filename
-        self.to_file(omim2_results, omim2_results_path)
-        self.to_file(omim1_results, omim1_results_path)
-        self.logger.debug("Results serialization completed successfully")
-
-    def __call__(
-        self, latent_dimensions: List[int]
     ) -> Tuple[Dict[str, Evaluation], Dict[str, Evaluation]]:
-        """Execute training for different latent dimensions.
+        """
+        Execute training for different latent dimensions and optionally save results.
 
         Args:
             latent_dimensions (List[int]): List of latent dimensions to evaluate.
+            save_results (bool): Whether to save the results to file.
+            omim2_filename (str, optional): Filename for saving OMIM2 results.
+                Defaults to "omim2_results.pickle".
+            omim1_filename (str, optional): Filename for saving OMIM1 results.
+                Defaults to "omim1_results.pickle".
 
         Returns:
-            Tuple[Dict[str, Evaluation], Dict[str, Evaluation]]: Results for OMIM1 and OMIM2 datasets.
+            Tuple[Dict[str, Evaluation], Dict[str, Evaluation]]: Evaluation results
+                for OMIM1 and OMIM2 datasets.
         """
         omim1_results = {}
         omim2_results = {}
         for num_latent in latent_dimensions:
             self.logger.debug("Running MACAU for %d latent dimensions", num_latent)
-            self.logger.debug("Starting training on OMIM1")
             omim1_results[f"latent dim={num_latent}"] = self.train_test_splits(
+                num_latent=num_latent,
                 save_name=f"latent={num_latent}:macau-omim1.hdf5",
             )
-            self.logger.debug("Starting training on OMIM2")
             omim2_results[
                 f"latent dim={num_latent}"
             ] = self.train_test_cross_validation(
+                num_latent=num_latent,
                 save_name=f"latent={num_latent}:macau-omim2.hdf5",
             )
         self.logger.debug("MACAU session completed successfully")
+        if save_results:
+            omim2_results_path = self.path / omim2_filename
+            omim1_results_path = self.path / omim1_filename
+            self.to_file(omim2_results, omim2_results_path)
+            self.to_file(omim1_results, omim1_results_path)
+            self.logger.debug("Results serialization completed successfully")
         return omim1_results, omim2_results
 
     def predict(
@@ -141,84 +163,74 @@ class Trainer:
         session: smurff.MacauSession,
         mask: np.ndarray,
     ) -> Results:
-        """Extract predictions from the trained model for the specified testing indices.
+        """
+        Extract predictions from the trained model using the test mask.
 
         Args:
-            session (smurff.MacauSession): The smurff session.
-            mask (np.ndarray): Mask for keeping test values only.
+            session (smurff.MacauSession): The trained SMURFF session.
+            mask (np.ndarray): Binary mask for selecting test indices.
 
         Returns:
-            Results: Contains `y_true` (ground truth) and `y_pred` (predictions).
+            Results: Contains ground truth values (`y_true`) and predictions (`y_pred`).
         """
         predict_session = session.makePredictSession()
         y_pred = np.mean(predict_session.predict_all(), axis=0)[mask]
-        return y_pred
+        return Results(y_true=mask, y_pred=y_pred)
 
     def train_test_cross_validation(
         self,
+        num_latent: int,
         save_name: str,
     ) -> Evaluation:
         """
-        Train and evaluate the model across multiple folds for cross-validation.
-
-        For each fold, the algorithm trains a model, makes predictions,
-        and extracts performance metrics.
+        Train and evaluate the model using cross-validation.
 
         Args:
-            save_name (str): The base filename to use when saving model snapshots.
+            num_latent (int): The number of latent dimensions for the model.
+            save_name (str): The base filename for saving model snapshots.
 
         Returns:
-            Evaluation: The results of the evaluation.
+            Evaluation: Aggregated evaluation results across all folds.
         """
         results = []
-        for i, (y_train, y_true, mask) in enumerate(self.dataloader.folds):
-            self.logger.debug("Initiating training on fold %s", i + 1)
+        for i, (y_train, y_true, mask) in enumerate(zip(*self.dataloader.folds)):
+            self.logger.debug("Initiating training on fold %d", i + 1)
             session = smurff.MacauSession(
                 **self.macau_session_kwargs,
+                num_latent=num_latent,
                 Ytrain=y_train,
                 save_name=str(self.path / f"{i}:{save_name}"),
             )
-            session.run()  # Run training
-            self.logger.debug("Training on fold %s ended successfully.", i + 1)
-
+            session.run()
             y_pred = self.predict(session, mask)
-            result = y_pred = Results(y_true, y_pred)
-
-            self.logger.debug("Evaluation on fold %s ended successfully.", i + 1)
-            results.append(result)
+            results.append(Results(y_true=y_true, y_pred=y_pred))
         return Evaluation(results)
 
     def train_test_splits(
         self,
+        num_latent: int,
         save_name: str,
     ) -> Evaluation:
         """
-        Train and evaluate the model across multiple splits.
-
-        For each split, the algorithm trains a model, makes predictions,
-        and extracts performance metrics.
+        Train and evaluate the model using predefined train-test splits.
 
         Args:
-            save_name (str): The base filename to use when saving model snapshots.
+            num_latent (int): The number of latent dimensions for the model.
+            save_name (str): The base filename for saving model snapshots.
 
         Returns:
-            Evaluation: The results of the evaluation.
+            Evaluation: Aggregated evaluation results across all splits.
         """
         results = []
-        for i, (y_train, y_true, mask) in enumerate(self.dataloader.splits):
-            self.logger.debug("Initiating training on split %s", i + 1)
-
+        for i, (y_train, y_true, mask) in enumerate(zip(*self.dataloader.splits)):
+            self.logger.debug("Initiating training on split %d", i + 1)
             session = smurff.MacauSession(
                 **self.macau_session_kwargs,
+                num_latent=num_latent,
                 Ytrain=y_train,
                 save_name=str(self.path / f"{i}:{save_name}"),
             )
-            session.run()  # Run training
-            self.logger.debug("Training on split %s ended successfully.", i + 1)
-
+            session.run()
             y_pred = self.predict(session, mask)
-            result = y_pred = Results(y_true, y_pred)
-
-            self.logger.debug("Evaluation on split %s ended successfully.", i + 1)
-            results.append(result)
+            results.append(Results(y_true=y_true, y_pred=y_pred))
         return Evaluation(results)

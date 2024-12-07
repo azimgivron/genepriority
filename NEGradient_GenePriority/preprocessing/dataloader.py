@@ -7,9 +7,10 @@ association data for gene prioritization tasks. It includes functionality for ha
 sparse matrices, random splits, and cross-validation folds.
 """
 import logging
+from typing import List, Optional, Tuple
+
 import pandas as pd
 from scipy.sparse import csr_matrix
-from typing import List, Tuple, Optional
 
 from NEGradient_GenePriority.preprocessing.preprocessing import (
     combine_matrices,
@@ -25,18 +26,20 @@ from NEGradient_GenePriority.preprocessing.preprocessing import (
 
 
 class DataLoader:
-    """"
+    """ "
     DataLoader Class
 
-    A utility class to handle the preprocessing and preparation of gene-disease association data 
-    for gene prioritization tasks. The DataLoader prepares datasets for two types of matrices (OMIM1 
-    and OMIM2), including creating sparse matrices, random splits, and folds for training and testing.
+    A utility class to handle the preprocessing and preparation of gene-disease association data
+    for gene prioritization tasks. The DataLoader prepares datasets for two types of matrices
+    (OMIM1 and OMIM2), including creating sparse matrices, random splits, and folds for
+    training and testing.
 
     Attributes:
         path (str): Path to the CSV file containing gene-disease associations.
         seed (int): Seed for reproducibility in random operations.
         num_splits (int): Number of splits to generate for training and testing data in OMIM1.
-        zero_sampling_factor (int): Factor to determine the number of zeros to sample for negative associations.
+        zero_sampling_factor (int): Factor to determine the number of zeros to sample for
+            negative associations.
         num_folds (int): Number of folds to generate for cross-validation in OMIM2.
         logger (logging.Logger): Logger instance for logging the processing steps.
 
@@ -60,7 +63,8 @@ class DataLoader:
             num_splits (int): Number of random splits for the data.
             zero_sampling_factor (int): Factor for sampling zero associations.
             num_folds (int): Number of folds for cross-validation.
-            logger (Optional[logging.Logger]): Logger for debug messages. If None, a default logger is created.
+            logger (Optional[logging.Logger]): Logger for debug messages.
+                If None, a default logger is created.
         """
         self.omim1: Optional[List[csr_matrix]] = None
         self.omim2: Optional[csr_matrix] = None
@@ -95,7 +99,8 @@ class DataLoader:
         Process the OMIM1 dataset.
 
         Args:
-            gene_disease (pd.DataFrame): Gene-disease association data as a DataFrame.
+            gene_disease (pd.DataFrame): Gene-disease association data as a
+                DataFrame.
         """
         omim1_1s = convert_dataframe_to_sparse_matrix(gene_disease)
         omim1_0s = [
@@ -127,7 +132,8 @@ class DataLoader:
         Process the OMIM2 dataset.
 
         Args:
-            gene_disease (pd.DataFrame): Gene-disease association data as a DataFrame.
+            gene_disease (pd.DataFrame): Gene-disease association data as
+                a DataFrame.
         """
         self.logger.debug("Filtering gene-disease data by association threshold")
         filtered_gene_disease = filter_by_number_of_association(
@@ -155,10 +161,17 @@ class DataLoader:
         Get splits for the OMIM1 dataset.
 
         Returns:
-            Tuple[List, List, List]: Training labels, true labels, and masks for testing data.
+            Tuple[List, List, List]: Training labels, true labels,
+                and masks for testing data.
         """
-        ys_train = [fold.training_indices.get_data(omim1) for fold, omim1 in zip(self.omim2_folds_indices, self.omim1)]
-        ys_true = [fold.testing_indices.get_data(omim1).data for fold, omim1 in zip(self.omim2_folds_indices, self.omim1)]
+        ys_train = [
+            fold.training_indices.get_data(omim1)
+            for fold, omim1 in zip(self.omim2_folds_indices, self.omim1)
+        ]
+        ys_true = [
+            fold.testing_indices.get_data(omim1).data
+            for fold, omim1 in zip(self.omim2_folds_indices, self.omim1)
+        ]
         masks = [fold.testing_indices.mask for fold in self.omim2_folds_indices]
         return ys_train, ys_true, masks
 
@@ -168,9 +181,16 @@ class DataLoader:
         Get folds for the OMIM2 dataset.
 
         Returns:
-            Tuple[List, List, List]: Training labels, true labels, and masks for testing data.
+            Tuple[List, List, List]: Training labels, true labels,
+                and masks for testing data.
         """
-        ys_train = [fold.training_indices.get_data(self.omim2) for fold in self.omim2_folds_indices]
-        ys_true = [fold.testing_indices.get_data(self.omim2).data for fold in self.omim2_folds_indices]
+        ys_train = [
+            fold.training_indices.get_data(self.omim2)
+            for fold in self.omim2_folds_indices
+        ]
+        ys_true = [
+            fold.testing_indices.get_data(self.omim2).data
+            for fold in self.omim2_folds_indices
+        ]
         masks = [fold.testing_indices.mask for fold in self.omim2_folds_indices]
         return ys_train, ys_true, masks
