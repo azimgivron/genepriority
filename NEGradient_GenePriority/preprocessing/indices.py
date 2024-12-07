@@ -78,6 +78,23 @@ class Indices:
                            matches the shape of the original dataset.
         """
         return from_indices(dataset_matrix, self.indices_set).tocsr()
+    
+    def get_1s(self, dataset_matrix: sp.coo_matrix) -> sp.csr_matrix:
+        """
+        Retrieves the subset of the dataset corresponding to the stored indices
+        where the data is 1.
+
+        Args:
+            dataset_matrix (sp.coo_matrix): The full dataset represented as a COO sparse matrix.
+
+        Returns:
+            sp.csr_matrix: A sparse matrix in CSR format containing only the elements
+                           specified by the indices. The shape of the returned matrix
+                           matches the shape of the original dataset.
+        """
+        full_matrix = self.get_data(dataset_matrix).tocoo()
+        mask = full_matrix.data == 1
+        return sp.coo_matrix((full_matrix.data[mask], (full_matrix.row[mask], full_matrix.col[mask])), shape=full_matrix.shape).tocsr()
 
     def merge(self, indices: Indices) -> Indices:
         """
@@ -92,6 +109,7 @@ class Indices:
         merged_indices = np.vstack((self.indices, indices.indices))
         return Indices(merged_indices)
 
+    @property
     def mask(self) -> np.ndarray:
         """
         Get a mask of indices to extract.

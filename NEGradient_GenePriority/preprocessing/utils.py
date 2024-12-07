@@ -5,7 +5,7 @@ Utils module
 This module defines the utility functions.
 """
 from typing import Set, Tuple
-
+import numpy as np
 import scipy.sparse as sp
 
 
@@ -13,7 +13,8 @@ def from_indices(
     dataset_matrix: sp.coo_matrix, indices_set: Set[Tuple[int, int]]
 ) -> sp.coo_matrix:
     """
-    Extracts a submatrix from the given sparse matrix based on specified row-column indices.
+    Extracts a submatrix from the given sparse matrix based on specified row-column indices
+    while keeping the same shape as the original matrix.
 
     Args:
         dataset_matrix (sp.coo_matrix): The input sparse matrix from which

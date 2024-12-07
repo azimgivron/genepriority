@@ -186,47 +186,57 @@ class DataLoader:
     @property
     def splits(
         self,
-    ) -> Tuple[List[sp.csr_matrix], List[sp.csr_matrix], List[np.ndarray]]:
+    ) -> Tuple[List[sp.csr_matrix], List[np.ndarray], List[sp.csr_matrix], List[np.ndarray]]:
         """
         Get splits for the OMIM1 dataset.
 
         Returns:
-            Tuple[List[sp.csr_matrix], List[sp.csr_matrix], List[np.ndarray]]:
+            Tuple[List[sp.csr_matrix], List[np.ndarray], List[sp.csr_matrix], List[np.ndarray]]:
                 - List of training matrices (sp.csr_matrix).
-                - List of testing matrices (sp.csr_matrix).
+                - List of test labels (np.ndarray).
+                - List of test matrices containing only positive class labels (sp.csr_matrix).
                 - List of masks for testing data (np.ndarray).
         """
         ys_train = [
             fold.training_indices.get_data(omim1)
             for fold, omim1 in zip(self.omim2_folds_indices, self.omim1)
         ]
-        ys_test = [
-            fold.testing_indices.get_data(omim1)
+        ys_true = [
+            fold.testing_indices.get_data(omim1).data
             for fold, omim1 in zip(self.omim2_folds_indices, self.omim1)
         ]
+        ys_test_1s = [
+            fold.testing_indices.get_1s(self.omim2)
+            for fold in self.omim2_folds_indices
+        ]
         masks = [fold.testing_indices.mask for fold in self.omim2_folds_indices]
-        return ys_train, ys_test, masks
+        return ys_train, ys_true, ys_test_1s, masks
 
     @property
     def folds(
         self,
-    ) -> Tuple[List[sp.csr_matrix], List[sp.csr_matrix], List[np.ndarray]]:
+    ) -> Tuple[List[sp.csr_matrix], List[np.ndarray], List[sp.csr_matrix], List[np.ndarray]]:
         """
         Get folds for the OMIM2 dataset.
 
         Returns:
-            Tuple[List[sp.csr_matrix], List[sp.csr_matrix], List[np.ndarray]]:
+            Tuple[List[sp.csr_matrix], List[np.ndarray], List[sp.csr_matrix], List[np.ndarray]]:
                 - List of training matrices (sp.csr_matrix).
-                - List of testing matrices (sp.csr_matrix).
+                - List of test labels (np.ndarray).
+                - List of test matrices containing only positive class labels (sp.csr_matrix).
                 - List of masks for testing data (np.ndarray).
         """
         ys_train = [
             fold.training_indices.get_data(self.omim2)
             for fold in self.omim2_folds_indices
         ]
-        ys_test = [
-            fold.testing_indices.get_data(self.omim2)
+        ys_true = [
+            fold.testing_indices.get_data(self.omim2).data
+            for fold in self.omim2_folds_indices
+        ]
+        ys_test_1s = [
+            fold.testing_indices.get_1s(self.omim2)
             for fold in self.omim2_folds_indices
         ]
         masks = [fold.testing_indices.mask for fold in self.omim2_folds_indices]
-        return ys_train, ys_test, masks
+        return ys_train, ys_true, ys_test_1s, masks
