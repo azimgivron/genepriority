@@ -22,6 +22,9 @@ import smurff
 from NEGradient_GenePriority.evaluation.evaluation import Evaluation
 from NEGradient_GenePriority.evaluation.results import Results
 from NEGradient_GenePriority.preprocessing.dataloader import DataLoader
+from NEGradient_GenePriority.preprocessing.side_information_loader import (
+    SideInformationLoader,
+)
 
 
 class Trainer:
@@ -36,6 +39,8 @@ class Trainer:
     Attributes:
         dataloader (DataLoader): The data loader containing all data for training
             and testing.
+        side_info_loader (SideInformationLoader): The data loader for the
+            side information.
         path (str): The path to the directory where model snapshots will be saved.
         num_samples (int): The number of posterior samples to draw during training.
         burnin_period (int): The number of burn-in iterations before collecting
@@ -52,6 +57,7 @@ class Trainer:
     def __init__(
         self,
         dataloader: DataLoader,
+        side_info_loader: SideInformationLoader,
         path: str,
         num_samples: int,
         burnin_period: int,
@@ -68,6 +74,8 @@ class Trainer:
         Args:
             dataloader (DataLoader): The data loader containing all data for
                 training and testing.
+            side_info_loader (SideInformationLoader): The data loader for the
+                side information.
             path (str): The path to the directory where model snapshots will be saved.
             num_samples (int): The number of posterior samples to draw during training.
             burnin_period (int): The number of burn-in iterations before collecting
@@ -81,6 +89,7 @@ class Trainer:
                 If None, a default logger is created.
         """
         self.dataloader = dataloader
+        self.side_info_loader = side_info_loader
         self.path = path
         self.num_samples = num_samples
         self.burnin_period = burnin_period
@@ -179,6 +188,21 @@ class Trainer:
         y_pred = np.mean(predict_session.predict_all(), axis=0)[mask]
         return Results(y_true=mask, y_pred=y_pred)
 
+    def add_side_information(self, session: smurff.MacauSession):
+        """
+        Add side information to the SMURFF Macau session.
+
+        Args:
+            session (smurff.MacauSession): The SMURFF Macau session to which
+                the side information will be added.
+        """
+        for disease_side_info in self.side_info_loader.disease_side_information:
+            # The direct method is only feasible for a small (< 100K) number of
+            # features.
+            session.addSideInfo(mode=1, Y=disease_side_info, direct=False)
+        for gene_side_info in self.side_info_loader.gene_side_information:
+            session.addSideInfo(mode=0, Y=gene_side_info, direct=False)
+
     def train_test_cross_validation(
         self,
         num_latent: int,
@@ -203,6 +227,8 @@ class Trainer:
                 Ytrain=y_train,
                 save_name=str(self.path / f"{i}:{save_name}"),
             )
+            self.add_side_information(session)
+
             session.run()
             y_pred = self.predict(session, mask)
             results.append(Results(y_true=y_true, y_pred=y_pred))
@@ -232,6 +258,8 @@ class Trainer:
                 Ytrain=y_train,
                 save_name=str(self.path / f"{i}:{save_name}"),
             )
+            self.add_side_information(session)
+
             session.run()
             y_pred = self.predict(session, mask)
             results.append(Results(y_true=y_true, y_pred=y_pred))

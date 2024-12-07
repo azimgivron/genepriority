@@ -1,3 +1,4 @@
+# pylint : disable=R0913
 """
 Side Information Loader Module
 ==============================
@@ -75,13 +76,13 @@ class SideInformationLoader:
         return dataframe
 
     def __call__(
-        self, side_information_dataframes: List[pd.DataFrame], add_1s_list: List[bool]
+        self, side_info_dataframes: List[pd.DataFrame], add_1s_list: List[bool]
     ) -> List[sp.coo_matrix]:
         """
         Process and convert datasets to sparse matrices.
 
         Args:
-            side_information_dataframes (List[pd.DataFrame]): List of DataFrames
+            side_info_dataframes (List[pd.DataFrame]): List of DataFrames
                 to process.
             add_1s_list (List[bool]): List indicating whether to add implicit ones to
                 corresponding DataFrames.
@@ -90,7 +91,7 @@ class SideInformationLoader:
             List[sp.coo_matrix]: List of COO matrices for side information.
         """
         side_information = []
-        for dataframe, add_1s in zip(side_information_dataframes, add_1s_list):
+        for dataframe, add_1s in zip(side_info_dataframes, add_1s_list):
             if add_1s:
                 dataframe = self.add_implicit_ones(dataframe)
             side_information.append(self.to_coo(dataframe))
@@ -98,32 +99,34 @@ class SideInformationLoader:
 
     def process_side_information(
         self,
-        gene_side_information_paths: List[str],
+        gene_side_info_paths: List[str],
         gene_add_1s: List[bool],
-        disease_side_information_paths: List[str],
+        disease_side_info_paths: List[str],
         disease_add_1s: List[bool],
+        names: List[str] = None,
     ):
         """
         Process the datasets and store the results as attributes.
 
         Args:
-            gene_side_information_paths (List[str]): List of file paths for gene-related
+            gene_side_info_paths (List[str]): List of file paths for gene-related
                 side information.
             gene_add_1s (List[bool]): List indicating whether to add implicit ones to
                 gene-related DataFrames.
-            disease_side_information_paths (List[str]): List of file paths for
+            disease_side_info_paths (List[str]): List of file paths for
                 disease-related side information.
             disease_add_1s (List[bool]): List indicating whether to add implicit ones to
                 disease-related DataFrames.
+            names (List[str], optional): Dataframe names to use for the logs.
         """
-        gene_dataframes = [pd.read_csv(path) for path in gene_side_information_paths]
-        disease_dataframes = [
-            pd.read_csv(path) for path in disease_side_information_paths
-        ]
+        gene_dataframes = [pd.read_csv(path) for path in gene_side_info_paths]
+        disease_dataframes = [pd.read_csv(path) for path in disease_side_info_paths]
         shapes = [dataframe.shape for dataframe in gene_dataframes + disease_dataframes]
         log_df = pd.DataFrame(
             shapes, columns=["number of rows", "number of columns"]
         ).applymap(lambda x: f"{x:_}")
+        if names:
+            log_df.index = names
         self.logger.debug(
             "Side information dataframes loaded successfully. \n%s\n",
             log_df.to_markdown(),
