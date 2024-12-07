@@ -37,6 +37,9 @@ class Evaluation:
             results (List[Results]): List of results, each corresponding to the
                 results of a fold/split.
         """
+        for i, result in enumerate(results):
+            if not isinstance(result, Results):
+                raise TypeError(f"Element {i} is not of type Results. It is {type(result)}.")
         self.results = results
 
     def compute_bedroc_scores(self) -> np.ndarray:

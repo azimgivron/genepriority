@@ -37,10 +37,12 @@ class Indices:
         Args:
             indices (np.ndarray): A 2D array of shape (n, 2) containing row-column pairs.
         """
-        assert isinstance(indices, np.ndarray), f"Wrong type: {type(indices)}"
-        assert (
+        if not isinstance(indices, np.ndarray):
+            raise TypeError(f"Wrong type: {type(indices)}")
+        if not (
             indices.ndim == 2 and indices.shape[1] == 2
-        ), "indices must be a 2D array with shape (n, 2)."
+        ):
+            raise ValueError("indices must be a 2D array with shape (n, 2).")
         self.indices: np.ndarray = indices
 
     @property

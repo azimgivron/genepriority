@@ -12,7 +12,7 @@ from NEGradient_GenePriority import (
     compute_statistics,
     convert_dataframe_to_sparse_matrix,
     create_folds,
-    create_random_splits,
+    create_random_splits_from_matrix,
     filter_by_number_of_association,
     from_indices,
     sample_zeros,
@@ -99,7 +99,7 @@ def test_from_indices(
 
 def test_convert_dataframe_to_sparse_matrix(sample_dataframe: pd.DataFrame):
     """Test the convert_dataframe_to_sparse_matrix function."""
-    sparse_matrix = convert_dataframe_to_sparse_matrix(sample_dataframe)
+    sparse_matrix = convert_dataframe_to_sparse_matrix(sample_dataframe, shape=(4,4))
     assert isinstance(sparse_matrix, sp.coo_matrix)
 
 
@@ -152,7 +152,7 @@ def test_filter_by_number_of_association(sample_dataframe: pd.DataFrame):
 
 def test_create_random_splits(sample_sparse_matrix: sp.coo_matrix):
     """Test the create_random_splits function."""
-    splits = create_random_splits(sample_sparse_matrix, num_splits=3)
+    splits = create_random_splits_from_matrix(sample_sparse_matrix, num_splits=3)
     assert len(splits) == 3
     assert isinstance(splits[0], TrainTestIndices)
 
@@ -166,6 +166,6 @@ def test_create_folds(sample_sparse_matrix: sp.coo_matrix):
 
 def test_compute_statistics(sample_sparse_matrix: sp.coo_matrix):
     """Test the compute_statistics function."""
-    splits = create_random_splits(sample_sparse_matrix, num_splits=2)
+    splits = create_random_splits_from_matrix(sample_sparse_matrix, num_splits=2)
     stats = compute_statistics(sample_sparse_matrix, splits)
     assert isinstance(stats, pd.DataFrame)

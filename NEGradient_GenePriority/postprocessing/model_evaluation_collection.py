@@ -34,7 +34,12 @@ class ModelEvaluationCollection:
             model_results (Dict[str, Evaluation]): A dictionary mapping model names
                 to their respective Evaluation objects.
         """
-        self.model_results: Dict[str, Evaluation] = model_results
+        for key, val in model_results.items():
+            if not isinstance(key, str):
+                raise TypeError(f"Key is not of type str. It is {type(key)}.")
+            if not isinstance(val, Evaluation):
+                raise TypeError(f"Value is not of type Evaluation. It is {type(val)}.")
+        self.model_results = model_results
 
     @property
     def model_names(self) -> List[str]:

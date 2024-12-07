@@ -52,9 +52,9 @@ def main():
         ############################
         # Set parameters
         logger.debug("Setting parameters for splits and MACAU")
-        latent_dimensions = [25, 30, 40]
-        num_splits = 6
-        num_folds = 5
+        latent_dimensions = [25, 30]#, 40]
+        num_splits = 2#6
+        num_folds = 2#5
         zero_sampling_factor = 5
         seed = 42
         nb_genes = 14_195
