@@ -19,17 +19,21 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Activate Virtual Environment
+        shell: bash
         run: |
-          source /app/work/.venv/bin/activate
+          . /app/work/.venv/bin/activate
 
       - name: Install Dependencies
+        shell: bash
         run: |
+          . /app/work/.venv/bin/activate
           pip install --upgrade pip
           pip install '.[test]'
 
       - name: Run Pytest with Coverage
+        shell: bash
         run: |
-          source /app/work/.venv/bin/activate
+          . /app/work/.venv/bin/activate
           coverage run --source=NEGradient-GenePriority -m pytest tests/
 
       - name: Upload Coverage Reports to Codecov
