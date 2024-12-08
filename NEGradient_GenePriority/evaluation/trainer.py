@@ -173,7 +173,7 @@ class Trainer:
         self,
         session: smurff.MacauSession,
         mask: np.ndarray,
-    ) -> Results:
+    ) -> np.ndarray:
         """
         Extract predictions from the trained model using the test mask.
 
@@ -182,11 +182,11 @@ class Trainer:
             mask (np.ndarray): Binary mask for selecting test indices.
 
         Returns:
-            Results: Contains ground truth values (`y_true`) and predictions (`y_pred`).
+            (np.ndarray): The predictions.
         """
         predict_session = session.makePredictSession()
-        y_pred = np.mean(predict_session.predict_all(), axis=0)[mask]
-        return Results(y_true=mask, y_pred=y_pred)
+        y_pred = np.mean(predict_session.predict_all(), axis=0)[*mask]
+        return y_pred
 
     def add_side_information(self, session: smurff.MacauSession):
         """

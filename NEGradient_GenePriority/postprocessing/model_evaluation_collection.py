@@ -36,9 +36,16 @@ class ModelEvaluationCollection:
         """
         for key, val in model_results.items():
             if not isinstance(key, str):
-                raise TypeError(f"Key is not of type str. It is {type(key)}.")
+                raise TypeError(
+                    f"Invalid dictionary key: Expected `str`, but got {type(key)} for key "
+                    f"`{key}`. Ensure all keys in `model_results` are strings."
+                )
             if not isinstance(val, Evaluation):
-                raise TypeError(f"Value is not of type Evaluation. It is {type(val)}.")
+                raise TypeError(
+                    f"Invalid dictionary value for key `{key}`: Expected `Evaluation`, "
+                    f"but got {type(val)}. Ensure all values in `model_results` are instances "
+                    "of the `Evaluation` class."
+                )
         self.model_results = model_results
 
     @property

@@ -52,9 +52,9 @@ def main():
         ############################
         # Set parameters
         logger.debug("Setting parameters for splits and MACAU")
-        latent_dimensions = [25, 30]#, 40]
-        num_splits = 2#6
-        num_folds = 2#5
+        latent_dimensions = [25, 30, 40]
+        num_splits = 6
+        num_folds = 5
         zero_sampling_factor = 5
         seed = 42
         nb_genes = 14_195
@@ -91,9 +91,9 @@ def main():
         ############################
         # Configure and run MACAU
         logger.debug("Configuring MACAU session")
-        num_samples = 50#3500
-        burnin_period = 50#500
-        save_freq = 20#100
+        num_samples = 3500
+        burnin_period = 500
+        save_freq = 100
         # Whether to use a Cholesky instead of conjugate gradient (CG) solver.
         # Keep true until the column features side information (F_e) reaches ~20,000.
         direct = False

@@ -199,17 +199,17 @@ class DataLoader:
         """
         ys_train = [
             fold.training_indices.get_data(omim1)
-            for fold, omim1 in zip(self.omim2_folds_indices, self.omim1)
+            for fold, omim1 in zip(self.omim1_splits_indices, self.omim1)
         ]
         ys_true = [
             fold.testing_indices.get_data(omim1).data
-            for fold, omim1 in zip(self.omim2_folds_indices, self.omim1)
+            for fold, omim1 in zip(self.omim1_splits_indices, self.omim1)
         ]
         ys_test_1s = [
-            fold.testing_indices.get_1s(self.omim2)
-            for fold in self.omim2_folds_indices
+            fold.testing_indices.get_1s(omim1)
+            for fold, omim1 in zip(self.omim1_splits_indices, self.omim1)
         ]
-        masks = [fold.testing_indices.mask for fold in self.omim2_folds_indices]
+        masks = [fold.testing_indices.mask for fold in self.omim1_splits_indices]
         return ys_train, ys_true, ys_test_1s, masks
 
     @property

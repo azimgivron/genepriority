@@ -38,12 +38,16 @@ class Indices:
             indices (np.ndarray): A 2D array of shape (n, 2) containing row-column pairs.
         """
         if not isinstance(indices, np.ndarray):
-            raise TypeError(f"Wrong type: {type(indices)}")
-        if not (
-            indices.ndim == 2 and indices.shape[1] == 2
-        ):
-            raise ValueError("indices must be a 2D array with shape (n, 2).")
-        self.indices: np.ndarray = indices
+            raise TypeError(
+                f"Invalid type for `indices`: Expected `np.ndarray`, but got {type(indices)}. "
+                "Ensure `indices` is a numpy array."
+            )
+        if not (indices.ndim == 2 and indices.shape[1] == 2):
+            raise ValueError(
+                "Invalid shape for `indices`: Expected a 2D array with shape (n, 2), but got "
+                f"shape {indices.shape}. Ensure `indices` is a 2D array of row-column pairs."
+            )
+        self.indices = indices
 
     @property
     def indices_set(self) -> Set[Tuple[int, int]]:
