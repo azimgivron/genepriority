@@ -186,7 +186,9 @@ class DataLoader:
     @property
     def splits(
         self,
-    ) -> Tuple[List[sp.csr_matrix], List[np.ndarray], List[sp.csr_matrix], List[np.ndarray]]:
+    ) -> Tuple[
+        List[sp.csr_matrix], List[np.ndarray], List[sp.csr_matrix], List[np.ndarray]
+    ]:
         """
         Get splits for the OMIM1 dataset.
 
@@ -215,7 +217,9 @@ class DataLoader:
     @property
     def folds(
         self,
-    ) -> Tuple[List[sp.csr_matrix], List[np.ndarray], List[sp.csr_matrix], List[np.ndarray]]:
+    ) -> Tuple[
+        List[sp.csr_matrix], List[np.ndarray], List[sp.csr_matrix], List[np.ndarray]
+    ]:
         """
         Get folds for the OMIM2 dataset.
 
@@ -235,8 +239,7 @@ class DataLoader:
             for fold in self.omim2_folds_indices
         ]
         ys_test_1s = [
-            fold.testing_indices.get_1s(self.omim2)
-            for fold in self.omim2_folds_indices
+            fold.testing_indices.get_1s(self.omim2) for fold in self.omim2_folds_indices
         ]
         masks = [fold.testing_indices.mask for fold in self.omim2_folds_indices]
         return ys_train, ys_true, ys_test_1s, masks

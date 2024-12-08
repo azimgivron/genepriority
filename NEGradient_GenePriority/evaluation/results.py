@@ -21,7 +21,7 @@ class Results:
 
     y_true: np.ndarray
     y_pred: np.ndarray
-    
+
     def __post_init__(self):
         if not isinstance(self.y_true, np.ndarray):
             raise TypeError(

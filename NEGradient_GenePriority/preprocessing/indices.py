@@ -84,7 +84,7 @@ class Indices:
                            matches the shape of the original dataset.
         """
         return from_indices(dataset_matrix, self.indices_set).tocsr()
-    
+
     def get_1s(self, dataset_matrix: sp.coo_matrix) -> sp.csr_matrix:
         """
         Retrieves the subset of the dataset corresponding to the stored indices
@@ -100,7 +100,10 @@ class Indices:
         """
         full_matrix = self.get_data(dataset_matrix).tocoo()
         mask = full_matrix.data == 1
-        return sp.coo_matrix((full_matrix.data[mask], (full_matrix.row[mask], full_matrix.col[mask])), shape=full_matrix.shape).tocsr()
+        return sp.coo_matrix(
+            (full_matrix.data[mask], (full_matrix.row[mask], full_matrix.col[mask])),
+            shape=full_matrix.shape,
+        ).tocsr()
 
     def merge(self, indices: Indices) -> Indices:
         """

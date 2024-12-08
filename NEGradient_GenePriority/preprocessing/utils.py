@@ -5,7 +5,7 @@ Utils module
 This module defines the utility functions.
 """
 from typing import Set, Tuple
-import numpy as np
+
 import scipy.sparse as sp
 
 
