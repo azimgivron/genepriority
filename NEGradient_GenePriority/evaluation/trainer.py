@@ -18,6 +18,7 @@ from typing import Dict, List, Literal, Optional, Tuple
 
 import numpy as np
 import smurff
+from tqdm import tqdm
 
 from NEGradient_GenePriority.evaluation.evaluation import Evaluation
 from NEGradient_GenePriority.evaluation.results import Results
@@ -148,7 +149,7 @@ class Trainer:
         """
         omim1_results = {}
         omim2_results = {}
-        for num_latent in latent_dimensions:
+        for num_latent in tqdm(latent_dimensions, desc="Latent dimensions"):
             self.logger.debug("Running MACAU for %d latent dimensions", num_latent)
             omim1_results[f"latent dim={num_latent}"] = self.train_test_splits(
                 num_latent=num_latent,
@@ -219,8 +220,8 @@ class Trainer:
             Evaluation: Aggregated evaluation results across all folds.
         """
         results = []
-        for i, (y_train, y_true, y_test_1s_only, mask) in enumerate(
-            zip(*self.dataloader.folds)
+        for i, (y_train, y_true, y_test_1s_only, mask) in tqdm(
+            enumerate(zip(*self.dataloader.folds)), desc="Folds"
         ):
             self.logger.debug("Initiating training on fold %d", i + 1)
             session = smurff.MacauSession(
@@ -252,8 +253,8 @@ class Trainer:
             Evaluation: Aggregated evaluation results across all splits.
         """
         results = []
-        for i, (y_train, y_true, y_test_1s_only, mask) in enumerate(
-            zip(*self.dataloader.splits)
+        for i, (y_train, y_true, y_test_1s_only, mask) in tqdm(
+            enumerate(zip(*self.dataloader.splits)), desc="Splits"
         ):
             self.logger.debug("Initiating training on split %d", i + 1)
             session = smurff.MacauSession(

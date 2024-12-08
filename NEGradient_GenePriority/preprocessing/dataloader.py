@@ -13,6 +13,7 @@ from typing import List, Optional, Tuple
 import numpy as np
 import pandas as pd
 import scipy.sparse as sp
+from tqdm import tqdm
 
 from NEGradient_GenePriority.preprocessing.preprocessing import (
     combine_matrices,
@@ -125,11 +126,13 @@ class DataLoader:
         )
         omim1_0s = [
             sample_zeros(omim1_1s, self.zero_sampling_factor, seed=self.seed)
-            for _ in range(self.num_splits)
+            for _ in tqdm(range(self.num_splits), desc="Sampling 0s in OMIM1")
         ]
         self.omim1 = [
             combine_matrices(omim1_1s, omim1_0s_per_split)
-            for omim1_0s_per_split in omim1_0s
+            for omim1_0s_per_split in tqdm(
+                omim1_0s, desc="Combining 1s and 0s to create OMIM1 matrices"
+            )
         ]
         self.logger.debug(
             "Combined sparse matrix for OMIM1 created. Shape is %s", omim1_1s.shape
