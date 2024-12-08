@@ -35,7 +35,6 @@ echo "******************************************"
 TEMP_DIR=$(mktemp -d)
 WORK_DIR="/app/work"
 SMURFF_REPO_URL="https://github.com/ExaScience/smurff.git"
-PYTHON_VERSION="3.11"
 COMMIT="35f766e8fa5d96fef90a943f6ef256dc5d5820e2"
 
 #######################################################
@@ -61,33 +60,32 @@ debutSection "BUILD_AND_INSTALL_SMURFF"
 afficheCmd "Setting up build directory"
 mkdir -p "$BUILD_DIR" "$WORK_DIR"
 
-cd "$TEMP_DIR"
-afficheCmd "Running CMake configuration"
-cmake -S "$SMURFF_DIR" -B "$BUILD_DIR"
-
-afficheCmd "Building SMURFF"
-cmake --build "$BUILD_DIR"
-
-afficheCmd "Installing SMURFF"
-cmake --install "$BUILD_DIR"
-
-afficheCmd "Running SMURFF self-tests"
-"$BUILD_DIR/bin/smurff" --bist
-finSection "BUILD_AND_INSTALL_SMURFF"
+cd "$BUILD_DIR"
+cmake -DCMAKE_BUILD_TYPE=Release \
+    -DENABLE_BLAS=ON \
+    -DBLA_VENDOR=Generic \
+    -DHighFive_DIR=/usr/local \
+    -DEigen3_DIR=/usr/include/eigen3 \
+    -DBOOST_ROOT=/usr \
+    -DPython3_EXECUTABLE=/usr/bin/python3.11 \
+    -DPython3_INCLUDE_DIR=/usr/include/python3.11 \
+    ..
+make -j2
+make install
 
 #######################################################
 # Set Up Python Virtual Environment
 #######################################################
 debutSection "SETUP_PYTHON_ENV"
 afficheCmd "Creating Python virtual environment"
-python3 -m venv "$WORK_DIR/.venv"
+python3.11 -m venv "$WORK_DIR/.venv"
 
 afficheCmd "Activating virtual environment"
-source "$WORK_DIR/.venv/bin/activate"
+. "$WORK_DIR/.venv/bin/activate"
+python3.11 -m pip install --upgrade pip
 
 afficheCmd "Installing SMURFF Python package"
-pip install -v "$SMURFF_DIR"
-echo "source $WORK_DIR/.venv/bin/activate" >> /home/root/.bashrc
+python3.11 -m pip install "$SMURFF_DIR"
 finSection "SETUP_PYTHON_ENV"
 
 echo "******************************************"

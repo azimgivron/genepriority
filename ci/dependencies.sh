@@ -11,10 +11,13 @@ echo "******************************************"
 export DEBIAN_FRONTEND=noninteractive
 
 apt update && \
+apt install -y --no-install-recommends software-properties-common && \
+add-apt-repository -y ppa:deadsnakes/ppa && \
+apt update && \
 apt install -y --no-install-recommends \
     build-essential \
     cmake \
-    git g++ python3 \
+    git g++ python3.11 \
     libblas-dev \
     liblapack-dev \
     liblapacke-dev \
@@ -25,7 +28,6 @@ apt install -y --no-install-recommends \
     ca-certificates \
     libhdf5-dev \
     gdb vim wget \
-    python3-pip \
     python3-numpy python3-pybind11 python3-setuptools \
     python3-scipy python3-pandas \
     python3-joblib python3-sklearn \
@@ -33,7 +35,9 @@ apt install -y --no-install-recommends \
     python3-pytest \
     python3-parameterized \
     python3-pytest-xdist \
-    python3-venv \
+    python3.11-venv \
+    python3.11-dev \
+    git \
     unzip && \
 rm -rf /var/lib/apt/lists/*
 
