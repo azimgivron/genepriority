@@ -221,7 +221,7 @@ class Trainer:
         """
         results = []
         for i, (y_train, y_true, y_test_1s_only, mask) in tqdm(
-            enumerate(zip(*self.dataloader.folds)), desc="Folds"
+            enumerate(zip(*self.dataloader.folds)), desc="Folds", leave=False
         ):
             self.logger.debug("Initiating training on fold %d", i + 1)
             session = smurff.MacauSession(
@@ -254,7 +254,7 @@ class Trainer:
         """
         results = []
         for i, (y_train, y_true, y_test_1s_only, mask) in tqdm(
-            enumerate(zip(*self.dataloader.splits)), desc="Splits"
+            enumerate(zip(*self.dataloader.splits)), desc="Splits", leave=False
         ):
             self.logger.debug("Initiating training on split %d", i + 1)
             session = smurff.MacauSession(

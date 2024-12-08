@@ -1,0 +1,41 @@
+name: NEGradient-GenePriority Unit Tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+    container:
+      image: azimgivron/smurff
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Activate Virtual Environment
+        run: |
+          source /app/work/.venv/bin/activate
+
+      - name: Install Dependencies
+        run: |
+          pip install --upgrade pip
+          pip install '.[test]'
+
+      - name: Run Pytest with Coverage
+        run: |
+          source /app/work/.venv/bin/activate
+          coverage run --source=NEGradient-GenePriority -m pytest tests/
+
+      - name: Upload Coverage Reports to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage.xml
+          fail_ci_if_error: true
+          verbose: true
