@@ -9,7 +9,7 @@ streamlining data preparation workflows.
 """
 from __future__ import annotations
 
-from typing import List
+from typing import List, Tuple
 
 import numpy as np
 import pandas as pd
@@ -36,22 +36,25 @@ def combine_splits(
     return [split1.merge(split2) for split1, split2 in zip(splits1, splits2)]
 
 
-def convert_dataframe_to_sparse_matrix(dataframe: pd.DataFrame) -> sp.coo_matrix:
+def convert_dataframe_to_sparse_matrix(
+    dataframe: pd.DataFrame, shape: Tuple[int, int]
+) -> sp.coo_matrix:
     """
     Converts a DataFrame of pairwise associations into a COO sparse matrix.
 
     Args:
         dataframe (pd.DataFrame): DataFrame containing two columns of IDs representing
                                   associations.
+        shape (Tuple[int, int]): The shape of the output matrix.
 
     Returns:
         sp.coo_matrix: Sparse matrix where rows and columns correspond to the
                        two ID columns in the DataFrame, and non-zero entries
                        indicate associations.
     """
-    col1_ids, col2_ids = dataframe.to_numpy().T
-    association_data = np.ones(len(col1_ids))
-    return sp.coo_matrix((association_data, (col1_ids, col2_ids)))
+    row, col = dataframe.to_numpy().T
+    association_data = np.ones(len(row))
+    return sp.coo_matrix((association_data, (row, col)), shape=shape)
 
 
 def sample_zeros(

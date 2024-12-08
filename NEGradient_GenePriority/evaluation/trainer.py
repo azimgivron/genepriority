@@ -18,10 +18,14 @@ from typing import Dict, List, Literal, Optional, Tuple
 
 import numpy as np
 import smurff
+from tqdm import tqdm
 
 from NEGradient_GenePriority.evaluation.evaluation import Evaluation
 from NEGradient_GenePriority.evaluation.results import Results
 from NEGradient_GenePriority.preprocessing.dataloader import DataLoader
+from NEGradient_GenePriority.preprocessing.side_information_loader import (
+    SideInformationLoader,
+)
 
 
 class Trainer:
@@ -36,6 +40,8 @@ class Trainer:
     Attributes:
         dataloader (DataLoader): The data loader containing all data for training
             and testing.
+        side_info_loader (SideInformationLoader): The data loader for the
+            side information.
         path (str): The path to the directory where model snapshots will be saved.
         num_samples (int): The number of posterior samples to draw during training.
         burnin_period (int): The number of burn-in iterations before collecting
@@ -52,6 +58,7 @@ class Trainer:
     def __init__(
         self,
         dataloader: DataLoader,
+        side_info_loader: SideInformationLoader,
         path: str,
         num_samples: int,
         burnin_period: int,
@@ -68,6 +75,8 @@ class Trainer:
         Args:
             dataloader (DataLoader): The data loader containing all data for
                 training and testing.
+            side_info_loader (SideInformationLoader): The data loader for the
+                side information.
             path (str): The path to the directory where model snapshots will be saved.
             num_samples (int): The number of posterior samples to draw during training.
             burnin_period (int): The number of burn-in iterations before collecting
@@ -81,6 +90,7 @@ class Trainer:
                 If None, a default logger is created.
         """
         self.dataloader = dataloader
+        self.side_info_loader = side_info_loader
         self.path = path
         self.num_samples = num_samples
         self.burnin_period = burnin_period
@@ -139,7 +149,7 @@ class Trainer:
         """
         omim1_results = {}
         omim2_results = {}
-        for num_latent in latent_dimensions:
+        for num_latent in tqdm(latent_dimensions, desc="Latent dimensions"):
             self.logger.debug("Running MACAU for %d latent dimensions", num_latent)
             omim1_results[f"latent dim={num_latent}"] = self.train_test_splits(
                 num_latent=num_latent,
@@ -164,7 +174,7 @@ class Trainer:
         self,
         session: smurff.MacauSession,
         mask: np.ndarray,
-    ) -> Results:
+    ) -> np.ndarray:
         """
         Extract predictions from the trained model using the test mask.
 
@@ -173,11 +183,26 @@ class Trainer:
             mask (np.ndarray): Binary mask for selecting test indices.
 
         Returns:
-            Results: Contains ground truth values (`y_true`) and predictions (`y_pred`).
+            (np.ndarray): The predictions.
         """
         predict_session = session.makePredictSession()
-        y_pred = np.mean(predict_session.predict_all(), axis=0)[mask]
-        return Results(y_true=mask, y_pred=y_pred)
+        y_pred = np.mean(predict_session.predict_all(), axis=0)[*mask]
+        return y_pred
+
+    def add_side_information(self, session: smurff.MacauSession):
+        """
+        Add side information to the SMURFF Macau session.
+
+        Args:
+            session (smurff.MacauSession): The SMURFF Macau session to which
+                the side information will be added.
+        """
+        for disease_side_info in self.side_info_loader.disease_side_information:
+            # The direct method is only feasible for a small (< 100K) number of
+            # features.
+            session.addSideInfo(mode=1, Y=disease_side_info, direct=False)
+        for gene_side_info in self.side_info_loader.gene_side_information:
+            session.addSideInfo(mode=0, Y=gene_side_info, direct=False)
 
     def train_test_cross_validation(
         self,
@@ -195,13 +220,17 @@ class Trainer:
             Evaluation: Aggregated evaluation results across all folds.
         """
         results = []
-        for i, (y_train, y_true, mask) in enumerate(zip(*self.dataloader.folds)):
+        for i, (y_train, y_true, y_test_1s_only, mask) in tqdm(
+            enumerate(zip(*self.dataloader.folds)), desc="Folds"
+        ):
             self.logger.debug("Initiating training on fold %d", i + 1)
             session = smurff.MacauSession(
                 **self.macau_session_kwargs,
                 num_latent=num_latent,
                 Ytrain=y_train,
+                Ytest=y_test_1s_only,
                 save_name=str(self.path / f"{i}:{save_name}"),
+                side_info=self.side_info_loader.side_info,
             )
             session.run()
             y_pred = self.predict(session, mask)
@@ -224,13 +253,17 @@ class Trainer:
             Evaluation: Aggregated evaluation results across all splits.
         """
         results = []
-        for i, (y_train, y_true, mask) in enumerate(zip(*self.dataloader.splits)):
+        for i, (y_train, y_true, y_test_1s_only, mask) in tqdm(
+            enumerate(zip(*self.dataloader.splits)), desc="Splits"
+        ):
             self.logger.debug("Initiating training on split %d", i + 1)
             session = smurff.MacauSession(
                 **self.macau_session_kwargs,
                 num_latent=num_latent,
                 Ytrain=y_train,
+                Ytest=y_test_1s_only,
                 save_name=str(self.path / f"{i}:{save_name}"),
+                side_info=self.side_info_loader.side_info,
             )
             session.run()
             y_pred = self.predict(session, mask)

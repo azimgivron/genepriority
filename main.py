@@ -57,28 +57,33 @@ def main():
         num_folds = 5
         zero_sampling_factor = 5
         seed = 42
+        nb_genes = 14_195
+        nb_diseases = 314
 
         # load data
         dataloader = DataLoader(
-            input_path / "gene-disease.csv",
-            seed,
-            num_splits,
-            zero_sampling_factor,
-            num_folds,
+            nb_genes=nb_genes,
+            nb_diseases=nb_diseases,
+            path=input_path / "gene-disease.csv",
+            seed=seed,
+            num_splits=num_splits,
+            zero_sampling_factor=zero_sampling_factor,
+            num_folds=num_folds,
         )
-        dataloader()  # load the data
+        dataloader(filter_column="Disease ID")  # load the data
 
         # load side information
         interpro_path = input_path / "interpro.csv"
         uniprot_path = input_path / "uniprot.csv"
         go_path = input_path / "go.csv"
         phenotype_path = input_path / "phenotype.csv"
-        side_information_loader = SideInformationLoader(logger=logger)
-        side_information_loader.process_side_information(
-            gene_side_information_paths=[interpro_path, uniprot_path, go_path],
-            gene_add_1s=[True, True, True],
-            disease_side_information_paths=[phenotype_path],
-            disease_add_1s=[False],
+        side_info_loader = SideInformationLoader(
+            logger=logger, nb_genes=nb_genes, nb_diseases=nb_diseases
+        )
+        side_info_loader.process_side_information(
+            gene_side_info_paths=[interpro_path, uniprot_path, go_path],
+            disease_side_info_paths=[phenotype_path],
+            names=["interpro", "uniprot", "GO", "phenotype"],
         )
 
         ############################
@@ -86,19 +91,20 @@ def main():
         ############################
         # Configure and run MACAU
         logger.debug("Configuring MACAU session")
-        num_samples = 1500
-        burnin_period = 100
+        num_samples = 3500
+        burnin_period = 500
         save_freq = 100
         # Whether to use a Cholesky instead of conjugate gradient (CG) solver.
-        # Keep false until the column features side information (F_e) reaches ~20,000.
+        # Keep true until the column features side information (F_e) reaches ~20,000.
         direct = False
-        univariate = False  # Whether to use univariate or multivariate sampling.
+        univariate = True  # Whether to use univariate or multivariate sampling.
         verbose = 0
         omim1_results = {}
         omim2_results = {}
 
         trainer = Trainer(
             dataloader=dataloader,
+            side_info_loader=side_info_loader,
             path=output_path,
             num_samples=num_samples,
             burnin_period=burnin_period,

@@ -37,6 +37,13 @@ class Evaluation:
             results (List[Results]): List of results, each corresponding to the
                 results of a fold/split.
         """
+        for i, result in enumerate(results):
+            if not isinstance(result, Results):
+                raise TypeError(
+                    f"Invalid type at index {i}: Expected `Results`, but got {type(result)}. "
+                    "Ensure all elements in the `results` list are instances of the "
+                    "`Results` class."
+                )
         self.results = results
 
     def compute_bedroc_scores(self) -> np.ndarray:

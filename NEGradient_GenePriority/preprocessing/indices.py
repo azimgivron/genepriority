@@ -37,11 +37,17 @@ class Indices:
         Args:
             indices (np.ndarray): A 2D array of shape (n, 2) containing row-column pairs.
         """
-        assert isinstance(indices, np.ndarray), f"Wrong type: {type(indices)}"
-        assert (
-            indices.ndim == 2 and indices.shape[1] == 2
-        ), "indices must be a 2D array with shape (n, 2)."
-        self.indices: np.ndarray = indices
+        if not isinstance(indices, np.ndarray):
+            raise TypeError(
+                f"Invalid type for `indices`: Expected `np.ndarray`, but got {type(indices)}. "
+                "Ensure `indices` is a numpy array."
+            )
+        if not (indices.ndim == 2 and indices.shape[1] == 2):
+            raise ValueError(
+                "Invalid shape for `indices`: Expected a 2D array with shape (n, 2), but got "
+                f"shape {indices.shape}. Ensure `indices` is a 2D array of row-column pairs."
+            )
+        self.indices = indices
 
     @property
     def indices_set(self) -> Set[Tuple[int, int]]:
@@ -79,6 +85,26 @@ class Indices:
         """
         return from_indices(dataset_matrix, self.indices_set).tocsr()
 
+    def get_1s(self, dataset_matrix: sp.coo_matrix) -> sp.csr_matrix:
+        """
+        Retrieves the subset of the dataset corresponding to the stored indices
+        where the data is 1.
+
+        Args:
+            dataset_matrix (sp.coo_matrix): The full dataset represented as a COO sparse matrix.
+
+        Returns:
+            sp.csr_matrix: A sparse matrix in CSR format containing only the elements
+                           specified by the indices. The shape of the returned matrix
+                           matches the shape of the original dataset.
+        """
+        full_matrix = self.get_data(dataset_matrix).tocoo()
+        mask = full_matrix.data == 1
+        return sp.coo_matrix(
+            (full_matrix.data[mask], (full_matrix.row[mask], full_matrix.col[mask])),
+            shape=full_matrix.shape,
+        ).tocsr()
+
     def merge(self, indices: Indices) -> Indices:
         """
         Merges another Indices object into the current one.
@@ -92,6 +118,7 @@ class Indices:
         merged_indices = np.vstack((self.indices, indices.indices))
         return Indices(merged_indices)
 
+    @property
     def mask(self) -> np.ndarray:
         """
         Get a mask of indices to extract.
