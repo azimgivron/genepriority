@@ -24,7 +24,7 @@ jobs:
           . /app/work/.venv/bin/activate
           pip install --upgrade pip
           pip install '.[test]'
-          coverage run --source=NEGradient-GenePriority -m pytest tests/
+          coverage run --source=NEGradient_GenePriority -m pytest tests/
 
       - name: Upload Coverage Reports to Codecov
         uses: codecov/codecov-action@v5.1.1
