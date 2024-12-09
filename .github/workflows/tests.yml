@@ -26,7 +26,8 @@ jobs:
       - name: Install Dependencies
         shell: bash
         run: |
-          . /app/work/.venv/bin/activate
+          apt update
+          apt install -y curl
           pip install --upgrade pip
           pip install '.[test]'
 
@@ -37,7 +38,7 @@ jobs:
           coverage run --source=NEGradient-GenePriority -m pytest tests/
 
       - name: Upload Coverage Reports to Codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v5.1.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage.xml
