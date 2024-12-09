@@ -1,10 +1,10 @@
-# NEGradient-GenePriority
+# NEGradient_GenePriority
 
 <p align="center" width="100%">
-    <img width="40%" src=".images/NEGradient-GenePriority-logo.png" >
+    <img width="40%" src=".images/NEGradient_GenePriority-logo.png" >
 </p>
 
-The repository **NEGradient-GenePriority** (short for "Non-Euclidean Gradient Methods for Matrix Completion in Gene Prioritization") provides the code and data to reproduce the results presented in the paper "[Gene prioritization using Bayesian matrix factorization with genomic and phenotypic side information.](https://pubmed.ncbi.nlm.nih.gov/29949967/)" This study introduces a novel method for gene prioritization by combining Bayesian matrix factorization (BMF) with genomic and phenotypic side information, enabling robust predictions and improved identification of disease-associated genes.
+The repository **NEGradient_GenePriority** (short for "Non-Euclidean Gradient Methods for Matrix Completion in Gene Prioritization") provides the code and data to reproduce the results presented in the paper "[Gene prioritization using Bayesian matrix factorization with genomic and phenotypic side information.](https://pubmed.ncbi.nlm.nih.gov/29949967/)" This study introduces a novel method for gene prioritization by combining Bayesian matrix factorization (BMF) with genomic and phenotypic side information, enabling robust predictions and improved identification of disease-associated genes.
 
 ---
 
@@ -88,8 +88,8 @@ The repository **NEGradient-GenePriority** (short for "Non-Euclidean Gradient Me
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/azimgivron/NEGradient-GenePriority.git
-   cd NEGradient-GenePriority
+   git clone https://github.com/azimgivron/NEGradient_GenePriority.git
+   cd NEGradient_GenePriority
    ```
 
 2. Create and activate a virtual environment:
