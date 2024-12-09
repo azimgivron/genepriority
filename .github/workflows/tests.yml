@@ -17,8 +17,8 @@ jobs:
     steps:
       - name: Install Curl for CodeCov
         run: |
-          apt-get update
-          apt-get install -y curl
+          apt update
+          apt install -y curl
       
       - name: Check out code
         uses: actions/checkout@v4
