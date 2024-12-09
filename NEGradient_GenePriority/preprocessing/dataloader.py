@@ -48,7 +48,7 @@ class DataLoader:
         num_folds (int): Number of folds for cross-validation in the OMIM2 dataset.
         omim1 (List[sp.csr_matrix]): List of sparse matrices representing splits for
             OMIM1.
-        omim2 (sp.csr_matrix): Sparse matrix combining positive and sampled negative 
+        omim2 (sp.csr_matrix): Sparse matrix combining positive and sampled negative
             associations for OMIM2.
         omim1_splits_indices (List[dict]): Indices for random splits of OMIM1 for
             training and testing.
@@ -56,7 +56,6 @@ class DataLoader:
         logger (logging.Logger): Logger instance for tracking and debugging the preprocessing
             steps.
     """
-
 
     def __init__(
         self,
@@ -182,7 +181,7 @@ class DataLoader:
         self.logger.debug(
             "Combined sparse matrix for OMIM1 created. Shape is %s", omim1_1s.shape
         )
-        
+
         omim1_1s_splits_indices = create_random_splits_from_matrix(
             omim1_1s, num_splits=self.num_splits
         )
@@ -197,8 +196,6 @@ class DataLoader:
 
         counts = compute_statistics(omim1_1s, omim1_1s_splits_indices)
         self.logger.debug("Disease count statistics:\n%s", counts)
-
-
 
     def load_omim2(self, gene_disease: pd.DataFrame, filter_column: str) -> None:
         """
