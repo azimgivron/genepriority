@@ -1,4 +1,4 @@
-name: NEGradient-GenePriority Unit Tests
+name: NEGradient_GenePriority Unit Tests
 
 on:
   push:
@@ -31,6 +31,7 @@ jobs:
           pip install --upgrade pip
           pip install '.[test]'
           coverage run --source=NEGradient_GenePriority -m pytest tests/
+          coverage xml
 
       - name: Upload Coverage Reports to Codecov
         uses: codecov/codecov-action@v5.1.1
