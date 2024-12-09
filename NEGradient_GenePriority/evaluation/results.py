@@ -48,5 +48,6 @@ class Results:
 
         Returns:
             Iterator: An iterator over the `y_true` and `y_pred` arrays.
+                Order is `y_true` followed by `y_pred`.
         """
         return iter([self.y_true, self.y_pred])

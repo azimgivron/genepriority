@@ -257,6 +257,11 @@ class Trainer:
             enumerate(zip(*self.dataloader.splits)), desc="Splits", leave=False
         ):
             self.logger.debug("Initiating training on split %d", i + 1)
+            self.logger.debug("Number of 1s in the training set %s", len(y_train.data[y_train.data == 1]))
+            self.logger.debug("Number of 0s in the training set %s", len(y_train.data[y_train.data == 0]))
+            self.logger.debug("Number of 1s in the test set %s", len(y_true[y_true == 1]))
+            self.logger.debug("Number of 0s in the test set %s", len(y_true[y_true == 0]))
+            
             session = smurff.MacauSession(
                 **self.macau_session_kwargs,
                 num_latent=num_latent,

@@ -6,6 +6,7 @@ DataLoader module
 This module contains the `DataLoader` class for preprocessing and preparing gene-disease 
 association data for gene prioritization tasks. It includes functionality for handling 
 sparse matrices, random splits, and cross-validation folds.
+
 """
 import logging
 from typing import List, Optional, Tuple
@@ -29,26 +30,33 @@ from NEGradient_GenePriority.preprocessing.preprocessing import (
 
 
 class DataLoader:
-    """ "
+    """
     DataLoader Class
 
     A utility class to handle the preprocessing and preparation of gene-disease association data
-    for gene prioritization tasks. The DataLoader prepares datasets for two types of matrices
-    (OMIM1 and OMIM2), including creating sparse matrices, random splits, and folds for
-    training and testing.
+    for gene prioritization tasks. It supports two types of datasets (OMIM1 and OMIM2) and provides
+    methods for sparse matrix creation, random sampling, and data splitting for cross-validation.
 
     Attributes:
+        nb_genes (int): Number of genes in the dataset.
+        nb_diseases (int): Number of diseases in the dataset.
         path (str): Path to the CSV file containing gene-disease associations.
-        seed (int): Seed for reproducibility in random operations.
-        num_splits (int): Number of splits to generate for training and testing data in OMIM1.
-        zero_sampling_factor (int): Factor to determine the number of zeros to sample for
-            negative associations.
-        num_folds (int): Number of folds to generate for cross-validation in OMIM2.
-        logger (logging.Logger): Logger instance for logging the processing steps.
-        nb_genes (int): The number of genes.
-        nb_diseases (int): The number of diseases.
-
+        seed (int): Random seed for reproducibility in sampling and splitting operations.
+        num_splits (int): Number of random splits to create for the OMIM1 dataset.
+        zero_sampling_factor (int): Factor determining the number of negative associations (zeros)
+            to sample relative to positive associations (ones).
+        num_folds (int): Number of folds for cross-validation in the OMIM2 dataset.
+        omim1 (List[sp.csr_matrix]): List of sparse matrices representing splits for
+            OMIM1.
+        omim2 (sp.csr_matrix): Sparse matrix combining positive and sampled negative 
+            associations for OMIM2.
+        omim1_splits_indices (List[dict]): Indices for random splits of OMIM1 for
+            training and testing.
+        omim2_folds_indices (List[dict]): Indices for cross-validation folds of OMIM2.
+        logger (logging.Logger): Logger instance for tracking and debugging the preprocessing
+            steps.
     """
+
 
     def __init__(
         self,
@@ -128,15 +136,53 @@ class DataLoader:
             sample_zeros(omim1_1s, self.zero_sampling_factor, seed=self.seed)
             for _ in tqdm(range(self.num_splits), desc="Sampling 0s in OMIM1")
         ]
+
+        # Verify consistency of zero sampling across splits
+        zero_counts = np.array([len(zeros.data) for zeros in omim1_0s])
+        assert (zero_counts == zero_counts[0]).all(), (
+            "Inconsistent number of zeros sampled across splits in `omim1_0s`. "
+            f"Expected uniform zero counts, but got {zero_counts.tolist()}. "
+            "Ensure that the sampling process is deterministic and correctly configured."
+        )
+
+        # Check the expected number of zeros in one split
+        actual_zeros = len(omim1_0s[0].data)
+        expected_zeros = self.zero_sampling_factor * len(omim1_1s.data)
+        assert actual_zeros == expected_zeros, (
+            "Mismatch in the number of sampled zeros per split. "
+            f"Expected {expected_zeros} zeros, but got {actual_zeros}. "
+            f"Check the zero sampling factor ({self.zero_sampling_factor}) and "
+            "verify the input sparse matrix size."
+        )
+
         self.omim1 = [
             combine_matrices(omim1_1s, omim1_0s_per_split)
             for omim1_0s_per_split in tqdm(
                 omim1_0s, desc="Combining 1s and 0s to create OMIM1 matrices"
             )
         ]
+
+        # Verify consistency of combined matrices' sizes
+        combined_sizes = np.array([len(matrix.data) for matrix in self.omim1])
+        assert (combined_sizes == combined_sizes[0]).all(), (
+            "Inconsistent sizes of combined matrices in `omim1`. "
+            f"Expected uniform sizes, but got {combined_sizes.tolist()}. "
+            "Ensure that `combine_matrices` correctly handles inputs across all splits."
+        )
+
+        # Check the expected size of combined matrices
+        actual_data_size = len(self.omim1[0].data)
+        expected_data_size = (self.zero_sampling_factor + 1) * len(omim1_1s.data)
+        assert actual_data_size == expected_data_size, (
+            "Mismatch in the data size of the combined matrices. "
+            f"Expected {expected_data_size}, but got {actual_data_size}. "
+            "Verify that the `combine_matrices` function properly adds sampled zeros."
+        )
+
         self.logger.debug(
             "Combined sparse matrix for OMIM1 created. Shape is %s", omim1_1s.shape
         )
+        
         omim1_1s_splits_indices = create_random_splits_from_matrix(
             omim1_1s, num_splits=self.num_splits
         )
@@ -151,6 +197,8 @@ class DataLoader:
 
         counts = compute_statistics(omim1_1s, omim1_1s_splits_indices)
         self.logger.debug("Disease count statistics:\n%s", counts)
+
+
 
     def load_omim2(self, gene_disease: pd.DataFrame, filter_column: str) -> None:
         """
