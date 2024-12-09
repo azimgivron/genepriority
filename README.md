@@ -1,5 +1,7 @@
 # NEGradient_GenePriority
 
+[![codecov](https://codecov.io/gh/azimgivron/NEGradient_GenePriority/branch/main/graph/badge.svg?token=QSAKYRC4EH)](https://codecov.io/gh/azimgivron/NEGradient_GenePriority)
+
 <p align="center" width="100%">
     <img width="40%" src=".images/NEGradient_GenePriority-logo.png" >
 </p>
