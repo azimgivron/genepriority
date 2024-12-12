@@ -2,7 +2,8 @@
 Results module
 ==============
 
-Contains a data structure for storing and processing simulation results.
+Provides a data structure for storing and processing simulation results
+of prediction tasks, including both ground truth values and model-predicted values.
 """
 
 from dataclasses import dataclass
@@ -15,31 +16,34 @@ import scipy.sparse as sp
 @dataclass
 class Results:
     """
-    Prediction results data structure.
+    Encapsulates the results of a prediction task.
 
-    This class encapsulates the results of a prediction task, including
-    the ground truth values, predicted values, and additional filtering
-    options for test data.
+    This class provides a structure to store and process prediction results,
+    including ground truth values and corresponding predicted values from a model.
+    It supports validation of input data and facilitates iteration over
+    the results in a convenient stacked format.
 
     Attributes:
-        y_true (sp.csr_matrix): Ground truth matrix, where each entry
-            represents a true association.
-        y_pred (np.ndarray): Predicted values from the trained model,
-            representing the likelihood of associations.
-        mask_1s (np.ndarray): Binary mask indicating the positions of
-            positive associations (1s) in the data.
-        on_test_data_only (bool): Whether to filter the predictions to
-            retain 1s from test data only.
+        y_true (sp.csr_matrix): Ground truth sparse matrix, where each entry 
+            represents the true association (e.g., between a disease and a gene).
+        y_pred (np.ndarray): Predicted values as a dense array, where each entry 
+            represents the likelihood of an association predicted by the model.
     """
 
     y_true: sp.csr_matrix
     y_pred: np.ndarray
-    mask_1s: np.ndarray
-    on_test_data_only: bool = False
 
     def __post_init__(self):
         """
         Validates the input data types and shapes after initialization.
+
+        Ensures that `y_true` is a sparse CSR matrix and `y_pred` is a dense
+        numpy array. Also checks that the shapes of `y_true` and `y_pred` match.
+
+        Raises:
+            TypeError: If `y_true` is not of type `sp.csr_matrix` or
+                       `y_pred` is not of type `np.ndarray`.
+            ValueError: If the shapes of `y_true` and `y_pred` do not match.
         """
         if not isinstance(self.y_true, sp.csr_matrix):
             raise TypeError(
@@ -56,58 +60,25 @@ class Results:
                 f"Shape mismatch: `y_true` has shape {self.y_true.shape}, "
                 f"but `y_pred` has shape {self.y_pred.shape}. Shapes must match."
             )
-        if not isinstance(self.mask_1s, np.ndarray):
-            raise TypeError(
-                "`mask_1s` must be of type np.ndarray, but "
-                f"got type {type(self.mask_1s)} instead."
-            )
-        if self.mask_1s.shape != self.y_true.shape:
-            raise ValueError(
-                f"Shape mismatch: `mask_1s` has shape {self.mask_1s.shape}, "
-                f"but `y_true` has shape {self.y_true.shape}. Shapes must match."
-            )
-
-    def filter(self, pred_truth_mat: np.ndarray) -> np.ndarray:
-        """
-        Filters the prediction matrix to retain only the relevant diseases.
-
-        This method identifies columns (diseases) that contain unselected positive
-        associations (1s) based on the ground truth and provided masks, and filters
-        the prediction matrix accordingly.
-
-        Args:
-            pred_truth_mat (np.ndarray): A 3D array of predictions and ground
-                truth values.
-
-        Returns:
-            np.ndarray: Filtered prediction matrix with selected columns.
-        """
-        # Convert to dense matrix for element-wise operations.
-        ground_truth = self.y_true.T.toarray()  # shape = (disease, gene)
-        all_1s = ground_truth == 1
-        mask = (ground_truth == 0) | self.mask_1s.T
-        unselected_1s = all_1s & mask
-        # Identify columns with unselected 1s.
-        disease_mask = unselected_1s.any(axis=1)
-        return pred_truth_mat[disease_mask]
 
     def __iter__(self) -> Iterator[np.ndarray]:
         """
         Returns an iterator over a stacked array of predictions and ground truth values.
 
-        This method stacks the predicted values (`y_pred`) and the ground truth values
-        (`y_true`) along a new dimension to create a matrix with shape
-        (disease, gene, 2), where the last dimension contains the prediction
-        in the first position and the ground truth in the second position. If the
-        `on_test_data_only` flag is set to `True`, the matrix is filtered to include only
-        relevant test data.
+        The stacked array has shape `(disease, 2, gene)`, where the second dimension contains:
+        - The predicted value (`y_pred`) in the first position.
+        - The ground truth value (`y_true`) in the second position.
+
+        This representation is useful for tasks requiring simultaneous access
+        to both the predictions and the ground truth.
 
         Returns:
-            Iterator[np.ndarray]: An iterator over the stacked array of predictions
-                and ground truth values.
+            Iterator[np.ndarray]: An iterator over the stacked array combining
+            ground truth values and predictions.
         """
-        # shape is (disease, gene, 2)
-        pred_truth_mat = np.stack((self.y_pred.T, self.y_true.T.toarray()), axis=2)
-        if self.on_test_data_only:
-            pred_truth_mat = self.filter(pred_truth_mat)
+        all_1s = self.y_true.T.toarray() == 1 # shape = (disease, gene)
+        disease_mask = all_1s.any(axis=1) # keep where there is a 1
+        pred_truth_mat = np.stack((self.y_true.T.toarray(), self.y_pred.T), axis=2)
+        pred_truth_mat = pred_truth_mat[disease_mask]
+        pred_truth_mat = np.swapaxes(pred_truth_mat, 1, 2)
         return iter(pred_truth_mat)

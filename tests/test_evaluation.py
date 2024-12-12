@@ -1,21 +1,32 @@
 from typing import List
-from unittest.mock import Mock
 
 import numpy as np
 import pytest
-from sklearn import metrics
+import scipy.sparse as sp
+from NEGradient_GenePriority import Evaluation, Results
 
-from NEGradient_GenePriority import Evaluation, Results, bedroc_score
 
+
+@pytest.fixture(name="diseases")
+def get_diseases() -> int:
+    """Return the number of diseases."""
+    return 5
+
+@pytest.fixture(name="genes")
+def get_genes() -> int:
+    """Return the number of genes."""
+    return 3
 
 @pytest.fixture(name="results")
-def create_results():
+def create_results(genes: int, diseases: int):
     """Fixture to provide Results data for testing."""
-    return [
-        Results(np.array([1, 0, 1, 0, 1]), np.array([0.9, 0.1, 0.8, 0.4, 0.7]), np.array([1, 0, 1, 0, 1]).astype(bool)),
-        Results(np.array([0, 1, 1, 0, 1]), np.array([0.3, 0.85, 0.65, 0.2, 0.9]), np.array([0, 1, 1, 0, 1]).astype(bool)),
-    ]
-
+    np.random.seed(42)
+    y_true=sp.coo_matrix((np.ones(5), (np.hstack((np.zeros(3),np.ones(2))), np.array([0, 1, 2, 3, 4]))), shape=(genes,diseases)).tocsr()
+    y_pred1=np.random.rand(genes,diseases)
+    y_pred2=np.random.rand(genes,diseases)
+    res1 = Results(y_true, y_pred1)
+    res2 = Results(y_true, y_pred2)
+    return [res1, res2]
 
 def test_evaluation_init(results: List[Results]):
     """Test the __init__ method of Evaluation class."""
@@ -29,16 +40,14 @@ def test_evaluation_init_invalid():
     with pytest.raises(TypeError):
         Evaluation(["invalid", 123])
 
-
-def test_compute_bedroc_scores(results):
+def test_compute_bedroc_scores(results, diseases):
     """Test the compute_bedroc_scores method."""
     alpha_values = [0.1, 0.5, 1.0]
     Evaluation.alphas = alpha_values
     Evaluation.alpha_map = {alpha: f"alpha_{alpha}" for alpha in alpha_values}
     evaluation = Evaluation(results)
     scores = evaluation.compute_bedroc_scores()
-    assert scores.shape == (len(results), len(alpha_values))
-
+    assert scores.shape == (diseases, len(alpha_values))
 
 def test_compute_avg_auc_loss(results):
     """Test the compute_avg_auc_loss method."""
