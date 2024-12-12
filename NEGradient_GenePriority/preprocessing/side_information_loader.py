@@ -25,8 +25,8 @@ class SideInformationLoader:
     and transform them into a format suitable for machine learning tasks like gene prioritization.
 
     Attributes:
-        gene_side_information (sp.csr_matrix): The gene-related side information.
-        disease_side_information (List[sp.coo_matrix]): The disease-related side information.
+        gene_side_info (sp.csr_matrix): The gene-related side information.
+        disease_side_info (List[sp.coo_matrix]): The disease-related side information.
         logger (logging.Logger): Logger instance for recording information, warnings,
             and errors.
         nb_genes (int): Number of genes defining the dimensions of gene-side sparse matrices.
@@ -51,8 +51,8 @@ class SideInformationLoader:
         self.nb_diseases = nb_diseases
 
         # Initialize attributes for processed data
-        self.gene_side_information = None
-        self.disease_side_information = None
+        self.gene_side_info = None
+        self.disease_side_info = None
 
     @property
     def side_info(self) -> List[sp.csr_matrix]:
@@ -61,7 +61,7 @@ class SideInformationLoader:
         Returns:
             List[sp.csr_matrix]: The side information list.
         """
-        return [self.gene_side_information, self.disease_side_information]
+        return [self.gene_side_info, self.disease_side_info]
 
     @staticmethod
     def to_coo(dataframe: pd.DataFrame, rows: int) -> sp.coo_matrix:
@@ -107,9 +107,9 @@ class SideInformationLoader:
 
     def __call__(
         self, side_info_dataframes: List[pd.DataFrame], rows: int
-    ) -> List[sp.coo_matrix]:
+    ) -> sp.csr_matrix:
         """
-        Process and convert datasets into sparse matrices in COO format.
+        Process and convert datasets into sparse matrices in CSR format.
 
         Args:
             side_info_dataframes (List[pd.DataFrame]): List of DataFrames
@@ -122,10 +122,10 @@ class SideInformationLoader:
             rows (int): Number of rows for the resulting sparse matrices.
 
         Returns:
-            sp.csr_matrix: A CSR matrix representing processed side information.
+            sp.csr_matrix: A CSR matrix representing processed normalized side information.
 
         """
-        side_information = []
+        side_info = []
         for dataframe in side_info_dataframes:
             if dataframe.shape[1] == 2:
                 dataframe = self.add_implicit_ones(dataframe)
@@ -135,10 +135,12 @@ class SideInformationLoader:
                     "index, the second is the column index and the optional third "
                     "column is the score. By default the score is 1."
                 )
-            side_information.append(self.to_coo(dataframe, rows).tocsr())
-        return sp.hstack(side_information)
+            side_info_mat = self.to_coo(dataframe, rows).tocsr()
+            norm = sp.linalg.norm(side_info_mat, ord="fro")
+            side_info.append(side_info_mat / norm)
+        return sp.hstack(side_info)
 
-    def process_side_information(
+    def process_side_info(
         self,
         gene_side_info_paths: List[str],
         disease_side_info_paths: List[str],
@@ -168,15 +170,15 @@ class SideInformationLoader:
             "Side information dataframes loaded successfully. \n%s\n",
             log_df.to_markdown(),
         )
-        self.gene_side_information = self(gene_dataframes, self.nb_genes)
+        self.gene_side_info = self(gene_dataframes, self.nb_genes)
         self.logger.debug(
             "Gene side information matrix has shape: %s",
-            self.gene_side_information.shape,
+            self.gene_side_info.shape,
         )
-        self.disease_side_information = self(disease_dataframes, self.nb_diseases)
+        self.disease_side_info = self(disease_dataframes, self.nb_diseases)
         self.logger.debug(
             "Disease side information matrix has shape: %s",
-            self.disease_side_information.shape,
+            self.disease_side_info.shape,
         )
         self.logger.debug(
             "Processed gene-side information and disease-side information successfully."

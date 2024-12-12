@@ -60,69 +60,65 @@ def main():
         nb_genes = 14_195
         nb_diseases = 314
 
-        # # load data
-        # dataloader = DataLoader(
-        #     nb_genes=nb_genes,
-        #     nb_diseases=nb_diseases,
-        #     path=input_path / "gene-disease.csv",
-        #     seed=seed,
-        #     num_splits=num_splits,
-        #     zero_sampling_factor=zero_sampling_factor,
-        #     num_folds=num_folds,
-        # )
-        # dataloader(filter_column="Disease ID")  # load the data
+        # load data
+        dataloader = DataLoader(
+            nb_genes=nb_genes,
+            nb_diseases=nb_diseases,
+            path=input_path / "gene-disease.csv",
+            seed=seed,
+            num_splits=num_splits,
+            zero_sampling_factor=zero_sampling_factor,
+            num_folds=num_folds,
+        )
+        dataloader(filter_column="Disease ID")  # load the data
 
-        # # load side information
-        # interpro_path = input_path / "interpro.csv"
-        # uniprot_path = input_path / "uniprot.csv"
-        # go_path = input_path / "go.csv"
-        # phenotype_path = input_path / "phenotype.csv"
-        # side_info_loader = SideInformationLoader(
-        #     logger=logger, nb_genes=nb_genes, nb_diseases=nb_diseases
-        # )
-        # side_info_loader.process_side_information(
-        #     gene_side_info_paths=[interpro_path, uniprot_path, go_path],
-        #     disease_side_info_paths=[phenotype_path],
-        #     names=["interpro", "uniprot", "GO", "phenotype"],
-        # )
+        # load side information
+        interpro_path = input_path / "interpro.csv"
+        uniprot_path = input_path / "uniprot.csv"
+        go_path = input_path / "go.csv"
+        phenotype_path = input_path / "phenotype.csv"
+        side_info_loader = SideInformationLoader(
+            logger=logger, nb_genes=nb_genes, nb_diseases=nb_diseases
+        )
+        side_info_loader.process_side_info(
+            gene_side_info_paths=[interpro_path, uniprot_path, go_path],
+            disease_side_info_paths=[phenotype_path],
+            names=["interpro", "uniprot", "GO", "phenotype"],
+        )
 
-        # ############################
-        # # RUN TRAINING AND PREDICT
-        # ############################
-        # # Configure and run MACAU
-        # logger.debug("Configuring MACAU session")
-        # num_samples = 3500
-        # burnin_period = 500
-        # save_freq = 100
-        # # Whether to use a Cholesky instead of conjugate gradient (CG) solver.
-        # # Keep true until the column features side information (F_e) reaches ~20,000.
-        # direct = False
-        # univariate = True  # Whether to use univariate or multivariate sampling.
-        # verbose = 0
-        # omim1_results = {}
-        # omim2_results = {}
+        ############################
+        # RUN TRAINING AND PREDICT
+        ############################
+        # Configure and run MACAU
+        logger.debug("Configuring MACAU session")
+        num_samples = 3500
+        burnin_period = 500
+        save_freq = 100
+        # Whether to use a Cholesky instead of conjugate gradient (CG) solver.
+        # Keep true until the column features side information (F_e) reaches ~20,000.
+        direct = False
+        univariate = True  # Whether to use univariate or multivariate sampling.
+        verbose = 0
+        omim1_results = {}
+        omim2_results = {}
 
-        # trainer = Trainer(
-        #     dataloader=dataloader,
-        #     side_info_loader=side_info_loader,
-        #     path=output_path,
-        #     num_samples=num_samples,
-        #     burnin_period=burnin_period,
-        #     direct=direct,
-        #     univariate=univariate,
-        #     seed=seed,
-        #     save_freq=save_freq,
-        #     verbose=verbose,
-        #     logger=logger,
-        # )
-        # omim1_results, omim2_results = trainer(
-        #     latent_dimensions=latent_dimensions, save_results=True
-        # )
-        import pickle
-        with open("/home/TheGreatestCoder/code/output/omim1_results.pickle", 'rb') as f:
-            omim1_results = pickle.load(f)
-        with open("/home/TheGreatestCoder/code/output/omim2_results.pickle", 'rb') as f:
-            omim2_results = pickle.load(f)
+        trainer = Trainer(
+            dataloader=dataloader,
+            side_info_loader=side_info_loader,
+            path=output_path,
+            num_samples=num_samples,
+            burnin_period=burnin_period,
+            direct=direct,
+            univariate=univariate,
+            seed=seed,
+            save_freq=save_freq,
+            verbose=verbose,
+            logger=logger,
+        )
+        omim1_results, omim2_results = trainer(
+            latent_dimensions=latent_dimensions, save_results=True
+        )
+
         ############################
         # POST PROCESSING RESULTS
         ############################
@@ -137,15 +133,15 @@ def main():
             ModelEvaluationCollection(omim2_results),
         ]
         for i, collection in enumerate(collections, 1):
-            # plot_roc_curves(
-            #     evaluation_collection=collection,
-            #     output_file=(output_path / f"roc_curve_omim{i}"),
-            # )
-            # auc_loss_dataframe = generate_auc_loss_table(
-            #     collection.compute_auc_losses(),
-            #     model_names=collection.model_names,
-            # )
-            # auc_loss_dataframe.to_csv(output_path / f"auc_loss_omim{i}.csv")
+            plot_roc_curves(
+                evaluation_collection=collection,
+                output_file=(output_path / f"roc_curve_omim{i}"),
+            )
+            auc_loss_dataframe = generate_auc_loss_table(
+                collection.compute_auc_losses(),
+                model_names=collection.model_names,
+            )
+            auc_loss_dataframe.to_csv(output_path / f"auc_loss_omim{i}.csv")
             plot_bedroc_boxplots(
                 collection.compute_bedroc_scores(),
                 model_names=latent_dimensions,

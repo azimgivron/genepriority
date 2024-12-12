@@ -14,7 +14,7 @@ for preprocessing, and saving evaluation results for further analysis.
 
 import logging
 import pickle
-from typing import Dict, List, Literal, Optional, Tuple
+from typing import Dict, List, Literal, Tuple
 
 import numpy as np
 import smurff
@@ -58,7 +58,6 @@ class Trainer:
     def __init__(
         self,
         dataloader: DataLoader,
-        side_info_loader: SideInformationLoader,
         path: str,
         num_samples: int,
         burnin_period: int,
@@ -67,7 +66,8 @@ class Trainer:
         seed: int,
         save_freq: int,
         verbose: Literal[0, 1, 2],
-        logger: Optional[logging.Logger] = None,
+        side_info_loader: SideInformationLoader = None,
+        logger: logging.Logger = None,
     ) -> None:
         """
         Initialize the Trainer class with the given configuration.
@@ -75,8 +75,6 @@ class Trainer:
         Args:
             dataloader (DataLoader): The data loader containing all data for
                 training and testing.
-            side_info_loader (SideInformationLoader): The data loader for the
-                side information.
             path (str): The path to the directory where model snapshots will be saved.
             num_samples (int): The number of posterior samples to draw during training.
             burnin_period (int): The number of burn-in iterations before collecting
@@ -86,7 +84,9 @@ class Trainer:
             seed (int): The random seed for reproducibility.
             save_freq (int): The frequency at which the model state is saved.
             verbose (Literal[0, 1, 2]): The verbosity level of the algorithm.
-            logger (Optional[logging.Logger]): Logger instance for debug messages.
+            side_info_loader (SideInformationLoader, optional): The data loader for the
+                side information.
+            logger (logging.Logger, optional): Logger instance for debug messages.
                 If None, a default logger is created.
         """
         self.dataloader = dataloader
@@ -173,23 +173,21 @@ class Trainer:
     def predict(
         self,
         session: smurff.MacauSession,
-        mask: np.ndarray,
     ) -> np.ndarray:
         """
-        Extract predictions from the trained model using the test mask.
+        Extract predictions from the trained model.
 
         Args:
             session (smurff.MacauSession): The trained SMURFF session.
-            mask (np.ndarray): Binary mask for selecting test indices.
 
         Returns:
             (np.ndarray): The predictions.
         """
         predict_session = session.makePredictSession()
-        y_pred = np.mean(predict_session.predict_all(), axis=0)[*mask]
+        y_pred = np.mean(predict_session.predict_all(), axis=0)
         return y_pred
 
-    def add_side_information(self, session: smurff.MacauSession):
+    def add_side_info(self, session: smurff.MacauSession):
         """
         Add side information to the SMURFF Macau session.
 
@@ -197,11 +195,11 @@ class Trainer:
             session (smurff.MacauSession): The SMURFF Macau session to which
                 the side information will be added.
         """
-        for disease_side_info in self.side_info_loader.disease_side_information:
+        for disease_side_info in self.side_info_loader.disease_side_info:
             # The direct method is only feasible for a small (< 100K) number of
             # features.
             session.addSideInfo(mode=1, Y=disease_side_info, direct=False)
-        for gene_side_info in self.side_info_loader.gene_side_information:
+        for gene_side_info in self.side_info_loader.gene_side_info:
             session.addSideInfo(mode=0, Y=gene_side_info, direct=False)
 
     def train_test_cross_validation(
@@ -220,7 +218,7 @@ class Trainer:
             Evaluation: Aggregated evaluation results across all folds.
         """
         results = []
-        for i, (y_train, y_true, y_test_1s_only, mask) in tqdm(
+        for i, (y_train, y_test_1s) in tqdm(
             enumerate(zip(*self.dataloader.folds)), desc="Folds", leave=False
         ):
             self.logger.debug("Initiating training on fold %d", i + 1)
@@ -232,23 +230,22 @@ class Trainer:
                 "Number of 0s in the training set %s",
                 len(y_train.data[y_train.data == 0]),
             )
-            self.logger.debug(
-                "Number of 1s in the test set %s", len(y_true[y_true == 1])
-            )
-            self.logger.debug(
-                "Number of 0s in the test set %s", len(y_true[y_true == 0])
-            )
             session = smurff.MacauSession(
                 **self.macau_session_kwargs,
                 num_latent=num_latent,
                 Ytrain=y_train,
-                Ytest=y_test_1s_only,
+                Ytest=y_test_1s,
                 save_name=str(self.path / f"{i}:{save_name}"),
-                side_info=self.side_info_loader.side_info,
+                side_info=self.side_info_loader.side_info
+                if self.side_info_loader
+                else None,
             )
             session.run()
-            y_pred = self.predict(session, mask)
-            results.append(Results(y_true=y_true, y_pred=y_pred))
+            y_pred = self.predict(session)
+            mask_1s = y_test_1s.toarray() == 1
+            results.append(
+                Results(y_true=self.dataloader.omim2, y_pred=y_pred, mask_1s=mask_1s)
+            )
         return Evaluation(results)
 
     def train_test_splits(
@@ -267,7 +264,7 @@ class Trainer:
             Evaluation: Aggregated evaluation results across all splits.
         """
         results = []
-        for i, (y_train, y_true, y_test_1s_only, mask) in tqdm(
+        for i, (y_train, y_test_1s) in tqdm(
             enumerate(zip(*self.dataloader.splits)), desc="Splits", leave=False
         ):
             self.logger.debug("Initiating training on split %d", i + 1)
@@ -279,24 +276,23 @@ class Trainer:
                 "Number of 0s in the training set %s",
                 len(y_train.data[y_train.data == 0]),
             )
-            self.logger.debug(
-                "Number of 1s in the test set %s", len(y_true[y_true == 1])
-            )
-            self.logger.debug(
-                "Number of 0s in the test set %s", len(y_true[y_true == 0])
-            )
 
             session = smurff.MacauSession(
                 **self.macau_session_kwargs,
                 num_latent=num_latent,
                 Ytrain=y_train,
-                Ytest=y_test_1s_only,
+                Ytest=y_test_1s,
                 save_name=str(self.path / f"{i}:{save_name}"),
-                side_info=self.side_info_loader.side_info,
+                side_info=self.side_info_loader.side_info
+                if self.side_info_loader
+                else None,
             )
             session.run()
-            y_pred = self.predict(session, mask)
-            results.append(Results(y_true=y_true, y_pred=y_pred))
+            y_pred = self.predict(session)
+            mask_1s = y_test_1s.toarray() == 1
+            results.append(
+                Results(y_true=self.dataloader.omim1[i], y_pred=y_pred, mask_1s=mask_1s)
+            )
         return Evaluation(results)
 
 
