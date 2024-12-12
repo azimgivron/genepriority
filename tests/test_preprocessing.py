@@ -88,9 +88,7 @@ def test_training_test_indices_init(training_test_indices: TrainTestIndices):
 ### Test Utility Functions
 
 
-def test_from_indices(
-    sample_sparse_matrix: sp.coo_matrix, sample_indices: np.ndarray
-):
+def test_from_indices(sample_sparse_matrix: sp.coo_matrix, sample_indices: np.ndarray):
     """Test the from_indices function."""
     indices_set = set(map(tuple, sample_indices))
     submatrix = from_indices(sample_sparse_matrix, indices_set)
@@ -99,7 +97,7 @@ def test_from_indices(
 
 def test_convert_dataframe_to_sparse_matrix(sample_dataframe: pd.DataFrame):
     """Test the convert_dataframe_to_sparse_matrix function."""
-    sparse_matrix = convert_dataframe_to_sparse_matrix(sample_dataframe, shape=(4,4))
+    sparse_matrix = convert_dataframe_to_sparse_matrix(sample_dataframe, shape=(4, 4))
     assert isinstance(sparse_matrix, sp.coo_matrix)
 
 
