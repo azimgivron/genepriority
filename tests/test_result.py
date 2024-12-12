@@ -1,7 +1,6 @@
 import numpy as np
 import pytest
 import scipy.sparse as sp
-
 from NEGradient_GenePriority import Results
 
 
@@ -10,10 +9,12 @@ def get_diseases() -> int:
     """Return the number of diseases."""
     return 5
 
+
 @pytest.fixture(name="genes")
 def get_genes() -> int:
     """Return the number of genes."""
     return 3
+
 
 @pytest.fixture(name="ground_truth")
 def get_ground_truth(diseases: int, genes: int) -> sp.coo_matrix:
@@ -22,11 +23,13 @@ def get_ground_truth(diseases: int, genes: int) -> sp.coo_matrix:
     cols = [0, 0, 1, 1, 0, 2]
     return sp.coo_matrix((np.ones(len(rows)), (rows, cols)), shape=(diseases, genes))
 
+
 @pytest.fixture(name="predictions")
 def get_predictions(diseases: int, genes: int) -> np.ndarray:
     """Return predictions as a dense array from the ground truth matrix."""
     np.random.seed(42)
     return np.random.rand(diseases, genes)
+
 
 @pytest.fixture(name="expected_filtered_result")
 def get_expected_filtered_result() -> np.ndarray:
@@ -36,15 +39,15 @@ def get_expected_filtered_result() -> np.ndarray:
     expected = np.swapaxes(expected, 1, 2)
     return expected
 
+
 @pytest.fixture(name="results")
-def get_results(
-    ground_truth: sp.coo_matrix, predictions: np.ndarray
-) -> Results:
+def get_results(ground_truth: sp.coo_matrix, predictions: np.ndarray) -> Results:
     """Return a Results object initialized with test data."""
     return Results(
         y_true=ground_truth.T.tocsr(),
         y_pred=predictions.T,
     )
+
 
 def test_results2(results: Results, expected_filtered_result: np.ndarray):
     """Test Results iteration and filtering logic."""

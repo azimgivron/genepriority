@@ -24,9 +24,9 @@ class Results:
     the results in a convenient stacked format.
 
     Attributes:
-        y_true (sp.csr_matrix): Ground truth sparse matrix, where each entry 
+        y_true (sp.csr_matrix): Ground truth sparse matrix, where each entry
             represents the true association (e.g., between a disease and a gene).
-        y_pred (np.ndarray): Predicted values as a dense array, where each entry 
+        y_pred (np.ndarray): Predicted values as a dense array, where each entry
             represents the likelihood of an association predicted by the model.
     """
 
@@ -76,8 +76,8 @@ class Results:
             Iterator[np.ndarray]: An iterator over the stacked array combining
             ground truth values and predictions.
         """
-        all_1s = self.y_true.T.toarray() == 1 # shape = (disease, gene)
-        disease_mask = all_1s.any(axis=1) # keep where there is a 1
+        all_1s = self.y_true.T.toarray() == 1  # shape = (disease, gene)
+        disease_mask = all_1s.any(axis=1)  # keep where there is a 1
         pred_truth_mat = np.stack((self.y_true.T.toarray(), self.y_pred.T), axis=2)
         pred_truth_mat = pred_truth_mat[disease_mask]
         pred_truth_mat = np.swapaxes(pred_truth_mat, 1, 2)

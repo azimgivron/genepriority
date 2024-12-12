@@ -9,10 +9,9 @@ such as ROC curve data, AUC loss, and BEDROC scores.
 from typing import Dict, List, Tuple
 
 import numpy as np
-from sklearn import metrics
-
 from NEGradient_GenePriority.evaluation.metrics import bedroc_score
 from NEGradient_GenePriority.evaluation.results import Results
+from sklearn import metrics
 
 
 class Evaluation:
@@ -53,7 +52,7 @@ class Evaluation:
         self.results = results
         self.avg_results = Results(
             y_true=self.results[0].y_true,
-            y_pred=sum(result.y_pred for result in self.results) / len(self.results)
+            y_pred=sum(result.y_pred for result in self.results) / len(self.results),
         )
 
     def compute_bedroc_scores(self) -> np.ndarray:
@@ -62,8 +61,8 @@ class Evaluation:
         scores for the given alpha values.
 
         Returns:
-            np.ndarray: A 2D array of BEDROC scores with shape `(disease, alphas)`, 
-            where each row corresponds to a disease and each column corresponds 
+            np.ndarray: A 2D array of BEDROC scores with shape `(disease, alphas)`,
+            where each row corresponds to a disease and each column corresponds
             to a specific alpha value.
         """
         bedroc = []
@@ -79,7 +78,7 @@ class Evaluation:
 
     def compute_avg_auc_loss(self) -> float:
         """
-        Computes the average AUC loss, which is defined as `1 - AUC` 
+        Computes the average AUC loss, which is defined as `1 - AUC`
         for each disease, indicating the model's inability to achieve perfect separation.
 
         Returns:
@@ -95,8 +94,8 @@ class Evaluation:
 
     def compute_roc_curve(self) -> Tuple[np.ndarray, np.ndarray]:
         """
-        Computes the Receiver Operating Characteristic (ROC) curve metrics, 
-        including False Positive Rates (FPR) and True Positive Rates (TPR), 
+        Computes the Receiver Operating Characteristic (ROC) curve metrics,
+        including False Positive Rates (FPR) and True Positive Rates (TPR),
         for each disease.
 
         Returns:

@@ -14,8 +14,6 @@ from typing import List, Tuple
 import numpy as np
 import pandas as pd
 import scipy.sparse as sp
-from tqdm import tqdm
-
 from NEGradient_GenePriority.preprocessing.preprocessing import (
     combine_matrices,
     combine_splits,
@@ -27,6 +25,7 @@ from NEGradient_GenePriority.preprocessing.preprocessing import (
     filter_by_number_of_association,
     sample_zeros,
 )
+from tqdm import tqdm
 
 
 class DataLoader:
