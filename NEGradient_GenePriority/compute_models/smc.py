@@ -59,7 +59,7 @@ class MatrixCompletion:
         """
         # Compute the residual matrix using the mask and factorized matrices
         residual = self.mask.multiply(self.A - self.H1.dot(self.H2))
-        loss = 0.5 * sp.linalg.sparse_norm(residual) ** 2
+        loss = 0.5 * sp.linalg.norm(residual) ** 2
         logging.debug(f"Calculated loss: {loss}")
         return loss
 
@@ -126,7 +126,7 @@ class MatrixCompletion:
         # Stack H1 and H2 for optimization
         Wk = sp.vstack([self.H1, self.H2.T])
         alpha_k = 1 / L
-        tau = sp.linalg.sparse_norm(self.A) / 3
+        tau = sp.linalg.norm(self.A) / 3
         tau1 = -(tau**2) / 3
         t1 = tau1 / 3
 
@@ -150,13 +150,13 @@ class MatrixCompletion:
                 grad_f_Wk = sp.vstack([grad_u, grad_v])
 
                 # Compute the gradient step
-                grad = (sp.linalg.sparse_norm(Wk, ord="fro") ** 2 + tau) * Wk - (
+                grad = (sp.linalg.norm(Wk, ord="fro") ** 2 + tau) * Wk - (
                     alpha_k * grad_f_Wk
                 )
                 tau2 = (
                     (
                         -2 * (tau**3)
-                        - 27 * (sp.linalg.sparse_norm(grad, ord="fro") ** 2)
+                        - 27 * (sp.linalg.norm(grad, ord="fro") ** 2)
                     )
                     / 27
                     / 2
@@ -191,13 +191,13 @@ class MatrixCompletion:
                     # Adjust step size
                     L *= rho1
                     alpha_k = (1 + lam) / L
-                    grad = (sp.linalg.sparse_norm(Wk, ord="fro") ** 2 + tau) * Wk - (
+                    grad = (sp.linalg.norm(Wk, ord="fro") ** 2 + tau) * Wk - (
                         alpha_k * grad_f_Wk
                     )
                     tau2 = (
                         (
                             -2 * (tau**3)
-                            - 27 * (sp.linalg.sparse_norm(grad, ord="fro") ** 2)
+                            - 27 * (sp.linalg.norm(grad, ord="fro") ** 2)
                         )
                         / 27
                         / 2
@@ -268,7 +268,7 @@ class MatrixCompletion:
         - float: The value of the h function
         """
         # Compute the Frobenius norm of W
-        fro_norm = sp.linalg.sparse_norm(W, ord="fro")
+        fro_norm = sp.linalg.norm(W, ord="fro")
         # Compute the h function value
         return 0.25 * fro_norm**4 + 0.5 * tau * fro_norm**2
 
@@ -289,6 +289,6 @@ class MatrixCompletion:
         hw1 = MatrixCompletion.func_h(W1, tau)
         hw2 = MatrixCompletion.func_h(W2, tau)
         # Compute the gradient of h at W2
-        grad_h_w2 = (sp.linalg.sparse_norm(W2, ord="fro") ** 2 + tau) * W2
+        grad_h_w2 = (sp.linalg.norm(W2, ord="fro") ** 2 + tau) * W2
         # Compute the difference in h values
         return hw1 - hw2 - grad_h_w2.T.dot(W1 - W2).sum()
