@@ -1,3 +1,16 @@
+# pylint: disable=C0103, R0913, R0914, R0915, R0902
+"""
+SMC module
+===========
+
+This module implements a matrix completion algorithm using adaptive step size.
+
+The primary purpose is to perform low-rank matrix approximation for imputation
+tasks, with a focus on sparse matrices. It includes:
+- Loss and RMSE calculation methods
+- An adaptive optimization loop
+- Support for debugging and detailed logging
+"""
 import logging
 import time
 import traceback
@@ -7,8 +20,23 @@ import numpy as np
 import scipy.sparse as sp
 from sklearn.metrics import mean_squared_error
 
-
 class MatrixCompletion:
+    """
+    MatrixCompletion performs low-rank matrix approximation for sparse matrices.
+
+    Attributes:
+        A (sp.csr_matrix): Original matrix to be approximated.
+        mask (sp.csr_matrix): Mask for observed entries in A.
+        test_matrix (sp.csr_matrix): Matrix for testing RMSE.
+        test_mask (sp.csr_matrix): Mask for observed entries in the test matrix.
+        k (int): Rank of the approximation.
+        mu (float): Regularization parameter.
+        iterations (int): Maximum number of optimization iterations.
+        H1 (sp.csr_matrix): Left factor matrix initialized randomly.
+        H2 (sp.csr_matrix): Right factor matrix initialized randomly.
+        loss (List[float]): History of loss values during optimization.
+        rmse (List[float]): History of RMSE values during optimization.
+    """
     def __init__(
         self,
         A: sp.csr_matrix,
@@ -20,16 +48,16 @@ class MatrixCompletion:
         iterations: int,
     ) -> None:
         """
-        Initialize the MatrixCompletion class.
+        Initializes the MatrixCompletion class.
 
-        Parameters:
-        - A (sp.csr_matrix): Original matrix (can be sparse or dense)
-        - mask (sp.csr_matrix): Mask for known entries
-        - test (sp.csr_matrix): Test matrix
-        - test_mask (sp.csr_matrix): Mask for test entries
-        - k (int): Rank of the approximation
-        - mu (float): Regularization parameter
-        - iterations (int): Number of iterations
+        Args:
+            A (sp.csr_matrix): Original matrix (can be sparse or dense).
+            mask (sp.csr_matrix): Mask for known entries.
+            test (sp.csr_matrix): Test matrix.
+            test_mask (sp.csr_matrix): Mask for test entries.
+            k (int): Rank of the approximation.
+            mu (float): Regularization parameter.
+            iterations (int): Number of iterations.
         """
         self.A = A
         self.mask = mask
@@ -38,6 +66,8 @@ class MatrixCompletion:
         self.k = k
         self.mu = mu
         self.iterations = iterations
+        self.rmse = None
+        self.loss = None
 
         # Set random seed for reproducibility
         np.random.seed(123)
@@ -52,10 +82,10 @@ class MatrixCompletion:
 
     def calculate_loss(self) -> float:
         """
-        Calculate the loss function.
+        Calculates the loss function.
 
         Returns:
-        - float: The calculated loss value
+            float: The calculated loss value.
         """
         # Compute the residual matrix using the mask and factorized matrices
         residual = self.mask.multiply(self.A - self.H1.dot(self.H2))
@@ -65,10 +95,10 @@ class MatrixCompletion:
 
     def calculate_rmse(self) -> float:
         """
-        Calculate the RMSE for the test data.
+        Calculates the RMSE for the test data.
 
         Returns:
-        - float: The calculated RMSE value
+            float: The calculated RMSE value.
         """
         # Compute the predicted matrix
         predicted_matrix = self.H1.dot(self.H2)
@@ -96,24 +126,20 @@ class MatrixCompletion:
         float,
     ]:
         """
-        Perform matrix completion using adaptive step size.
+        Performs matrix completion using adaptive step size.
 
-        Parameters:
-        - lam (float): Regularization parameter
-        - L (float): Initial step size
-        - rho1 (float): Adjustment parameter for increasing step size
-        - rho2 (float): Adjustment parameter for decreasing step size
-        - threshold (int): Maximum iterations for inner loop
+        Args:
+            lam (float): Regularization parameter.
+            L (float): Initial step size.
+            rho1 (float): Adjustment parameter for increasing step size.
+            rho2 (float): Adjustment parameter for decreasing step size.
+            threshold (int): Maximum iterations for the inner loop.
 
         Returns:
-        - Tuple[sp.csr_matrix, sp.csr_matrix, sp.csr_matrix, List[float], int, List[float], float]:
-            - Completed matrix
-            - H1 matrix
-            - H2 matrix
-            - Loss history
-            - Number of iterations
-            - RMSE history
-            - Runtime
+            Tuple[sp.csr_matrix, sp.csr_matrix, sp.csr_matrix, List[float], int,
+            List[float], float]:
+                Completed matrix, H1 matrix, H2 matrix, loss history, number of iterations,
+                RMSE history, runtime.
         """
         # Start measuring runtime
         start_time = time.time()
@@ -244,28 +270,28 @@ class MatrixCompletion:
     @staticmethod
     def nthr(a: float, n: int) -> float:
         """
-        Calculate the nth root of a number.
+        Calculates the nth root of a number.
 
-        Parameters:
-        - a (float): The number to take the nth root of
-        - n (int): The degree of the root
+        Args:
+            a (float): The number to take the nth root of.
+            n (int): The degree of the root.
 
         Returns:
-        - float: The nth root of a
+            float: The nth root of a.
         """
         return pow(a, 1 / n)
 
     @staticmethod
     def func_h(W: sp.csr_matrix, tau: float) -> float:
         """
-        Compute the h function for a given matrix W and parameter tau.
+        Computes the h function for a given matrix W and parameter tau.
 
-        Parameters:
-        - W (sp.csr_matrix): Input matrix
-        - tau (float): Regularization parameter
+        Args:
+            W (sp.csr_matrix): Input matrix.
+            tau (float): Regularization parameter.
 
         Returns:
-        - float: The value of the h function
+            float: The value of the h function.
         """
         # Compute the Frobenius norm of W
         fro_norm = sp.linalg.norm(W, ord="fro")
@@ -275,15 +301,15 @@ class MatrixCompletion:
     @staticmethod
     def D_h(W1: sp.csr_matrix, W2: sp.csr_matrix, tau: float) -> float:
         """
-        Compute the difference in h function values between two matrices.
+        Computes the difference in h function values between two matrices.
 
-        Parameters:
-        - W1 (sp.csr_matrix): First input matrix
-        - W2 (sp.csr_matrix): Second input matrix
-        - tau (float): Regularization parameter
+        Args:
+            W1 (sp.csr_matrix): First input matrix.
+            W2 (sp.csr_matrix): Second input matrix.
+            tau (float): Regularization parameter.
 
         Returns:
-        - float: The difference in h function values
+            float: The difference in h function values.
         """
         # Compute the h function values for W1 and W2
         hw1 = MatrixCompletion.func_h(W1, tau)
