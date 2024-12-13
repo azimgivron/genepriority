@@ -14,11 +14,33 @@ tasks, with a focus on sparse matrices. It includes:
 import logging
 import time
 import traceback
-from typing import List, Tuple
+from dataclasses import dataclass
+from typing import List
 
 import numpy as np
 import scipy.sparse as sp
 from sklearn.metrics import mean_squared_error
+
+
+@dataclass
+class MCAdaptive2Result:
+    """
+    A data class to store the results of the MC_adaptive_2 method.
+
+    Attributes:
+        completed_matrix (sp.csr_matrix): The completed matrix after the optimization.
+        loss_history (List[float]): A list of loss values recorded during each iteration.
+        iterations (int): The number of iterations performed during optimization.
+        rmse_history (List[float]): A list of RMSE values recorded during each iteration.
+        runtime (float): The total time taken for the optimization in seconds.
+    """
+
+    completed_matrix: sp.csr_matrix
+    loss_history: List[float]
+    iterations: int
+    rmse_history: List[float]
+    runtime: float
+
 
 class MatrixCompletion:
     """
@@ -32,11 +54,10 @@ class MatrixCompletion:
         k (int): Rank of the approximation.
         mu (float): Regularization parameter.
         iterations (int): Maximum number of optimization iterations.
-        H1 (sp.csr_matrix): Left factor matrix initialized randomly.
-        H2 (sp.csr_matrix): Right factor matrix initialized randomly.
-        loss (List[float]): History of loss values during optimization.
-        rmse (List[float]): History of RMSE values during optimization.
+        H1 (sp.csr_matrix): The left factor matrix from the low-rank approximation.
+        H2 (sp.csr_matrix): The right factor matrix from the low-rank approximation.
     """
+
     def __init__(
         self,
         A: sp.csr_matrix,
@@ -66,8 +87,6 @@ class MatrixCompletion:
         self.k = k
         self.mu = mu
         self.iterations = iterations
-        self.rmse = None
-        self.loss = None
 
         # Set random seed for reproducibility
         np.random.seed(123)
@@ -77,7 +96,7 @@ class MatrixCompletion:
         self.H1 = sp.csr_matrix(np.random.randn(m, k))
         self.H2 = sp.csr_matrix(np.random.randn(k, n))
         logging.debug(
-            f"Initialized H1 and H2 with shapes {self.H1.shape} and {self.H2.shape}"
+            "Initialized H1 and H2 with shapes %s and %s", self.H1.shape, self.H2.shape
         )
 
     def calculate_loss(self) -> float:
@@ -90,7 +109,7 @@ class MatrixCompletion:
         # Compute the residual matrix using the mask and factorized matrices
         residual = self.mask.multiply(self.A - self.H1.dot(self.H2))
         loss = 0.5 * sp.linalg.norm(residual) ** 2
-        logging.debug(f"Calculated loss: {loss}")
+        logging.debug("Calculated loss: %f", loss)
         return loss
 
     def calculate_rmse(self) -> float:
@@ -111,20 +130,12 @@ class MatrixCompletion:
 
         # Compute RMSE using the actual and predicted values
         rmse = np.sqrt(mean_squared_error(test_values_actual, test_values_predicted))
-        logging.debug(f"Calculated RMSE: {rmse}")
+        logging.debug("Calculated RMSE: %f", rmse)
         return rmse
 
     def MC_adaptive_2(
         self, lam: float, L: float, rho1: float, rho2: float, threshold: int = 20
-    ) -> Tuple[
-        sp.csr_matrix,
-        sp.csr_matrix,
-        sp.csr_matrix,
-        List[float],
-        int,
-        List[float],
-        float,
-    ]:
+    ) -> MCAdaptive2Result:
         """
         Performs matrix completion using adaptive step size.
 
@@ -136,18 +147,15 @@ class MatrixCompletion:
             threshold (int): Maximum iterations for the inner loop.
 
         Returns:
-            Tuple[sp.csr_matrix, sp.csr_matrix, sp.csr_matrix, List[float], int,
-            List[float], float]:
-                Completed matrix, H1 matrix, H2 matrix, loss history, number of iterations,
-                RMSE history, runtime.
+            MCAdaptive2Result: Dataclass containing results of the matrix completion.
         """
         # Start measuring runtime
         start_time = time.time()
         m, n = self.A.shape
 
         # Initialize loss and RMSE history
-        self.loss = [self.calculate_loss() / (m * n)]
-        self.rmse = [self.calculate_rmse()]
+        loss = [self.calculate_loss() / (m * n)]
+        rmse = [self.calculate_rmse()]
 
         # Stack H1 and H2 for optimization
         Wk = sp.vstack([self.H1, self.H2.T])
@@ -156,12 +164,12 @@ class MatrixCompletion:
         tau1 = -(tau**2) / 3
         t1 = tau1 / 3
 
-        logging.debug(f"Starting optimization with tau={tau}, alpha_k={alpha_k}")
+        logging.debug("Starting optimization with tau=%f, alpha_k=%f", tau, alpha_k)
 
         # Main optimization loop
         for i in range(self.iterations):
             try:
-                logging.debug(f"Iteration {i} started")
+                logging.debug("Iteration %d started", i)
                 # Compute gradients for H1 and H2
                 grad_u = (
                     self.mask.multiply((self.H1.dot(self.H2) - self.A)).dot(self.H2.T)
@@ -180,10 +188,7 @@ class MatrixCompletion:
                     alpha_k * grad_f_Wk
                 )
                 tau2 = (
-                    (
-                        -2 * (tau**3)
-                        - 27 * (sp.linalg.norm(grad, ord="fro") ** 2)
-                    )
+                    (-2 * (tau**3) - 27 * (sp.linalg.norm(grad, ord="fro") ** 2))
                     / 27
                     / 2
                 )
@@ -200,17 +205,19 @@ class MatrixCompletion:
 
                 # Compute the new loss
                 fk1 = self.calculate_loss()
-                logging.debug(f"Iteration {i}: Loss={fk1}")
+                logging.debug("Iteration %d: Loss=%f", i, fk1)
                 j = 0
                 flag = 0
 
                 # Inner loop to adjust step size
-                while fk1 > self.loss[-1] + grad_f_Wk.T.dot(
-                    Wk1 - Wk
-                ).sum() + L * self.D_h(Wk1, Wk, tau):
+                while fk1 > loss[-1] + grad_f_Wk.T.dot(Wk1 - Wk).sum() + L * self.D_h(
+                    Wk1, Wk, tau
+                ):
                     flag = 1
                     j += 1
-                    logging.debug(f"Adjusting step size, iteration {i}, inner loop {j}")
+                    logging.debug(
+                        "Adjusting step size, iteration %d, inner loop %d", i, j
+                    )
                     # Detect overflow and exit if necessary
                     if rho1**j > np.finfo(float).max or j == threshold:
                         raise OverflowError("Overflow detected. Exiting loop.")
@@ -221,10 +228,7 @@ class MatrixCompletion:
                         alpha_k * grad_f_Wk
                     )
                     tau2 = (
-                        (
-                            -2 * (tau**3)
-                            - 27 * (sp.linalg.norm(grad, ord="fro") ** 2)
-                        )
+                        (-2 * (tau**3) - 27 * (sp.linalg.norm(grad, ord="fro") ** 2))
                         / 27
                         / 2
                     )
@@ -243,13 +247,11 @@ class MatrixCompletion:
                 # Update variables for the next iteration
                 Wk = Wk1
                 alpha_k = (1 + lam) / L
-                self.loss.append(fk1 / (m * n))
-                self.rmse.append(self.calculate_rmse())
+                loss.append(fk1 / (m * n))
+                rmse.append(self.calculate_rmse())
 
                 # Log iteration metrics
-                logging.debug(
-                    f"Iteration {i}: RMSE={self.rmse[-1]}, Loss={self.loss[-1]}"
-                )
+                logging.debug("Iteration %d: RMSE=%f, Loss=%f", i, rmse[-1], loss[-1])
 
                 # Break if loss becomes NaN
                 if np.isnan(fk1):
@@ -258,14 +260,24 @@ class MatrixCompletion:
 
             except Exception as e:
                 logging.error(
-                    f"Error encountered during iteration {i}: {e}\n{traceback.format_exc()}"
+                    "Error encountered during iteration %d: %s\n%s",
+                    i,
+                    e,
+                    traceback.format_exc(),
                 )
                 raise
 
         # Compute runtime
         runtime = time.time() - start_time
-        logging.debug(f"Optimization completed in {runtime:.2f} seconds")
-        return self.H1.dot(self.H2), self.H1, self.H2, self.loss, i, self.rmse, runtime
+        logging.debug("Optimization completed in %.2f seconds", runtime)
+        training_data = MCAdaptive2Result(
+            completed_matrix=self.H1.dot(self.H2),
+            loss_history=loss,
+            iterations=i,
+            rmse_history=rmse,
+            runtime=runtime,
+        )
+        return training_data
 
     @staticmethod
     def nthr(a: float, n: int) -> float:
