@@ -92,26 +92,22 @@ class Evaluation:
         auc_loss = np.array(auc_loss)  # shape (disease)
         return auc_loss
 
-    def compute_roc_curve(self) -> Tuple[np.ndarray, np.ndarray]:
+    def compute_roc_curve(self) -> List[Tuple[np.ndarray, np.ndarray]]:
         """
         Computes the Receiver Operating Characteristic (ROC) curve metrics,
         including False Positive Rates (FPR) and True Positive Rates (TPR),
         for each disease.
 
         Returns:
-            Tuple[np.ndarray, np.ndarray]:
-                - np.ndarray: A 2D array where each row contains the FPR for a specific disease.
-                - np.ndarray: A 2D array where each row contains the TPR for a specific disease.
+            List[Tuple[np.ndarray, np.ndarray]]: A list of tuples, 
+                one per disease, where each element of the tuple is the FPR
+                and TPR for the given specific disease.
         """
-        fpr = []
-        tpr = []
+        fpr_tpr = []
         for disease_result in self.avg_results:
             y_true, y_pred = disease_result
             fpr_per_disease, tpr_per_disease, _ = metrics.roc_curve(
                 y_true, y_pred, pos_label=1, drop_intermediate=True
             )
-            fpr.append(fpr_per_disease)
-            tpr.append(tpr_per_disease)
-        fpr = np.array(fpr)
-        tpr = np.array(tpr)
-        return fpr, tpr
+            fpr_tpr.append((fpr_per_disease, tpr_per_disease))
+        return fpr_tpr

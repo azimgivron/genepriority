@@ -71,7 +71,7 @@ def test_compute_roc_curve(results, diseases):
     assert isinstance(fpr_tpr_per_disease, list)
     assert len(fpr_tpr_per_disease)==diseases
     fpr_tpr = fpr_tpr_per_disease[0]
-    assert isinstance(fpr_tpr, list)
+    assert isinstance(fpr_tpr, tuple)
     assert len(fpr_tpr)==2
     fpr, tpr = fpr_tpr
     assert isinstance(fpr, np.ndarray)
