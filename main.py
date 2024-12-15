@@ -80,7 +80,7 @@ def main():
         side_info_loader = SideInformationLoader(
             logger=logger, nb_genes=nb_genes, nb_diseases=nb_diseases
         )
-        side_info_loader.process_side_information(
+        side_info_loader.process_side_info(
             gene_side_info_paths=[interpro_path, uniprot_path, go_path],
             disease_side_info_paths=[phenotype_path],
             names=["interpro", "uniprot", "GO", "phenotype"],

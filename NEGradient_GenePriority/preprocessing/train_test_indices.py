@@ -12,7 +12,6 @@ from __future__ import annotations
 from typing import Type
 
 import numpy as np
-
 from NEGradient_GenePriority.preprocessing.indices import Indices
 
 
