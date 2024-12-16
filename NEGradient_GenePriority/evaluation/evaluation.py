@@ -9,10 +9,11 @@ such as ROC curve data, AUC loss, and BEDROC scores.
 from typing import Dict, List, Tuple
 
 import numpy as np
+from scipy import interpolate
+from sklearn import metrics
+
 from NEGradient_GenePriority.evaluation.metrics import bedroc_score
 from NEGradient_GenePriority.evaluation.results import Results
-from sklearn import metrics
-from scipy import interpolate
 
 
 class Evaluation:
@@ -95,8 +96,8 @@ class Evaluation:
 
     def compute_roc_curve(self) -> np.ndarray:
         """
-        Computes the Receiver Operating Characteristic (ROC) curve metrics, 
-        including False Positive Rates (FPR) and True Positive Rates (TPR), 
+        Computes the Receiver Operating Characteristic (ROC) curve metrics,
+        including False Positive Rates (FPR) and True Positive Rates (TPR),
         interpolated over a common set of thresholds for all diseases.
 
         Returns:
