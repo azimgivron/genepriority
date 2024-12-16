@@ -12,6 +12,7 @@ import numpy as np
 from NEGradient_GenePriority.evaluation.metrics import bedroc_score
 from NEGradient_GenePriority.evaluation.results import Results
 from sklearn import metrics
+from scipy import interpolate
 
 
 class Evaluation:
@@ -92,22 +93,36 @@ class Evaluation:
         auc_loss = np.array(auc_loss)  # shape (disease)
         return auc_loss
 
-    def compute_roc_curve(self) -> List[Tuple[np.ndarray, np.ndarray]]:
+    def compute_roc_curve(self) -> np.ndarray:
         """
-        Computes the Receiver Operating Characteristic (ROC) curve metrics,
-        including False Positive Rates (FPR) and True Positive Rates (TPR),
-        for each disease.
+        Computes the Receiver Operating Characteristic (ROC) curve metrics, 
+        including False Positive Rates (FPR) and True Positive Rates (TPR), 
+        interpolated over a common set of thresholds for all diseases.
 
         Returns:
-            List[Tuple[np.ndarray, np.ndarray]]: A list of tuples, 
-                one per disease, where each element of the tuple is the FPR
-                and TPR for the given specific disease.
+            np.ndarray: A 3D array with the following structure:
+                - Shape: (diseases, common thresholds, 2)
+                - For each disease, the first dimension corresponds to the number of diseases.
+                - The second dimension represents the common thresholds.
+                - The third dimension contains two values: FPR and TPR respectively,
+                for each threshold.
         """
-        fpr_tpr = []
+        fpr_tpr_interp = []
+        thr = set()
         for disease_result in self.avg_results:
             y_true, y_pred = disease_result
-            fpr_per_disease, tpr_per_disease, _ = metrics.roc_curve(
+            fpr_per_disease, tpr_per_disease, thr_per_disease = metrics.roc_curve(
                 y_true, y_pred, pos_label=1, drop_intermediate=True
             )
-            fpr_tpr.append((fpr_per_disease, tpr_per_disease))
-        return fpr_tpr
+            thr.add(set(thr_per_disease))
+            fpr_tpr_interp.append(
+                (
+                    interpolate.interp1d(thr_per_disease, fpr_per_disease),
+                    interpolate.interp1d(thr_per_disease, tpr_per_disease),
+                )
+            )
+        fpr_tpr = []
+        thr = sorted(list(thr))
+        for fpr_interp, tpr_interp in fpr_tpr_interp:
+            fpr_tpr.append((fpr_interp(thr), tpr_interp(thr)))
+        return np.array(fpr_tpr)

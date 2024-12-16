@@ -91,8 +91,8 @@ def main():
         ############################
         # Configure and run MACAU
         logger.debug("Configuring MACAU session")
-        num_samples = 3500
-        burnin_period = 500
+        num_samples = 350#3500
+        burnin_period = 50#500
         save_freq = 100
         # Whether to use a Cholesky instead of conjugate gradient (CG) solver.
         # Keep true until the column features side information (F_e) reaches ~20,000.
