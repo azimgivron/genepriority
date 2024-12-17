@@ -11,6 +11,7 @@ from NEGradient_GenePriority import (
     ModelEvaluationCollection,
     SideInformationLoader,
     Trainer,
+    generate_bedroc_table,
     generate_auc_loss_table,
     plot_bedroc_boxplots,
     plot_roc_curves,
@@ -91,8 +92,8 @@ def main():
         ############################
         # Configure and run MACAU
         logger.debug("Configuring MACAU session")
-        num_samples = 350  # 3500
-        burnin_period = 50  # 500
+        num_samples = 3500
+        burnin_period = 500
         save_freq = 100
         # Whether to use a Cholesky instead of conjugate gradient (CG) solver.
         # Keep true until the column features side information (F_e) reaches ~20,000.
@@ -137,16 +138,26 @@ def main():
                 evaluation_collection=collection,
                 output_file=(output_path / f"roc_curve_omim{i}"),
             )
-            auc_loss_dataframe = generate_auc_loss_table(
-                collection.compute_auc_losses(),
-                model_names=collection.model_names,
-            )
-            auc_loss_dataframe.to_csv(output_path / f"auc_loss_omim{i}.csv")
-            plot_bedroc_boxplots(
-                collection.compute_bedroc_scores(),
-                model_names=latent_dimensions,
-                output_file=(output_path / f"bedroc_omim{i}.png"),
-            )
+        
+        collection = collections[0]
+        auc_loss_dataframe = generate_auc_loss_table(
+            collection.compute_auc_losses(),
+            model_names=collection.model_names,
+        )
+        auc_loss_dataframe.to_csv(output_path / f"auc_loss_omim1.csv")
+
+        collection = collections[1]
+        plot_bedroc_boxplots(
+            collection.compute_bedroc_scores(),
+            model_names=latent_dimensions,
+            output_file=(output_path / f"bedroc_omim2.png"),
+        )
+        bedroc_dataframe  = generate_bedroc_table(
+            collection.compute_bedroc_scores(),
+            model_names=collection.model_names,
+            alpha_map=alpha_map
+        )
+        bedroc_dataframe.to_csv(output_path / f"bedroc_omim2.csv")
         logger.debug("Figures and tables creation completed successfully")
     except Exception as exception:
         logger.error("An error occurred during processing: %s", exception)

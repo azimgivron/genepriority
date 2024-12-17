@@ -40,7 +40,8 @@ def plot_roc_curves(
     colors = plt.get_cmap(cmap).colors
     fig = plt.figure(figsize=figsize)
     for i, (name, evaluation) in enumerate(evaluation_collection.items()):
-        fpr, tpr = evaluation.compute_roc_curve().mean(axis=0).T
+        fpr_tpr_avg = evaluation.compute_roc_curve().mean(axis=0)
+        fpr, tpr = fpr_tpr_avg
         plt.plot(
             fpr,
             tpr,

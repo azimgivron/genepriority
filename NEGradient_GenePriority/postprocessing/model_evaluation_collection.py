@@ -9,7 +9,7 @@ This class facilitates comparison and analysis of model performance in a structu
 and efficient manner.
 
 """
-from typing import Dict, Iterator, List
+from typing import Dict, Iterator, List, Tuple
 
 import numpy as np
 
@@ -68,12 +68,12 @@ class ModelEvaluationCollection:
         """
         return list(self.model_results.values())
 
-    def items(self) -> Iterator[tuple]:
+    def items(self) -> Iterator[Tuple[str, Evaluation]]:
         """
         Provides an iterator over the model names and their corresponding Evaluation objects.
 
         Returns:
-            Iterator[tuple]: An iterator of (model_name, Evaluation) pairs.
+            Iterator[Tuple[str, Evaluation]]: An iterator of (model_name, Evaluation) pairs.
         """
         return self.model_results.items()
 

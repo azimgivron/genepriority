@@ -102,28 +102,32 @@ class Evaluation:
 
         Returns:
             np.ndarray: A 3D array with the following structure:
-                - Shape: (diseases, common thresholds, 2)
-                - For each disease, the first dimension corresponds to the number of diseases.
-                - The second dimension represents the common thresholds.
-                - The third dimension contains two values: FPR and TPR respectively,
-                for each threshold.
+                - Shape: (diseases, 2, common thresholds)
+                - The first dimension corresponds to the number of diseases.
+                - The second dimension contains FPR and TPR values respectively.
+                - The third dimension represents the common thresholds.
         """
         fpr_tpr_interp = []
-        thr = set()
+        thr = set()  # Collect unique thresholds as a flat set
+
         for disease_result in self.avg_results:
             y_true, y_pred = disease_result
             fpr_per_disease, tpr_per_disease, thr_per_disease = metrics.roc_curve(
                 y_true, y_pred, pos_label=1, drop_intermediate=True
             )
-            thr.add(set(thr_per_disease))
+            thr.update(thr_per_disease)  # Add elements to the set, avoiding nested sets
             fpr_tpr_interp.append(
                 (
-                    interpolate.interp1d(thr_per_disease, fpr_per_disease),
-                    interpolate.interp1d(thr_per_disease, tpr_per_disease),
+                    interpolate.interp1d(thr_per_disease, fpr_per_disease, bounds_error=False, kind="nearest", fill_value="extrapolate"),
+                    interpolate.interp1d(thr_per_disease, tpr_per_disease, bounds_error=False, kind="nearest", fill_value="extrapolate"),
                 )
             )
+
+        # Sort thresholds
+        thr = sorted(thr)
         fpr_tpr = []
-        thr = sorted(list(thr))
+        # Compute interpolated FPR and TPR for all diseases
         for fpr_interp, tpr_interp in fpr_tpr_interp:
             fpr_tpr.append((fpr_interp(thr), tpr_interp(thr)))
+
         return np.array(fpr_tpr)
