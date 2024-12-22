@@ -56,18 +56,17 @@ def test_compute_bedroc_scores(results, diseases):
     assert scores.shape == (diseases, len(alpha_values))
 
 
-def test_compute_avg_auc_loss(results):
+def test_compute_avg_auc_loss(results, diseases):
     """Test the compute_avg_auc_loss method."""
     evaluation = Evaluation(results)
-    mean_loss, std_loss = evaluation.compute_avg_auc_loss()
-    assert isinstance(mean_loss, float)
-    assert isinstance(std_loss, float)
+    loss = evaluation.compute_avg_auc_loss()
+    assert isinstance(loss, np.ndarray)
+    assert loss.shape==(diseases,)
 
 
-def test_compute_roc_curve(results):
+def test_compute_roc_curve(results, diseases):
     """Test the compute_roc_curve method."""
     evaluation = Evaluation(results)
-    fpr, tpr = evaluation.compute_roc_curve()
-    assert isinstance(fpr, np.ndarray)
-    assert isinstance(tpr, np.ndarray)
-    assert len(fpr) == len(tpr)
+    fpr_tpr_per_disease = evaluation.compute_roc_curve()
+    assert isinstance(fpr_tpr_per_disease, np.ndarray)
+    assert fpr_tpr_per_disease.shape[:-1]==(diseases, 2)

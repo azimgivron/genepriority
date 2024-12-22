@@ -12,33 +12,50 @@ The repository **NEGradient_GenePriority** (short for "Non-Euclidean Gradient Me
 
 ## Overview
 
+[![](https://mermaid.ink/img/pako:eNptlEtv4jAQx7_KyGeKyJPHYSUKLItEilQ4beDgkmmwSpzIdnbbAt-9jh3Y0KwPyJ7feMJ_Hj6RfZ4gGZFU0OIAy-ctB71k-WINz1ggVRC-W_s4XkWLaAcPDz_Oa5oVR4SePMOjMTs76_RYYZjEG0EZh3VxZOqOTOMNSnUHkCd2Y38nxm8eT_KsKBXCc7SewbQUjKdgoupNfXNqXe1hFi9zmsCaJQgL_pqLjCqWc6A8gafqdGSfCH-ZOsBPkb8gZ6U0wCpacIlCta6fr-F_xROhs4H6CpMIkc7ccdf8_twcFlY5JtZD7prSbpm1zBqrtTB3Iyc2AK7JbCC3Rm4beTXy2sivkd9GQY2CNgprFP6_QDcVVYWOqCqtVAm2x4aiyDGxVlpTsz0McmvkGtRUFHk18gxqKor8GvkGNRVFQY0Cg5qKorBGoUF3ir6pGaepwLSq8OYg8jLVVULKYVWgMJ3wL-iqFrc0MWH8R3ukmOyaHlbjsmny2ia_bQraprBp-laMpWnesZRlppuSSVmNyZQqClTY-XyK58grDXqUKH-ToHsbZnR_gKluZKp7uZqQ27RplypEhFVF5Y50SIZ6Flii34lT9c0tUQfMcEtGeptQ8bYlW37RfrRU-fqD78lIiRI7xCSRjF7pUepTWST6L0wZ1dnObtaC8t95nl2vYMJULiL7KpnHybiQ0Ym8k5HbDQKv54RuLwjDoet6fod8aLMz7A5DPxgMQ2cw7Pd7_UuHfJqoTrdnV-CEQS_wBpcvmgtl3Q?type=png)](https://mermaid.live/edit#pako:eNptlEtv4jAQx7_KyGeKyJPHYSUKLItEilQ4beDgkmmwSpzIdnbbAt-9jh3Y0KwPyJ7feMJ_Hj6RfZ4gGZFU0OIAy-ctB71k-WINz1ggVRC-W_s4XkWLaAcPDz_Oa5oVR4SePMOjMTs76_RYYZjEG0EZh3VxZOqOTOMNSnUHkCd2Y38nxm8eT_KsKBXCc7SewbQUjKdgoupNfXNqXe1hFi9zmsCaJQgL_pqLjCqWc6A8gafqdGSfCH-ZOsBPkb8gZ6U0wCpacIlCta6fr-F_xROhs4H6CpMIkc7ccdf8_twcFlY5JtZD7prSbpm1zBqrtTB3Iyc2AK7JbCC3Rm4beTXy2sivkd9GQY2CNgprFP6_QDcVVYWOqCqtVAm2x4aiyDGxVlpTsz0McmvkGtRUFHk18gxqKor8GvkGNRVFQY0Cg5qKorBGoUF3ir6pGaepwLSq8OYg8jLVVULKYVWgMJ3wL-iqFrc0MWH8R3ukmOyaHlbjsmny2ia_bQraprBp-laMpWnesZRlppuSSVmNyZQqClTY-XyK58grDXqUKH-ToHsbZnR_gKluZKp7uZqQ27RplypEhFVF5Y50SIZ6Flii34lT9c0tUQfMcEtGeptQ8bYlW37RfrRU-fqD78lIiRI7xCSRjF7pUepTWST6L0wZ1dnObtaC8t95nl2vYMJULiL7KpnHybiQ0Ym8k5HbDQKv54RuLwjDoet6fod8aLMz7A5DPxgMQ2cw7Pd7_UuHfJqoTrdnV-CEQS_wBpcvmgtl3Q)
+
 1. **Problem Formulation**:  
-   - **Input**: Matrix $M$ of gene-disease associations ($M_{ij} = 1$ for known associations, $M_{ij} = 0$ otherwise).  
-   - **Objective**: Predict potential associations $\hat{M}$, where $\hat{M}_{ij}$ are floating-point scores.
+   - **Input**: Matrix $O$ of gene-disease associations ($O_{ij} = 1$ for known associations, $O_{ij} = 0$ for unknown or missing associations).  
+   - **Objective**: Predict potential associations $\hat{O}$, where $\hat{O}_{ij}$ are floating-point scores indicating the likelihood of gene-disease associations.
 
 2. **Data Preparation**:  
-   - **Positive Class**: Known gene-disease associations ($M_{ij} = 1$).  
-   - **Negative Class**: Randomly sampled negatives from $M_{ij} = 0$, avoiding overlap with positives.
+   - **Positive Class**: Known gene-disease associations ($O_{ij} = 1$).  
+   - **Negative Class**: Randomly sampled negatives ($O_{ij} = 0$), ensuring no overlap with positives.  
    - **Unknown Class**: Represented as missing values in the sparse encoding.  
    - **Procedure**:  
-     - Split the Positive Class data.  
-     - Split the Negative Class data.  
-     - Merge the splits.
+     - **Generate Negative Samples**: Randomly sample negatives and merge with the positive class to form $O_1$.  
+     - **Create Train-Test Splits**: Split $O_1$ into train and test sets across six random iterations for cross-validation.
 
-3. **Model Training**:  
-   - Train a matrix completion model on $M$.
+3. **Incorporating Side Information**:  
+   - Load side information (e.g., gene or disease features) and normalize using the Frobenius norm.  
+   - Integrate side information into the training process to enhance predictions.
 
-4. **Model Testing**:  
-   - Complete $M$ using the trained model to yield $\hat{M}$ with predicted scores.  
-   - Rank genes for each disease based on $\hat{M}$.  
-   - Use only positive associations from the test set. For each disease, highly ranked genes in $\hat{M}$ should correspond to true positive associations from the test set.
+4. **Model Training**:  
+   - Train matrix completion models on the train split of $O_1$, using side information.  
+   - Compute the Root Mean Squared Error (RMSE) during training as a measure of model performance.  
+   - Repeat training across six random splits to yield six independent models, $M_i \quad \forall i \in \set{1,2,3,4,5,6}$.
 
-**Note**:  
-- The procedure is repeated across six random splits using different matrices. Metrics are aggregated across splits for robustness.
+5. **Matrix Completion**:  
+   - Use the trained models to generate the completed matrix, generating six predicted matrices ($\hat{O_i} \quad \forall i \in \set{1,2,3,4,5,6}$) with floating-point scores.  
+   - Aggregate the six matrices using a mean operation to produce $\bar{O}$ (averaged matrix).
+
+6. **Model Testing and Ranking**:  
+   - Rank genes for each disease (columns of $\bar{O}$) based on the predicted scores.  
+   - Assume missing values are zeros for ranking purposes.  
+   - Use only positive associations from the test set for evaluation. For each disease, highly ranked genes in $\bar{O}$ should correspond to true positive associations.
+
+7. **Evaluation and Metrics**:  
+   - Compute ranking metrics to assess the quality of predictions, focusing on the ability of the model to rank true positive associations higher.  
+   - Metrics are aggregated across the six splits to ensure robustness.
 
 ---
 
 ## Dataset Generation
+
+The above procedure describes the general approach. However, the reference paper uses two datasets, OMIM1 and OMIM2, respectively named  $O_1$ and $O_2$. The procedure for $O_2$ differs in the following way:
+
+- Subset Relationship: $O_2$ is a subset of $O_1$.
+- Model Generation: For $O_2$, models are generated using an N-Fold cross-validation approach, rather than the N random splits used for $O_1$.  
 
 ### OMIM1 Dataset Construction
 
@@ -48,15 +65,15 @@ The repository **NEGradient_GenePriority** (short for "Non-Euclidean Gradient Me
 - Sparsity factor $\alpha$, the ratio of 0s to 1s.  
 
 **Output**:  
-- Unified sparse matrices: $M_{1_{i}} \quad \forall i \in \{1, N\}$  
+- Unified sparse matrices: $O_{1_{i}} \quad \forall i \in \{1, N\}$  
 - Combined splits: $S_{1_{i}} \quad \forall i \in \{1, N\}$  
 
 **Procedure**:  
-1. Convert $d$ into a sparse matrix $M_{1_{1s}}$.  
-2. Sample $N$ zero matrices $M_{1_{0s, i}}$ from $M_{1_{1s}}$ using $\alpha \quad \forall i \in \{1, N\}$.  
-3. Combine $M_{1_{1s}}$ and $M_{1_{0s, i}}$ into unified matrices $M_{1_{i}} \quad \forall i \in \{1, N\}$.  
-4. Split $M_{1_{1s}}$ indices randomly into subsets $S_{1_{1s}}$.  
-5. Split $M_{1_{0s, i}}$ indices randomly into subsets $S_{1_{0s, i}} \quad \forall i \in \{1, N\}$.  
+1. Convert $d$ into a sparse matrix $O_{1_{1s}}$.  
+2. Sample $N$ zero matrices $O_{1_{0s, i}}$ from $O_{1_{1s}}$ using $\alpha \quad \forall i \in \{1, N\}$.  
+3. Combine $O_{1_{1s}}$ and $O_{1_{0s, i}}$ into unified matrices $O_{1_{i}} \quad \forall i \in \{1, N\}$.  
+4. Split $O_{1_{1s}}$ indices randomly into subsets $S_{1_{1s}}$.  
+5. Split $O_{1_{0s, i}}$ indices randomly into subsets $S_{1_{0s, i}} \quad \forall i \in \{1, N\}$.  
 6. Merge splits from positive ($S_{1_{1s}}$) and zero ($S_{1_{0s, i}}$) samples into $S_{1_{i}} \quad \forall i \in \{1, N\}$.  
 
 ---
@@ -65,21 +82,21 @@ The repository **NEGradient_GenePriority** (short for "Non-Euclidean Gradient Me
 
 **Input**:  
 - Gene-disease DataFrame: $d$  
-- Number of splits: $N$  
+- Number of folds: $N$  
 - Association threshold: $T$  
 - Sparsity factor $\alpha$, the ratio of 0s to 1s.  
 
 **Output**:  
-- Unified sparse matrix: $M_2$  
+- Unified sparse matrix: $O_2$
 - Combined folds: $S_2$  
 
 **Procedure**:  
 1. Filter diseases with fewer than $T$ associations.  
-2. Convert $d$ into a sparse matrix $M_{2_{1s}}$.  
-3. Sample zeros from $M_{2_{1s}}$ using $\alpha$.  
-4. Combine $M_{2_{1s}}$ and $M_{2_{0s}}$ into a unified matrix $M_2$.  
-5. Split $M_{2_{1s}}$ indices randomly into subsets $S_{2_{1s}}$.  
-6. Split $M_{2_{0s}}$ indices randomly into subsets $S_{2_{0s}}$.  
+2. Convert $d$ into a sparse matrix $O_{2_{1s}}$.  
+3. Sample zeros from $O_{2_{1s}}$ using $\alpha$.  
+4. Combine $O_{2_{1s}}$ and $O_{2_{0s}}$ into a unified matrix $O_2$.  
+5. Split $O_{2_{1s}}$ indices randomly into subsets $S_{2_{1s}}$.  
+6. Split $O_{2_{0s}}$ indices randomly into subsets $S_{2_{0s}}$.  
 7. Merge splits from positive ($S_{2_{1s}}$) and zero ($S_{2_{0s}}$) samples into $S_2$.  
 
 ---
