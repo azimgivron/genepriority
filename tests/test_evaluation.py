@@ -68,12 +68,5 @@ def test_compute_roc_curve(results, diseases):
     """Test the compute_roc_curve method."""
     evaluation = Evaluation(results)
     fpr_tpr_per_disease = evaluation.compute_roc_curve()
-    assert isinstance(fpr_tpr_per_disease, list)
-    assert len(fpr_tpr_per_disease)==diseases
-    fpr_tpr = fpr_tpr_per_disease[0]
-    assert isinstance(fpr_tpr, tuple)
-    assert len(fpr_tpr)==2
-    fpr, tpr = fpr_tpr
-    assert isinstance(fpr, np.ndarray)
-    assert isinstance(tpr, np.ndarray)
-    assert len(fpr)==len(tpr)
+    assert isinstance(fpr_tpr_per_disease, np.ndarray)
+    assert fpr_tpr_per_disease.shape[:-1]==(diseases, 2)
