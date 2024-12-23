@@ -15,7 +15,6 @@ from typing import Dict, Union
 
 import numpy as np
 import scipy.sparse as sp
-
 from NEGradient_GenePriority.compute_models.smc import MatrixCompletionSession
 from NEGradient_GenePriority.preprocessing.dataloader import DataLoader
 from NEGradient_GenePriority.preprocessing.side_information_loader import (
@@ -139,22 +138,20 @@ class NEGTrainer(BaseTrainer):
     def create_session(
         self,
         iteration: int,
-        y_train: sp.csr_matrix,
-        y_test_1s: sp.csr_matrix,
+        training_data: sp.csr_matrix,
+        testing_data: sp.csr_matrix,
         num_latent: int,
         save_name: Union[str, Path],
     ) -> MatrixCompletionSession:
         """
-        Abstract method for creating a session for model training and evaluation.
+        Create a session for model training and evaluation.
 
         Args:
             iteration (int): The current iteration or fold index.
-            y_train (sp.csr_matrix): The training matrix, containing both observed and
-                unobserved entries.
-            y_test_1s (sp.csr_matrix): The test matrix, containing only positive class
-                labels.
+            training_data (sp.csr_matrix): The training matrix.
+            testing_data (sp.csr_matrix): The test matrix.
             num_latent (int): The number of latent dimensions for the model.
-            save_name (Union[str, Path]): The base filename or path for saving model snapshots.
+            save_name (Union[str, Path]): Filename or path for saving model snapshots.
 
         Returns:
             MatrixCompletionSession: A configured session object for model training and evaluation.
@@ -162,9 +159,9 @@ class NEGTrainer(BaseTrainer):
         return MatrixCompletionSession(
             **self.neg_session_kwargs,
             rank=num_latent,
-            matrix=y_train,
-            mask=y_train,
-            test_matrix=y_test_1s,
-            test_mask=y_test_1s,
+            matrix=training_data,
+            mask=training_data,
+            test_matrix=testing_data,
+            test_mask=testing_data,
             save_name=str(self.path / f"{iteration}:{save_name}"),
         )

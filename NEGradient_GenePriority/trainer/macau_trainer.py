@@ -16,7 +16,6 @@ from typing import Dict, Literal, Union
 import numpy as np
 import scipy.sparse as sp
 import smurff
-
 from NEGradient_GenePriority.preprocessing.dataloader import DataLoader
 from NEGradient_GenePriority.preprocessing.side_information_loader import (
     SideInformationLoader,
@@ -153,22 +152,20 @@ class MACAUTrainer(BaseTrainer):
     def create_session(
         self,
         iteration: int,
-        y_train: sp.csr_matrix,
-        y_test_1s: sp.csr_matrix,
+        training_data: sp.csr_matrix,
+        testing_data: sp.csr_matrix,
         num_latent: int,
         save_name: Union[str, Path],
     ) -> smurff.MacauSession:
         """
-        Abstract method for creating a session for model training and evaluation.
+        Create a session for model training and evaluation.
 
         Args:
             iteration (int): The current iteration or fold index.
-            y_train (sp.csr_matrix): The training matrix, containing both observed and
-                unobserved entries.
-            y_test_1s (sp.csr_matrix): The test matrix, containing only positive class
-                labels.
+            training_data (sp.csr_matrix): The training matrix.
+            testing_data (sp.csr_matrix): The test matrix.
             num_latent (int): The number of latent dimensions for the model.
-            save_name (Union[str, Path]): The base filename or path for saving model snapshots.
+            save_name (Union[str, Path]): Filename or path for saving model snapshots.
 
         Returns:
             smurff.MacauSession: A configured session object for model training and evaluation.
@@ -176,8 +173,8 @@ class MACAUTrainer(BaseTrainer):
         return smurff.MacauSession(
             **self.macau_session_kwargs,
             num_latent=num_latent,
-            Ytrain=y_train,
-            Ytest=y_test_1s,
+            Ytrain=training_data,
+            Ytest=testing_data,
             save_name=str(self.path / f"{iteration}:{save_name}"),
             side_info=self.side_info_loader.side_info
             if self.side_info_loader

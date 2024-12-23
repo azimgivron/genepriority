@@ -13,7 +13,6 @@ from typing import List, Tuple
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
-
 from NEGradient_GenePriority.evaluation.evaluation import Evaluation
 from NEGradient_GenePriority.postprocessing.model_evaluation_collection import (
     ModelEvaluationCollection,
