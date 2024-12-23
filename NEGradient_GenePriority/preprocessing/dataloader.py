@@ -241,7 +241,7 @@ class DataLoader:
     @property
     def splits(
         self,
-    ) -> Tuple[List[sp.csr_matrix], List[sp.csr_matrix], List[np.ndarray]]:
+    ) -> Tuple[List[sp.csr_matrix], List[sp.csr_matrix]]:
         """
         Get splits for the OMIM1 dataset.
 
@@ -263,12 +263,12 @@ class DataLoader:
     @property
     def folds(
         self,
-    ) -> Tuple[List[sp.csr_matrix], List[sp.csr_matrix], List[np.ndarray]]:
+    ) -> Tuple[List[sp.csr_matrix], List[sp.csr_matrix]]:
         """
         Get folds for the OMIM2 dataset.
 
         Returns:
-            Tuple[List[sp.csr_matrix], List[sp.csr_matrix], List[np.ndarray]]:
+            Tuple[List[sp.csr_matrix], List[sp.csr_matrix]]:
                 - List of training matrices (sp.csr_matrix).
                 - List of test matrices containing only positive class labels (sp.csr_matrix).
         """

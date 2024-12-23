@@ -5,17 +5,12 @@ import os
 import traceback
 from pathlib import Path
 
-from NEGradient_GenePriority import (
-    DataLoader,
-    Evaluation,
-    ModelEvaluationCollection,
-    SideInformationLoader,
-    Trainer,
-    generate_bedroc_table,
-    generate_auc_loss_table,
-    plot_bedroc_boxplots,
-    plot_roc_curves,
-)
+from NEGradient_GenePriority import (DataLoader, Evaluation, MACAUTrainer,
+                                     ModelEvaluationCollection,
+                                     SideInformationLoader,
+                                     generate_auc_loss_table,
+                                     generate_bedroc_table,
+                                     plot_bedroc_boxplots, plot_roc_curves)
 
 
 def setup_logger(log_file: str):
@@ -103,7 +98,7 @@ def main():
         omim1_results = {}
         omim2_results = {}
 
-        trainer = Trainer(
+        trainer = MACAUTrainer(
             dataloader=dataloader,
             side_info_loader=side_info_loader,
             path=output_path,
