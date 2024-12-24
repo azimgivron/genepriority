@@ -11,7 +11,6 @@ for reproducibility and analysis.
 """
 import abc
 import logging
-import pickle
 from abc import ABCMeta
 from pathlib import Path
 from typing import Any, Dict, Iterator, List, Tuple, Union
@@ -25,6 +24,7 @@ from NEGradient_GenePriority.preprocessing.dataloader import DataLoader
 from NEGradient_GenePriority.preprocessing.side_information_loader import (
     SideInformationLoader,
 )
+from NEGradient_GenePriority.utils import mask_sparse_containing_0s, save_evaluations
 from tqdm import tqdm
 
 
@@ -197,7 +197,7 @@ class BaseTrainer(metaclass=ABCMeta):
             self.logger.debug("Initiating training on %s %d", desc, i + 1)
             self.logger.debug("Training mask nnz %s", f"{train_mask.nnz:_}")
 
-            training_data = mask(matrix, train_mask)
+            training_data = mask_sparse_containing_0s(matrix, train_mask)
 
             self.logger.debug(
                 "Number of 1s in the training set %s",
@@ -208,7 +208,7 @@ class BaseTrainer(metaclass=ABCMeta):
                 f"{np.sum(training_data.data == 0):_}",
             )
 
-            testing_data = mask(matrix, test_mask)
+            testing_data = mask_sparse_containing_0s(matrix, test_mask)
 
             self.logger.debug("Testing mask nnz %s", f"{test_mask.nnz:_}")
             self.logger.debug(
@@ -280,40 +280,3 @@ class BaseTrainer(metaclass=ABCMeta):
             desc="split",
             splitted_data=self.dataloader.splits,
         )
-
-
-def save_evaluations(results: Dict[str, Evaluation], output_path: str):
-    """
-    Save evaluation results to a file in binary format using pickle.
-
-    Args:
-        results (Dict[str, Evaluation]): A dictionary where keys are descriptive strings
-            (e.g., latent dimensions or other identifiers) and values are `Evaluation` objects
-            containing evaluation metrics and results.
-        output_path (str): The file path where the results should be saved.
-    """
-    with open(output_path, "wb") as handler:
-        pickle.dump(results, handler)
-
-
-def mask(matrix: sp.csr_matrix, mask: sp.csr_matrix) -> sp.csr_matrix:
-    """
-    Masks the values of a given sparse matrix based on a mask matrix.
-
-    This function modifies the input sparse matrix such that:
-    - Non-zero values in the input `matrix` are preserved where the `mask` has non-zero entries.
-    - All other values are set to zero.
-
-    Args:
-        matrix (sp.csr_matrix): A sparse matrix (CSR format) whose values need to be masked.
-        mask (sp.csr_matrix): A sparse matrix (CSR format) with non-zero entries indicating where
-        values in `matrix` should be retained.
-
-    Returns:
-        sp.csr_matrix: A sparse matrix (CSR format) resulting from applying the `mask` to `matrix`.
-    """
-    matrix_tmp = matrix.copy()
-    matrix_tmp.data[matrix_tmp.data == 0] = -1
-    result = matrix_tmp.multiply(mask)
-    result.data[result.data == -1] = 0
-    return result

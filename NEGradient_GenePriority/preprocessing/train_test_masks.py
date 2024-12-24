@@ -13,6 +13,7 @@ from __future__ import annotations
 from typing import Iterator, Tuple
 
 import scipy.sparse as sp
+from NEGradient_GenePriority.utils import filter_from_indices
 from sklearn.model_selection import KFold, train_test_split
 
 
@@ -83,10 +84,10 @@ class TrainTestMasks:
             num_folds (int): The number of folds to create for cross-validation.
         """
         kfold = KFold(n_splits=num_folds, shuffle=True, random_state=self.seed)
-        indices = sp.find(mask)[0]
-        for train_idx, test_idx in kfold.split(indices):
-            train_mask = mask[train_idx]
-            test_mask = mask[test_idx]
+        rows_idx = sp.find(mask)[0]
+        for train_idx, test_idx in kfold.split(rows_idx):
+            train_mask = filter_from_indices(mask, train_idx)
+            test_mask = filter_from_indices(mask, test_idx)
             self.training_masks.append(train_mask)
             self.testing_masks.append(test_mask)
 
