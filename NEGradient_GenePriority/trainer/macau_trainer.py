@@ -11,7 +11,7 @@ and model snapshots can be saved for reproducibility.
 
 import logging
 from pathlib import Path
-from typing import Dict, Literal, Union
+from typing import Dict, List, Literal, Union
 
 import numpy as np
 import scipy.sparse as sp
@@ -23,6 +23,7 @@ from NEGradient_GenePriority.preprocessing.side_information_loader import (
 )
 from NEGradient_GenePriority.trainer.base import BaseTrainer
 from NEGradient_GenePriority.utils import mask_sparse_containing_0s
+
 
 class MACAUTrainer(BaseTrainer):
     """
@@ -188,3 +189,13 @@ class MACAUTrainer(BaseTrainer):
             if self.side_info_loader
             else None,
         )
+
+    def log_training_info(training_status: List[smurff.Prediction]):
+        """
+        Logs training information for monitoring and debugging purposes.
+
+        Args:
+            training_status (List[smurff.Prediction]): The predictions on
+                the test set during training.
+        """
+        pass

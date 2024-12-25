@@ -14,9 +14,13 @@ from pathlib import Path
 from typing import Dict, Union
 
 import numpy as np
+import optuna
 import scipy.sparse as sp
 
-from NEGradient_GenePriority.compute_models.smc import MatrixCompletionSession
+from NEGradient_GenePriority.compute_models.smc import (
+    MatrixCompletionResult,
+    MatrixCompletionSession,
+)
 from NEGradient_GenePriority.preprocessing.dataloader import DataLoader
 from NEGradient_GenePriority.preprocessing.side_information_loader import (
     SideInformationLoader,
@@ -173,3 +177,77 @@ class NEGTrainer(BaseTrainer):
             test_mask=test_mask,
             save_name=str(self.path / f"{iteration}:{save_name}"),
         )
+
+    def log_training_info(training_status: MatrixCompletionResult):
+        """
+        Logs training information for monitoring and debugging purposes.
+
+        Args:
+            training_status (MatrixCompletionResult): The results from
+                training.
+        """
+        pass
+
+    def fine_tune(
+        self,
+        matrix: sp.csr_matrix,
+        train_mask: sp.csr_matrix,
+        test_mask: sp.csr_matrix,
+        num_latent: int,
+        load_if_exists: bool,
+        n_trials: int,
+    ):
+        """
+        Fine-tunes the hyperparameters for sparse matrix completion using Optuna.
+
+        This method performs hyperparameter optimization for the matrix completion task 
+        using the Optuna framework. It defines an objective function that evaluates 
+        the performance of the matrix completion algorithm based on different 
+        hyperparameter configurations and optimizes for minimal RMSE.
+
+        Args:
+            matrix (sp.csr_matrix): The sparse matrix to be completed.
+            train_mask (sp.csr_matrix): Sparse matrix representing the training mask.
+            test_mask (sp.csr_matrix): Sparse matrix representing the testing mask.
+            num_latent (int): Number of latent factors for the matrix completion model.
+            load_if_exists (bool): If True, loads an existing study with the same name.
+            n_trials (int): Number of optimization trials to perform.
+
+        Returns:
+            optuna.study.Study: The study object containing the results of the optimization.
+        """
+        def objective(trial: optuna.Trial) -> float:
+            optim_reg = trial.suggest_float("optim_reg", 0, 1)
+            iterations = trial.suggest_int("iterations", 0, 10)
+            lam = trial.suggest_float("lam", 0, 1)
+            step_size = trial.suggest_float("step_size", 0, 1)
+            rho_increase = trial.suggest_float("rho_increase", 0, 1)
+            rho_decrease = trial.suggest_float("rho_decrease", 0, 1)
+            threshold = trial.suggest_int("threashold", 0, 10)
+            session = MatrixCompletionSession(
+                optim_reg=optim_reg,
+                iterations=iterations,
+                lam=lam,
+                step_size=step_size,
+                rho_increase=rho_increase,
+                rho_decrease=rho_decrease,
+                threshold=threshold,
+                rank=num_latent,
+                matrix=matrix,
+                train_mask=train_mask,
+                test_mask=test_mask,
+            )
+            training_status = session.run()
+            trial.set_user_attr("rmse on test set", training_status.rmse_history)
+            trial.set_user_attr("loss on training set", training_status.loss_history)
+            return training_status.rmse_history[-1]
+
+        study = optuna.create_study(
+            study_name="SMC hyper-parameters optimization",
+            direction="minimize",
+            load_if_exists=load_if_exists,
+        )
+        study.optimize(
+            objective, n_trials=n_trials, n_jobs=-1, show_progress_bar=True
+        )
+        return study

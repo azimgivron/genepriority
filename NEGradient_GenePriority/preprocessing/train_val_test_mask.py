@@ -9,11 +9,14 @@ for random splitting using sparse matrices.
 """
 
 from __future__ import annotations
+
 from typing import Iterator, Tuple
 
 import scipy.sparse as sp
 from sklearn.model_selection import train_test_split
+
 from NEGradient_GenePriority.preprocessing.train_test_masks import TrainTestMasks
+
 
 class TrainValTestMasks(TrainTestMasks):
     """

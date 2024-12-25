@@ -168,6 +168,23 @@ class BaseTrainer(metaclass=ABCMeta):
         """
         raise NotImplementedError
 
+    @abc.abstractmethod
+    def log_training_info(training_status: Any):
+        """
+        Logs training information for monitoring and debugging purposes.
+
+        This method must be implemented by subclasses to handle logging
+        of training status details, which are typically returned from a
+        session's `run` call.
+
+        Args:
+            training_status (Any): An object or structure containing the
+                status and metrics of the training process, as returned
+                by the session `run` call. The exact type and structure
+                depend on the training framework being used.
+        """
+        raise NotImplementedError
+
     def train_test(
         self,
         matrix: sp.csr_matrix,
@@ -198,16 +215,17 @@ class BaseTrainer(metaclass=ABCMeta):
             enumerate(splitted_data), desc=desc, leave=False
         ):
             self.logger.debug("Initiating training on %s %d", desc, i + 1)
-            
+
             session = self.create_session(
                 i, matrix, train_mask, test_mask, num_latent, save_name
             )
-            session.run()
+            training_status = session.run()
+            self.log_training_info(training_status)
 
             y_pred = self.predict(session)
             results.append(Results(y_true=matrix.tocsr(), y_pred=y_pred))
         return Evaluation(results)
-    
+
     def log_data(self, set_name: str, data: sp.csr_matrix):
         self.logger.debug("%s data nnz %s", set_name.capitaliser(), f"{data.nnz:_}")
         self.logger.debug(
