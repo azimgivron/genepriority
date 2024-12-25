@@ -18,14 +18,15 @@ from typing import Any, Dict, Iterator, List, Tuple, Union
 import numpy as np
 import scipy.sparse as sp
 import smurff
+from tqdm import tqdm
+
 from NEGradient_GenePriority.evaluation.evaluation import Evaluation
 from NEGradient_GenePriority.evaluation.results import Results
 from NEGradient_GenePriority.preprocessing.dataloader import DataLoader
 from NEGradient_GenePriority.preprocessing.side_information_loader import (
     SideInformationLoader,
 )
-from NEGradient_GenePriority.utils import mask_sparse_containing_0s, save_evaluations
-from tqdm import tqdm
+from NEGradient_GenePriority.utils import save_evaluations
 
 
 class BaseTrainer(metaclass=ABCMeta):
@@ -145,8 +146,9 @@ class BaseTrainer(metaclass=ABCMeta):
     def create_session(
         self,
         iteration: int,
-        training_data: sp.csr_matrix,
-        testing_data: sp.csr_matrix,
+        matrix: sp.csr_matrix,
+        train_mask: sp.csr_matrix,
+        test_mask: sp.csr_matrix,
         num_latent: int,
         save_name: Union[str, Path],
     ) -> Any:
@@ -155,8 +157,9 @@ class BaseTrainer(metaclass=ABCMeta):
 
         Args:
             iteration (int): The current iteration or fold index.
-            training_data (sp.csr_matrix): The training matrix.
-            testing_data (sp.csr_matrix): The test matrix.
+            matrix (sp.csr_matrix): The data matrix.
+            train_mask (sp.csr_matrix): The training mask.
+            test_mask (sp.csr_matrix): The test mask.
             num_latent (int): The number of latent dimensions for the model.
             save_name (Union[str, Path]): Filename or path for saving model snapshots.
 
@@ -195,39 +198,28 @@ class BaseTrainer(metaclass=ABCMeta):
             enumerate(splitted_data), desc=desc, leave=False
         ):
             self.logger.debug("Initiating training on %s %d", desc, i + 1)
-            self.logger.debug("Training mask nnz %s", f"{train_mask.nnz:_}")
-
-            training_data = mask_sparse_containing_0s(matrix, train_mask)
-
-            self.logger.debug(
-                "Number of 1s in the training set %s",
-                f"{np.sum(training_data.data == 1):_}",
-            )
-            self.logger.debug(
-                "Number of 0s in the training set %s",
-                f"{np.sum(training_data.data == 0):_}",
-            )
-
-            testing_data = mask_sparse_containing_0s(matrix, test_mask)
-
-            self.logger.debug("Testing mask nnz %s", f"{test_mask.nnz:_}")
-            self.logger.debug(
-                "Number of 1s in the testing set %s",
-                f"{np.sum(testing_data.data == 1):_}",
-            )
-            self.logger.debug(
-                "Number of 0s in the testing set %s",
-                f"{np.sum(testing_data.data == 0):_}",
-            )
-
+            
             session = self.create_session(
-                i, training_data, testing_data, num_latent, save_name
+                i, matrix, train_mask, test_mask, num_latent, save_name
             )
             session.run()
 
             y_pred = self.predict(session)
             results.append(Results(y_true=matrix.tocsr(), y_pred=y_pred))
         return Evaluation(results)
+    
+    def log_data(self, set_name: str, data: sp.csr_matrix):
+        self.logger.debug("%s data nnz %s", set_name.capitaliser(), f"{data.nnz:_}")
+        self.logger.debug(
+            "Number of 1s in the %s set %s",
+            set_name,
+            f"{np.sum(data.data == 1):_}",
+        )
+        self.logger.debug(
+            "Number of 0s in the %s set %s",
+            set_name,
+            f"{np.sum(data.data == 0):_}",
+        )
 
     def train_test_cross_validation(
         self,

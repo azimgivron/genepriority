@@ -56,9 +56,9 @@ class MatrixCompletionSession:
 
     Attributes:
         matrix (sp.csr_matrix): Input matrix to be approximated. Shape: (m, n).
-        mask (sp.csr_matrix): Mask indicating observed entries in `matrix`. Shape: (m, n).
-        test_matrix (sp.csr_matrix): Test matrix for evaluation. Shape: (m, n).
-        test_mask (sp.csr_matrix): Mask indicating observed entries in `test_matrix`.
+        train_mask (sp.csr_matrix): Mask indicating observed entries in `matrix` for training.
+            Shape: (m, n).
+        test_mask (sp.csr_matrix): Mask indicating observed entries in `matrix` for test.
             Shape: (m, n).
         rank (int): The rank of the low-rank approximation.
         optim_reg (float): Regularization parameter for the optimization.
@@ -81,8 +81,7 @@ class MatrixCompletionSession:
     def __init__(
         self,
         matrix: sp.csr_matrix,
-        mask: sp.csr_matrix,
-        test_matrix: sp.csr_matrix,
+        train_mask: sp.csr_matrix,
         test_mask: sp.csr_matrix,
         rank: int,
         optim_reg: float,
@@ -102,12 +101,10 @@ class MatrixCompletionSession:
         Args:
             matrix (sp.csr_matrix): Input matrix to be approximated.
                 Shape: (m, n).
-            mask (sp.csr_matrix): Mask indicating observed entries in `matrix`.
-                Shape: (m, n).
-            test_matrix (sp.csr_matrix): Test matrix for evaluation.
+            train_mask (sp.csr_matrix): Mask indicating observed entries in `matrix` for training.
                 Shape: (m, n).
             test_mask (sp.csr_matrix): Mask indicating observed entries in
-                `test_matrix`. Shape: (m, n).
+                `matrix` for test. Shape: (m, n).
             rank (int): Desired rank for the low-rank approximation.
             optim_reg (float): Regularization parameter for the optimization.
             iterations (int): Maximum number of optimization iterations.
@@ -124,8 +121,7 @@ class MatrixCompletionSession:
                 If set to None, the model will not be saved after training.  Defaults to None.
         """
         self.matrix = matrix
-        self.mask = mask
-        self.test_matrix = test_matrix
+        self.train_mask = train_mask
         self.test_mask = test_mask
         self.rank = rank
         self.optim_reg = optim_reg
@@ -208,7 +204,7 @@ class MatrixCompletionSession:
         Returns:
             float: The computed loss value.
         """
-        residual = (self.matrix - self.predict_all()).multiply(self.mask)
+        residual = (self.matrix - self.predict_all()).multiply(self.train_mask)
         return 0.5 * sp.linalg.norm(residual, ord="fro") ** 2
 
     def calculate_rmse(self) -> float:
@@ -239,7 +235,7 @@ class MatrixCompletionSession:
         """
         # Extract observed test values and corresponding predictions
         row_indices, col_indices = self.test_mask.nonzero()
-        test_values_actual = self.test_matrix[row_indices, col_indices]
+        test_values_actual = self.matrix[row_indices, col_indices]
         test_predictions = self.predict_all()[row_indices, col_indices]
 
         # Compute RMSE
@@ -378,7 +374,7 @@ class MatrixCompletionSession:
                 self.logger.debug("Iteration %d started", i)
                 # Compute gradients for h1 and h2
                 residual = (
-                    self.mask.multiply(self.h1 @ self.h2) - self.matrix
+                    self.train_mask.multiply(self.h1 @ self.h2) - self.matrix
                 ).toarray()
                 grad_u = residual @ self.h2.T + self.optim_reg * self.h1
                 grad_v = residual.T @ self.h1 + self.optim_reg * self.h2.T

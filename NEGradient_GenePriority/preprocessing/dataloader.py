@@ -5,13 +5,25 @@ DataLoader module
 
 This module contains the `DataLoader` class for preprocessing and preparing gene-disease 
 association data for gene prioritization tasks. It includes functionality for handling 
-sparse matrices, random splits, and cross-validation folds.
+sparse matrices, random splits, cross-validation folds, and filtering based on association
+thresholds.
+
+Features:
+- Load and preprocess gene-disease association data from CSV files.
+- Create sparse matrices for gene-disease associations.
+- Sample negative associations to balance datasets.
+- Generate random splits and cross-validation folds for model training and evaluation.
+- Filter data based on a minimum number of associations per disease or gene.
+- Log detailed statistics for debugging and tracking preprocessing steps.
 
 """
 import logging
+from typing import Union
 
 import numpy as np
 import pandas as pd
+import scipy.sparse as sp
+
 from NEGradient_GenePriority.preprocessing.preprocessing import (
     compute_statistics,
     convert_dataframe_to_sparse_matrix,
@@ -19,6 +31,7 @@ from NEGradient_GenePriority.preprocessing.preprocessing import (
     sample_zeros,
 )
 from NEGradient_GenePriority.preprocessing.train_test_masks import TrainTestMasks
+from NEGradient_GenePriority.preprocessing.train_val_test_mask import TrainValTestMasks
 
 
 class DataLoader:
@@ -36,8 +49,8 @@ class DataLoader:
         path (str): Path to the CSV file containing gene-disease associations.
         seed (int): Random seed for reproducibility in sampling and splitting operations.
         num_splits (int): Number of random splits to create for the OMIM1 dataset.
-        zero_sampling_factor (int): Factor determining the number of negative associations
-            (zeros) to sample relative to positive associations (ones).
+        zero_sampling_factor (int, optional): Factor determining the number of negative
+            associations (zeros) to sample relative to positive associations (ones).
         num_folds (int): Number of folds for cross-validation in the OMIM2 dataset.
         omim1 (List[sp.csr_matrix]): List of sparse matrices representing splits for
             OMIM1.
@@ -48,6 +61,9 @@ class DataLoader:
         omim2_masks (List[dict]): Masks for cross-validation folds of OMIM2.
         logger (logging.Logger): Logger instance for tracking and debugging the
             preprocessing steps.
+        min_associations (int): Minimum number of associations required for filtering in OMIM2.
+        train_size (float): Proportion of data used for training in splits.
+        validation_size (float, optional): Proportion of data used for validation in splits.
     """
 
     def __init__(
@@ -60,6 +76,7 @@ class DataLoader:
         num_folds: int,
         train_size: float,
         min_associations: int,
+        validation_size: float = None,
         zero_sampling_factor: int = None,
         logger: logging.Logger = None,
     ) -> None:
@@ -74,6 +91,7 @@ class DataLoader:
             num_splits (int): Number of random splits to create for the OMIM1 dataset.
             num_folds (int): Number of folds to create for cross-validation in OMIM2 dataset.
             train_size (float): Proportion of the data to be used for training in splits.
+            validation_size (float, optional): Proportion of the data to be used for validation in splits.
             min_associations (int): Minimum number of associations required for filtering in OMIM2.
             zero_sampling_factor (int, optional): Multiplier for generating negative associations.
             logger (logging.Logger, optional): Logger for debugging. Defaults to a standard logger.
@@ -94,6 +112,7 @@ class DataLoader:
                 "`train_size` is a fraction, hence it must contained between 0 and 1"
             )
         self.train_size = train_size
+        self.validation_size = validation_size
         self.min_associations = min_associations
 
         if logger is None:
@@ -138,30 +157,31 @@ class DataLoader:
         self.omim1 = convert_dataframe_to_sparse_matrix(
             gene_disease, shape=(self.nb_genes + 1, self.nb_diseases + 1)
         )
-        sparsity = self.omim1.nnz / (self.omim1.shape[0] * self.omim1.shape[1])
-        self.logger.debug("Data sparsity: %.2f%%", sparsity * 100)
 
         if self.zero_sampling_factor is not None:
             self.omim1 = sample_zeros(
                 self.omim1, self.zero_sampling_factor, seed=self.seed
             )
-            self.logger.debug("Number of 0s: %s", f"{np.sum(self.omim1.data == 0):_}")
-            self.logger.debug("Number of 1s: %s", f"{np.sum(self.omim1.data == 1):_}")
-            self.logger.debug("Non-zero data: %s", f"{self.omim1.nnz:_}")
+            self._log_matrix_stats(self.omim1, "omim1")
 
         mask = self.omim1.copy()
         mask.data = np.ones(mask.nnz, dtype=bool)
 
-        self.omim1_masks = TrainTestMasks(seed=self.seed)
-        self.omim1_masks.split(
-            mask, train_size=self.train_size, num_splits=self.num_splits
-        )
+        if self.validation_size is None:
+            self.omim1_masks = TrainTestMasks(seed=self.seed)
+            self.omim1_masks.split(
+                mask, train_size=self.train_size, num_splits=self.num_splits
+            )
+        else:
+            self.omim1_masks = TrainValTestMasks(seed=self.seed)
+            self.omim1_masks.split(
+                mask,
+                train_size=self.train_size,
+                num_splits=self.num_splits,
+                validation_size=self.validation_size,
+            )
 
-        self.logger.debug(
-            "Combined sparse matrix for OMIM1 created. Shape is %s", self.omim1.shape
-        )
-        self.logger.debug("Generated random splits for OMIM1 data")
-
+        self.logger.debug("Processed OMIM1 dataset. Shape: %s", self.omim1.shape)
         counts = compute_statistics(self.omim1, self.omim1_masks)
         self.logger.debug("Disease count statistics:\n%s", counts)
 
@@ -183,33 +203,56 @@ class DataLoader:
             "Filtered gene-disease data contains %d genes-disease associations",
             len(filtered_gene_disease),
         )
+
         self.omim2 = convert_dataframe_to_sparse_matrix(
             filtered_gene_disease, shape=(self.nb_genes + 1, self.nb_diseases + 1)
         )
+
         if self.zero_sampling_factor is not None:
             self.omim2 = sample_zeros(
                 self.omim2, self.zero_sampling_factor, seed=self.seed
             )
-            self.logger.debug("Number of 0s: %s", f"{np.sum(self.omim2.data == 0):_}")
-            self.logger.debug("Number of 1s: %s", f"{np.sum(self.omim2.data == 1):_}")
-            self.logger.debug("Non-zero data: %s", f"{self.omim2.nnz:_}")
+            self._log_matrix_stats(self.omim2, "omim2")
 
         mask = self.omim2.copy()
         mask.data = np.ones(mask.nnz, dtype=bool)
 
         self.omim2_masks = TrainTestMasks(seed=self.seed)
         self.omim2_masks.fold(mask, num_folds=self.num_folds)
-        self.logger.debug("Created folds for OMIM2 data")
+
+        self.logger.debug("Processed OMIM2 dataset. Shape: %s", self.omim2.shape)
+
+    def _log_matrix_stats(self, matrix: sp.csr_matrix, dataset_name: str) -> None:
+        """
+        Log statistics about the sparse matrix for debugging purposes.
+
+        Args:
+            matrix (sp.csr_matrix): Sparse matrix to log statistics for.
+            dataset_name (str): The name of the dataset being processed.
+        """
+        self.logger.debug(
+            "Number of 0s in %s: %s",
+            dataset_name.upper(),
+            f"{np.sum(matrix.data == 0):_}",
+        )
+        self.logger.debug(
+            "Number of 1s in %s: %s",
+            dataset_name.upper(),
+            f"{np.sum(matrix.data == 1):_}",
+        )
+        self.logger.debug(
+            "Non-zero data in %s: %s", dataset_name.upper(), f"{matrix.nnz:_}"
+        )
 
     @property
     def splits(
         self,
-    ) -> TrainTestMasks:
+    ) -> Union[TrainTestMasks, TrainValTestMasks]:
         """
         Retrieve the random split masks for the OMIM1 dataset.
 
         Returns:
-            TrainTestMasks
+            Union[TrainTestMasks, TrainValTestMasks]: The random split masks for OMIM1.
         """
         return self.omim1_masks
 
@@ -221,6 +264,6 @@ class DataLoader:
         Retrieve the cross-validation fold masks for the OMIM2 dataset.
 
         Returns:
-            TrainTestMasks
+            TrainTestMasks: The cross-validation fold masks for OMIM2.
         """
         return self.omim2_masks

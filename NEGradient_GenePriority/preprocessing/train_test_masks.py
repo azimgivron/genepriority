@@ -13,8 +13,9 @@ from __future__ import annotations
 from typing import Iterator, Tuple
 
 import scipy.sparse as sp
-from NEGradient_GenePriority.utils import filter_from_indices
 from sklearn.model_selection import KFold, train_test_split
+
+from NEGradient_GenePriority.utils import filter_from_indices
 
 
 class TrainTestMasks:
@@ -41,7 +42,12 @@ class TrainTestMasks:
         self.testing_masks = []
         self.seed = seed
 
-    def split(self, mask: sp.csr_matrix, train_size: float, num_splits: int):
+    def split(
+        self,
+        mask: sp.csr_matrix,
+        train_size: float,
+        num_splits: int,
+    ):
         """
         Performs random splitting of a given mask into training and testing sets.
 

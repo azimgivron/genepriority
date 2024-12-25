@@ -9,6 +9,7 @@ from typing import Dict
 
 import numpy as np
 import scipy.sparse as sp
+
 from NEGradient_GenePriority.evaluation.evaluation import Evaluation
 
 
@@ -52,14 +53,22 @@ def mask_sparse_containing_0s(
 
 
 def filter_from_indices(matrix: sp.csr_matrix, row_idx: np.ndarray) -> sp.csr_matrix:
-    """Filtering matrix based on the row indices.
+    """
+    Filters a sparse matrix by zeroing out specified rows.
+
+    This function modifies the given sparse matrix by setting all the elements
+    in the specified rows to zero. The input matrix is first converted to
+    LIL (List of Lists) format for efficient row-wise manipulation, and
+    the output is returned in CSR (Compressed Sparse Row) format.
 
     Args:
-        matrix (sp.csr_matrix): The matrix to filter on.
-        row_idx (np.ndarray): The row indices.
+        matrix (sp.csr_matrix): The input sparse matrix in CSR format to be filtered.
+        row_idx (np.ndarray): An array of row indices to be zeroed out. Indices should
+            be valid within the range of the matrix's rows.
 
     Returns:
-        sp.csr_matrix: The filtered matrix.
+        sp.csr_matrix: A sparse matrix in CSR format where the specified rows
+            have been zeroed out.
     """
     matrix_lil = matrix.copy().tolil()
     for row in row_idx:

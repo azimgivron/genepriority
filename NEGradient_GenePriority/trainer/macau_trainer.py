@@ -16,12 +16,13 @@ from typing import Dict, Literal, Union
 import numpy as np
 import scipy.sparse as sp
 import smurff
+
 from NEGradient_GenePriority.preprocessing.dataloader import DataLoader
 from NEGradient_GenePriority.preprocessing.side_information_loader import (
     SideInformationLoader,
 )
 from NEGradient_GenePriority.trainer.base import BaseTrainer
-
+from NEGradient_GenePriority.utils import mask_sparse_containing_0s
 
 class MACAUTrainer(BaseTrainer):
     """
@@ -152,8 +153,9 @@ class MACAUTrainer(BaseTrainer):
     def create_session(
         self,
         iteration: int,
-        training_data: sp.csr_matrix,
-        testing_data: sp.csr_matrix,
+        matrix: sp.csr_matrix,
+        train_mask: sp.csr_matrix,
+        test_mask: sp.csr_matrix,
         num_latent: int,
         save_name: Union[str, Path],
     ) -> smurff.MacauSession:
@@ -162,14 +164,20 @@ class MACAUTrainer(BaseTrainer):
 
         Args:
             iteration (int): The current iteration or fold index.
-            training_data (sp.csr_matrix): The training matrix.
-            testing_data (sp.csr_matrix): The test matrix.
+            matrix (sp.csr_matrix): The data matrix.
+            train_mask (sp.csr_matrix): The training mask.
+            test_mask (sp.csr_matrix): The test mask.
             num_latent (int): The number of latent dimensions for the model.
             save_name (Union[str, Path]): Filename or path for saving model snapshots.
 
         Returns:
             smurff.MacauSession: A configured session object for model training and evaluation.
         """
+        training_data = mask_sparse_containing_0s(matrix, train_mask)
+        self.log_data("training", training_data)
+
+        testing_data = mask_sparse_containing_0s(matrix, test_mask)
+        self.log_data("testing", testing_data)
         return smurff.MacauSession(
             **self.macau_session_kwargs,
             num_latent=num_latent,

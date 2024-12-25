@@ -15,12 +15,14 @@ from typing import Dict, Union
 
 import numpy as np
 import scipy.sparse as sp
+
 from NEGradient_GenePriority.compute_models.smc import MatrixCompletionSession
 from NEGradient_GenePriority.preprocessing.dataloader import DataLoader
 from NEGradient_GenePriority.preprocessing.side_information_loader import (
     SideInformationLoader,
 )
 from NEGradient_GenePriority.trainer.base import BaseTrainer
+from NEGradient_GenePriority.utils import mask_sparse_containing_0s
 
 
 class NEGTrainer(BaseTrainer):
@@ -138,8 +140,9 @@ class NEGTrainer(BaseTrainer):
     def create_session(
         self,
         iteration: int,
-        training_data: sp.csr_matrix,
-        testing_data: sp.csr_matrix,
+        matrix: sp.csr_matrix,
+        train_mask: sp.csr_matrix,
+        test_mask: sp.csr_matrix,
         num_latent: int,
         save_name: Union[str, Path],
     ) -> MatrixCompletionSession:
@@ -148,20 +151,25 @@ class NEGTrainer(BaseTrainer):
 
         Args:
             iteration (int): The current iteration or fold index.
-            training_data (sp.csr_matrix): The training matrix.
-            testing_data (sp.csr_matrix): The test matrix.
+            matrix (sp.csr_matrix): The data matrix.
+            train_mask (sp.csr_matrix): The training mask.
+            test_mask (sp.csr_matrix): The test mask.
             num_latent (int): The number of latent dimensions for the model.
             save_name (Union[str, Path]): Filename or path for saving model snapshots.
 
         Returns:
             MatrixCompletionSession: A configured session object for model training and evaluation.
         """
+        training_data = mask_sparse_containing_0s(matrix, train_mask)
+        self.log_data("training", training_data)
+
+        testing_data = mask_sparse_containing_0s(matrix, test_mask)
+        self.log_data("testing", testing_data)
         return MatrixCompletionSession(
             **self.neg_session_kwargs,
             rank=num_latent,
-            matrix=training_data,
-            mask=training_data,
-            test_matrix=testing_data,
-            test_mask=testing_data,
+            matrix=matrix,
+            train_mask=train_mask,
+            test_mask=test_mask,
             save_name=str(self.path / f"{iteration}:{save_name}"),
         )
