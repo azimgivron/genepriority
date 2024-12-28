@@ -23,7 +23,6 @@ from typing import Union
 import numpy as np
 import pandas as pd
 import scipy.sparse as sp
-
 from NEGradient_GenePriority.preprocessing.preprocessing import (
     compute_statistics,
     convert_dataframe_to_sparse_matrix,
@@ -79,7 +78,7 @@ class DataLoader:
         validation_size: float = None,
         zero_sampling_factor: int = None,
         logger: logging.Logger = None,
-    ) -> None:
+    ):
         """
         Initialize the DataLoader with configuration settings for data processing.
 
@@ -91,7 +90,8 @@ class DataLoader:
             num_splits (int): Number of random splits to create for the OMIM1 dataset.
             num_folds (int): Number of folds to create for cross-validation in OMIM2 dataset.
             train_size (float): Proportion of the data to be used for training in splits.
-            validation_size (float, optional): Proportion of the data to be used for validation in splits.
+            validation_size (float, optional): Proportion of the data to be used for validation in
+                splits.
             min_associations (int): Minimum number of associations required for filtering in OMIM2.
             zero_sampling_factor (int, optional): Multiplier for generating negative associations.
             logger (logging.Logger, optional): Logger for debugging. Defaults to a standard logger.
@@ -109,8 +109,10 @@ class DataLoader:
         self.num_folds = num_folds
         if not 0 <= train_size <= 1:
             raise ValueError(
-                "`train_size` is a fraction, hence it must contained between 0 and 1"
+                "`train_size` must be a fraction between 0 and 1, inclusive. "
+                f"Received: {train_size}."
             )
+
         self.train_size = train_size
         self.validation_size = validation_size
         self.min_associations = min_associations
@@ -119,6 +121,36 @@ class DataLoader:
             logger = logging.getLogger(__name__)
 
         self.logger = logger
+
+    @property
+    def iter_over_validation(self) -> bool:
+        """
+        Get the `iter_over_validation` flag from the `omim1_masks` object.
+
+        Returns:
+            bool: The value of `iter_over_validation` from `omim1_masks`.
+        """
+        if not isinstance(self.omim1_masks, TrainValTestMasks):
+            raise TypeError(
+                "`omim1_masks` must be an instance of `TrainValTestMasks` to get "
+                f"`iter_over_validation`. Current type: {type(self.omim1_masks).__name__}."
+            )
+        return self.omim1_masks.iter_over_validation
+
+    @iter_over_validation.setter
+    def iter_over_validation(self, value: bool):
+        """
+        Set the `iter_over_validation` flag on the `omim1_masks` object.
+
+        Args:
+            value (bool): The value to set for `iter_over_validation`.
+        """
+        if not isinstance(self.omim1_masks, TrainValTestMasks):
+            raise TypeError(
+                "`omim1_masks` must be an instance of `TrainValTestMasks` to set "
+                f"`iter_over_validation`. Current type: {type(self.omim1_masks).__name__}."
+            )
+        self.omim1_masks.iter_over_validation = value
 
     def load_data(self) -> pd.DataFrame:
         """
@@ -130,7 +162,7 @@ class DataLoader:
         self.logger.debug("Loading gene-disease data from %s", self.path)
         return pd.read_csv(self.path)
 
-    def __call__(self, filter_column: str) -> None:
+    def __call__(self, filter_column: str):
         """
         Entry point for processing the input dataset to generate OMIM1 and OMIM2 datasets
         along with their respective splits and folds.
@@ -146,7 +178,7 @@ class DataLoader:
         self.load_omim1(gene_disease)
         self.load_omim2(gene_disease, filter_column=filter_column)
 
-    def load_omim1(self, gene_disease: pd.DataFrame) -> None:
+    def load_omim1(self, gene_disease: pd.DataFrame):
         """
         Process and prepare the OMIM1 dataset by creating a sparse matrix, optionally
         sampling negative associations, and generating random splits for training and testing.
@@ -162,7 +194,7 @@ class DataLoader:
             self.omim1 = sample_zeros(
                 self.omim1, self.zero_sampling_factor, seed=self.seed
             )
-            self._log_matrix_stats(self.omim1, "omim1")
+        self._log_matrix_stats(self.omim1, "omim1")
 
         mask = self.omim1.copy()
         mask.data = np.ones(mask.nnz, dtype=bool)
@@ -172,6 +204,11 @@ class DataLoader:
             self.omim1_masks.split(
                 mask, train_size=self.train_size, num_splits=self.num_splits
             )
+            self.logger.debug(
+                "Random splits created: %.2f%% for training, %.2f%% for testing.",
+                self.train_size * 100,
+                (1 - self.train_size) * 100,
+            )
         else:
             self.omim1_masks = TrainValTestMasks(seed=self.seed)
             self.omim1_masks.split(
@@ -180,12 +217,24 @@ class DataLoader:
                 num_splits=self.num_splits,
                 validation_size=self.validation_size,
             )
+            self.logger.debug(
+                "Random splits created: %.2f%% for validation, %.2f%% for "
+                "training, %.2f%% for testing.",
+                self.validation_size * 100,
+                self.train_size * (1 - self.validation_size) * 100,
+                (
+                    1
+                    - self.train_size * (1 - self.validation_size)
+                    - self.validation_size
+                )
+                * 100,
+            )
 
         self.logger.debug("Processed OMIM1 dataset. Shape: %s", self.omim1.shape)
         counts = compute_statistics(self.omim1, self.omim1_masks)
         self.logger.debug("Disease count statistics:\n%s", counts)
 
-    def load_omim2(self, gene_disease: pd.DataFrame, filter_column: str) -> None:
+    def load_omim2(self, gene_disease: pd.DataFrame, filter_column: str):
         """
         Process and prepare the OMIM2 dataset by filtering based on association count,
         creating a sparse matrix, sampling negative associations, and generating
@@ -212,7 +261,7 @@ class DataLoader:
             self.omim2 = sample_zeros(
                 self.omim2, self.zero_sampling_factor, seed=self.seed
             )
-            self._log_matrix_stats(self.omim2, "omim2")
+        self._log_matrix_stats(self.omim2, "omim2")
 
         mask = self.omim2.copy()
         mask.data = np.ones(mask.nnz, dtype=bool)
@@ -222,7 +271,7 @@ class DataLoader:
 
         self.logger.debug("Processed OMIM2 dataset. Shape: %s", self.omim2.shape)
 
-    def _log_matrix_stats(self, matrix: sp.csr_matrix, dataset_name: str) -> None:
+    def _log_matrix_stats(self, matrix: sp.csr_matrix, dataset_name: str):
         """
         Log statistics about the sparse matrix for debugging purposes.
 

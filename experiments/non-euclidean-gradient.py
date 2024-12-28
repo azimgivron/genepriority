@@ -1,10 +1,12 @@
 # pylint: disable=R0914, R0915
-"""Main module"""
+"""Run non-euclidean gradient based method for gene prioritization."""
 import logging
 import os
+import pickle
 import traceback
 from pathlib import Path
 
+import pint
 from NEGradient_GenePriority import DataLoader, NEGTrainer
 
 
@@ -14,7 +16,7 @@ def setup_logger(log_file: str):
     """
     logging.basicConfig(
         level=logging.DEBUG,
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        format="%(asctime)s - %(name)s - [%(funcName)s] - %(levelname)s - %(message)s",
         handlers=[
             logging.FileHandler(log_file, mode="w"),
         ],
@@ -25,7 +27,7 @@ def main():
     """Main"""
     # Setup paths
     input_path = Path("/home/TheGreatestCoder/code/data/postprocessed/").absolute()
-    output_path = Path("/home/TheGreatestCoder/code/output/").absolute()
+    output_path = Path("/home/TheGreatestCoder/code/neg/").absolute()
     os.makedirs(output_path, exist_ok=True)
 
     # Setup logger
@@ -42,12 +44,14 @@ def main():
         # LOAD DATA
         ############################
         # Set parameters
-        logger.debug("Setting parameters for splits and MACAU")
-        latent_dimensions = [25, 30, 40]
-        num_splits = 6
+        logger.debug("Setting parameters for splits and NEG")
+        num_splits = 1
         seed = 42
         nb_genes = 14_195
         nb_diseases = 314
+        validation_size = 0.1 #10% of the whole data
+        train_size = 0.8 #80% of the 90% remaining data, hence train size = 72% and test size = 18%
+        min_associations = 10
 
         # load data
         dataloader = DataLoader(
@@ -57,37 +61,39 @@ def main():
             seed=seed,
             num_splits=num_splits,
             num_folds=None,
+            train_size=train_size,
+            min_associations=min_associations,
+            validation_size=validation_size,
         )
-        dataloader(filter_column="Disease ID")  # load the data
+        gene_disease = dataloader.load_data()
+        dataloader.load_omim1(gene_disease)
 
         ############################
         # RUN TRAINING AND PREDICT
         ############################
-        # Configure and run MACAU
-        logger.debug("Configuring MACAU session")
-        
-        optim_reg=.1
-        iterations=100
-        lam=.4
-        step_size=.3
-        rho_increase=.4
-        rho_decrease=.3
-        threshold=20
+        # Configure and run NEG
+        logger.debug("Configuring NEG session")
 
+        train_mask, test_mask = next(iter(dataloader.splits))
         trainer = NEGTrainer(
             dataloader=dataloader,
             path=output_path,
             seed=seed,
-            optim_reg=optim_reg,
-            iterations=iterations,
-            lam=lam,
-            step_size=step_size,
-            rho_increase=rho_increase,
-            rho_decrease=rho_decrease,
-            threshold=threshold,
             logger=logger,
         )
-        
+    
+        optuna_study = trainer.fine_tune(
+            matrix=dataloader.omim1,
+            train_mask=train_mask,
+            test_mask=test_mask,
+            load_if_exists=False,
+            n_trials=10_000,
+            timeout=pint.Quantity(2, "d").to("s").m,
+        )
+
+        with open(output_path / "study.pickle", "wb") as handler:
+            pickle.dump(optuna_study, handler)
+
     except Exception as exception:
         logger.error("An error occurred during processing: %s", exception)
         logger.error("%s", traceback.format_exc())

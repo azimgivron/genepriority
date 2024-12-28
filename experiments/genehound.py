@@ -1,16 +1,21 @@
 # pylint: disable=R0914, R0915
-"""Main module"""
+"""Reproduce GeneHound results."""
 import logging
 import os
 import traceback
 from pathlib import Path
 
-from NEGradient_GenePriority import (DataLoader, Evaluation, MACAUTrainer,
-                                     ModelEvaluationCollection,
-                                     SideInformationLoader,
-                                     generate_auc_loss_table,
-                                     generate_bedroc_table,
-                                     plot_bedroc_boxplots, plot_roc_curves)
+from NEGradient_GenePriority import (
+    DataLoader,
+    Evaluation,
+    MACAUTrainer,
+    ModelEvaluationCollection,
+    SideInformationLoader,
+    generate_auc_loss_table,
+    generate_bedroc_table,
+    plot_bedroc_boxplots,
+    plot_roc_curves,
+)
 
 
 def setup_logger(log_file: str):
@@ -19,7 +24,7 @@ def setup_logger(log_file: str):
     """
     logging.basicConfig(
         level=logging.DEBUG,
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        format="%(asctime)s - %(name)s - [%(funcName)s] - %(levelname)s - %(message)s",
         handlers=[
             logging.FileHandler(log_file, mode="w"),
         ],
@@ -30,7 +35,7 @@ def main():
     """Main"""
     # Setup paths
     input_path = Path("/home/TheGreatestCoder/code/data/postprocessed/").absolute()
-    output_path = Path("/home/TheGreatestCoder/code/output/").absolute()
+    output_path = Path("/home/TheGreatestCoder/code/genehounds/").absolute()
     os.makedirs(output_path, exist_ok=True)
 
     # Setup logger
@@ -55,8 +60,8 @@ def main():
         seed = 42
         nb_genes = 14_195
         nb_diseases = 314
-        train_size=.9
-        min_associations=10
+        train_size = 0.9
+        min_associations = 10
 
         # load data
         dataloader = DataLoader(
@@ -68,7 +73,7 @@ def main():
             zero_sampling_factor=zero_sampling_factor,
             num_folds=num_folds,
             train_size=train_size,
-            min_associations=min_associations
+            min_associations=min_associations,
         )
         dataloader(filter_column="Disease ID")  # load the data
 
@@ -91,9 +96,9 @@ def main():
         ############################
         # Configure and run MACAU
         logger.debug("Configuring MACAU session")
-        num_samples = 100
-        burnin_period = 50
-        save_freq = 10
+        num_samples = 3_500
+        burnin_period = 500
+        save_freq = 100
         # Whether to use a Cholesky instead of conjugate gradient (CG) solver.
         # Keep true until the column features side information (F_e) reaches ~20,000.
         direct = False
@@ -137,7 +142,7 @@ def main():
                 evaluation_collection=collection,
                 output_file=(output_path / f"roc_curve_omim{i}"),
             )
-        
+
         collection = collections[0]
         auc_loss_dataframe = generate_auc_loss_table(
             collection.compute_auc_losses(),
@@ -151,10 +156,10 @@ def main():
             model_names=latent_dimensions,
             output_file=(output_path / f"bedroc_omim2.png"),
         )
-        bedroc_dataframe  = generate_bedroc_table(
+        bedroc_dataframe = generate_bedroc_table(
             collection.compute_bedroc_scores(),
             model_names=collection.model_names,
-            alpha_map=alpha_map
+            alpha_map=alpha_map,
         )
         bedroc_dataframe.to_csv(output_path / f"bedroc_omim2.csv")
         logger.debug("Figures and tables creation completed successfully")

@@ -13,7 +13,6 @@ Features:
 import logging
 import pickle
 import time
-import traceback
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List
@@ -94,7 +93,7 @@ class MatrixCompletionSession:
         logger: logging.Logger = None,
         seed: int = 123,
         save_name: str = None,
-    ) -> None:
+    ):
         """
         Initializes the MatrixCompletionSession instance.
 
@@ -235,8 +234,8 @@ class MatrixCompletionSession:
         """
         # Extract observed test values and corresponding predictions
         row_indices, col_indices = self.test_mask.nonzero()
-        test_values_actual = self.matrix[row_indices, col_indices]
-        test_predictions = self.predict_all()[row_indices, col_indices]
+        test_values_actual = np.asarray(self.matrix[row_indices, col_indices])
+        test_predictions = np.asarray(self.predict_all()[row_indices, col_indices])
 
         # Compute RMSE
         rmse = np.sqrt(mean_squared_error(test_values_actual, test_predictions))
@@ -356,98 +355,134 @@ class MatrixCompletionSession:
         m, n = self.matrix.shape
 
         # Initialize loss and RMSE history
-        loss = [self.calculate_loss() / (m * n)]
+        f = self.calculate_loss()
+        loss = [f / (m * n)]
         rmse = [self.calculate_rmse()]
 
         # Stack h1 and h2 for optimization
         Wk = sp.vstack([self.h1, self.h2.T])
         alpha_k = 1 / self.step_size
-        tau = sp.linalg.norm(self.matrix) / 3
+        tau = sp.linalg.norm(self.matrix, ord="fro") / 3
         tau1 = -(tau**2) / 3
         t1 = tau1 / 3
 
         self.logger.debug("Starting optimization with tau=%f, alpha_k=%f", tau, alpha_k)
 
         # Main optimization loop
+        iterations_count = 0
         for i in range(self.iterations):
-            try:
-                self.logger.debug("Iteration %d started", i)
-                # Compute gradients for h1 and h2
-                residual = (
-                    self.train_mask.multiply(self.h1 @ self.h2) - self.matrix
-                ).toarray()
-                grad_u = residual @ self.h2.T + self.optim_reg * self.h1
-                grad_v = residual.T @ self.h1 + self.optim_reg * self.h2.T
-                grad_f_Wk = sp.vstack([grad_u, grad_v])
+            iterations_count = i
+            self.logger.debug("[Main Loop] Iteration %d started.", i)
+            # Compute gradients for h1 and h2
+            residual = (
+                self.train_mask.multiply(self.h1 @ self.h2) - self.matrix
+            ).toarray()
+            grad_u = residual @ self.h2.T + self.optim_reg * self.h1
+            grad_v = residual.T @ self.h1 + self.optim_reg * self.h2.T
+            grad_f_Wk = sp.vstack([grad_u, grad_v])
 
-                Wk1, fk1 = self.update_factors(Wk, tau, alpha_k, grad_f_Wk, t1, m)
-                self.logger.debug("Iteration %d: Loss=%f", i, fk1)
-                j = 0
-                flag = 0
+            Wk1, fk1 = self.update_factors(Wk, tau, alpha_k, grad_f_Wk, t1, m)
+            self.logger.debug("[Iteration %d] Loss calculated: %.6e", i, fk1)
+            j = 0
+            flag = 0
 
-                # Inner loop to adjust step size
-                gradient_term = (grad_f_Wk.T @ (Wk1 - Wk)).sum()
-                h_difference_term = self.step_size * compute_h_difference(Wk1, Wk, tau)
-                while fk1 > loss[-1] + gradient_term + h_difference_term:
-                    flag = 1
-                    j += 1
-                    self.logger.debug(
-                        "Adjusting step size, iteration %d, inner loop %d", i, j
-                    )
-                    # Detect overflow and exit if necessary
-                    if (
-                        self.rho_increase**j > np.finfo(float).max
-                        or j == self.threshold
-                    ):
-                        raise OverflowError("Overflow detected. Exiting loop.")
-                    # Adjust step size
-                    self.step_size *= self.rho_increase
-                    alpha_k = (1 + self.lam) / self.step_size
-
-                    Wk1, fk1 = self.update_factors(
-                        Wk, tau, alpha_k, grad_f_Wk, t1 / 3, m
-                    )
-                    gradient_term = (grad_f_Wk.T @ (Wk1 - Wk)).sum()
-                    h_difference_term = self.step_size * compute_h_difference(
-                        Wk1, Wk, tau
-                    )
-
-                if flag == 1:
-                    # Adjust step size for next iteration
-                    self.step_size *= self.rho_decrease
-
-                # Update variables for the next iteration
-                Wk = Wk1
-                alpha_k = (1 + self.lam) / self.step_size
-                loss.append(fk1 / (m * n))
-                rmse.append(self.calculate_rmse())
-
-                # Log iteration metrics
+            # Inner loop to adjust step size
+            gradient_term = (grad_f_Wk.T @ (Wk1 - Wk)).sum()
+            h_difference_term = self.step_size * compute_h_difference(Wk1, Wk, tau)
+            self.logger.debug(
+                "[Inner Loop Entry] Iteration %d: Loss=%.6e, GradientTerm=%.6e, H-Difference=%.6e",
+                i,
+                fk1,
+                gradient_term,
+                h_difference_term,
+            )
+            while fk1 > f + gradient_term + h_difference_term:
+                flag = 1
+                j += 1
                 self.logger.debug(
-                    "Iteration %d: RMSE=%f, Loss=%f", i, rmse[-1], loss[-1]
+                    "[Step Adjustment] Iteration %d, Inner Loop %d: Step size being adjusted.",
+                    i,
+                    j,
+                )
+                # Detect overflow and exit if necessary
+                if self.rho_increase**j > np.finfo(float).max:
+                    self.logger.warning(
+                        "[Overflow Detected] Iteration %d, Inner Loop %d: "
+                        "Exiting to prevent overflow.",
+                        i,
+                        j,
+                    )
+                    break
+                if j == self.threshold:
+                    self.logger.warning(
+                        "[Inner Loop Limit] Iteration %d, Inner Loop %d: Maximum "
+                        "allowed iterations reached.",
+                        i,
+                        j,
+                    )
+                    break
+                # Adjust step size
+                self.logger.debug(
+                    "[Step Size Adjustment] Increasing step size at Iteration %d, Inner Loop %d.",
+                    i,
+                    j,
+                )
+                self.step_size *= self.rho_increase**j
+                alpha_k = (1 + self.lam) / self.step_size
+
+                Wk1, fk1 = self.update_factors(Wk, tau, alpha_k, grad_f_Wk, t1 / 3, m)
+                self.logger.debug(
+                    "[Inner Loop Update] Iteration %d, Inner Loop %d: Updated Loss=%.6e",
+                    i,
+                    j,
+                    fk1,
                 )
 
-                # Break if loss becomes NaN
-                if np.isnan(fk1):
-                    self.logger.warning("NaN encountered in loss, exiting loop.")
-                    break
-            except OverflowError as oe:
-                self.logger.error("Overflow error encountered: %s", oe)
+                gradient_term = (grad_f_Wk.T @ (Wk1 - Wk)).sum()
+                h_difference_term = self.step_size * compute_h_difference(Wk1, Wk, tau)
+            self.logger.debug("[Inner Loop Exit] Iteration %d: Loss=%.6e", i, fk1)
+            if flag == 1:
+                # Adjust step size
+                self.logger.debug(
+                    "[Step Size Adjustment] Decreasing step size after Inner Loop at Iteration %d.",
+                    i,
+                )
+                self.step_size *= self.rho_decrease
+
+            # Update variables for the next iteration
+            Wk = Wk1
+            alpha_k = (1 + self.lam) / self.step_size
+            loss.append(fk1 / (m * n))
+            rmse.append(self.calculate_rmse())
+
+            # Log iteration metrics
+            self.logger.debug(
+                "[Metrics Log] Iteration %d: RMSE=%.6f, Normalized Loss=%.6f",
+                i,
+                rmse[-1],
+                loss[-1],
+            )
+
+            # Break if loss becomes NaN
+            if np.isnan(fk1):
+                self.logger.warning(
+                    "[NaN Loss] Iteration %d: Loss is NaN, exiting loop.", i
+                )
                 break
-            except Exception as e:
-                self.logger.error("Unexpected error: %s\n%s", e, traceback.format_exc())
-                raise
+            f = fk1
 
         # Compute runtime
         runtime = time.time() - start_time
-        self.logger.debug("Optimization completed in %.2f seconds", runtime)
+        self.logger.debug(
+            "[Completion] Optimization finished in %.2f seconds.", runtime
+        )
         if self.save_name is not None:
             with open(self.save_name, "wb") as handler:
                 pickle.dump(self, handler)
         training_data = MatrixCompletionResult(
             completed_matrix=self.predict_all(),
             loss_history=loss,
-            iterations=i,
+            iterations=iterations_count,
             rmse_history=rmse,
             runtime=runtime,
         )

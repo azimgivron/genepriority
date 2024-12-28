@@ -18,14 +18,13 @@ from typing import Dict, List, Literal, Tuple
 
 import numpy as np
 import smurff
-from tqdm import tqdm
-
 from NEGradient_GenePriority.evaluation.evaluation import Evaluation
 from NEGradient_GenePriority.evaluation.results import Results
 from NEGradient_GenePriority.preprocessing.dataloader import DataLoader
 from NEGradient_GenePriority.preprocessing.side_information_loader import (
     SideInformationLoader,
 )
+from tqdm import tqdm
 
 
 class Trainer:
@@ -68,7 +67,7 @@ class Trainer:
         verbose: Literal[0, 1, 2],
         side_info_loader: SideInformationLoader = None,
         logger: logging.Logger = None,
-    ) -> None:
+    ):
         """
         Initialize the Trainer class with the given configuration.
 

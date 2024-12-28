@@ -1,4 +1,4 @@
-# pylint: disable=R0903
+# pylint: disable=R0903,R0913,R0801
 """
 TrainTestMasks module
 =======================
@@ -12,10 +12,9 @@ from __future__ import annotations
 
 from typing import Iterator, Tuple
 
+import numpy as np
 import scipy.sparse as sp
 from sklearn.model_selection import KFold, train_test_split
-
-from NEGradient_GenePriority.utils import filter_from_indices
 
 
 class TrainTestMasks:
@@ -47,6 +46,7 @@ class TrainTestMasks:
         mask: sp.csr_matrix,
         train_size: float,
         num_splits: int,
+        validation_size: float = None,
     ):
         """
         Performs random splitting of a given mask into training and testing sets.
@@ -55,31 +55,65 @@ class TrainTestMasks:
             mask (sp.csr_matrix): The sparse matrix mask to be split.
             train_size (float): Proportion of the dataset to include in the training set.
             num_splits (int): The number of random splits to generate.
+            validation_size (float): Unused, set for API uniformity.
         """
+        # pylint: disable=W0613
+        row_indices, col_indices, values = sp.find(mask)
+        indices = np.arange(len(row_indices))
+        self.append_train_test_splits(
+            indices,
+            num_splits,
+            row_indices,
+            col_indices,
+            values,
+            train_size,
+            mask.shape,
+        )
+
+    def append_train_test_splits(
+        self,
+        indices: np.ndarray,
+        num_splits: int,
+        row_indices: np.ndarray,
+        col_indices: np.ndarray,
+        values: np.ndarray,
+        train_size: float,
+        shape: Tuple[int, int],
+    ):
+        """
+        Generate and store multiple train-test splits for sparse matrix data.
+
+        This method creates `num_splits` train-test splits using random sampling,
+        with a specified training size. The splits are stored as sparse matrices
+        in CSR format for efficient storage and computation.
+
+        Args:
+            indices (np.ndarray): Indices for splitting the data.
+            num_splits (int): Number of train-test splits to generate.
+            row_indices (np.ndarray): Row indices of non-zero matrix elements.
+            col_indices (np.ndarray): Column indices of non-zero matrix elements.
+            values (np.ndarray): Values of the non-zero matrix elements.
+            train_size (float): Proportion of data in the training set (0 < train_size < 1).
+            shape (Tuple[int, int]): Shape of the sparse matrices.
+        """
+        if not 0 < train_size < 1:
+            raise ValueError("train_size must be between 0 and 1.")
+
         for i in range(num_splits):
-            row_indices, col_indices, values = sp.find(mask)
             train_row_indices, test_row_indices = train_test_split(
-                row_indices,
+                indices,
                 train_size=train_size,
                 random_state=self.seed + i,
                 shuffle=True,
             )
-            train_mask = sp.csr_matrix(
-                (
-                    values[train_row_indices],
-                    (row_indices[train_row_indices], col_indices[train_row_indices]),
-                ),
-                shape=mask.shape,
+            self.append_train_test_masks(
+                values,
+                row_indices,
+                col_indices,
+                train_row_indices,
+                test_row_indices,
+                shape,
             )
-            test_mask = sp.csr_matrix(
-                (
-                    values[test_row_indices],
-                    (row_indices[test_row_indices], col_indices[test_row_indices]),
-                ),
-                shape=mask.shape,
-            )
-            self.training_masks.append(train_mask)
-            self.testing_masks.append(test_mask)
 
     def fold(self, mask: sp.csr_matrix, num_folds: int):
         """
@@ -90,12 +124,54 @@ class TrainTestMasks:
             num_folds (int): The number of folds to create for cross-validation.
         """
         kfold = KFold(n_splits=num_folds, shuffle=True, random_state=self.seed)
-        rows_idx = sp.find(mask)[0]
-        for train_idx, test_idx in kfold.split(rows_idx):
-            train_mask = filter_from_indices(mask, train_idx)
-            test_mask = filter_from_indices(mask, test_idx)
-            self.training_masks.append(train_mask)
-            self.testing_masks.append(test_mask)
+        row_indices, col_indices, values = sp.find(mask)
+        indices = np.arange(len(row_indices))
+        for train_row_indices, test_row_indices in kfold.split(indices):
+            self.append_train_test_masks(
+                values,
+                row_indices,
+                col_indices,
+                train_row_indices,
+                test_row_indices,
+                mask.shape,
+            )
+
+    def append_train_test_masks(
+        self,
+        values: np.ndarray,
+        row_indices: np.ndarray,
+        col_indices: np.ndarray,
+        train_row_indices: np.ndarray,
+        test_row_indices: np.ndarray,
+        shape: Tuple[int, int],
+    ):
+        """
+        Append training and testing masks to their respective lists.
+
+        Args:
+            values (np.ndarray): Non-zero values of the matrix.
+            row_indices (np.ndarray): Row indices of non-zero elements.
+            col_indices (np.ndarray): Column indices of non-zero elements.
+            train_row_indices (np.ndarray): Row indices for the training set.
+            test_row_indices (np.ndarray): Row indices for the testing set.
+            shape (Tuple[int, int]): Dimensions of the sparse matrix.
+        """
+        train_mask = sp.csr_matrix(
+            (
+                values[train_row_indices],
+                (row_indices[train_row_indices], col_indices[train_row_indices]),
+            ),
+            shape=shape,
+        )
+        test_mask = sp.csr_matrix(
+            (
+                values[test_row_indices],
+                (row_indices[test_row_indices], col_indices[test_row_indices]),
+            ),
+            shape=shape,
+        )
+        self.training_masks.append(train_mask)
+        self.testing_masks.append(test_mask)
 
     def __iter__(self) -> Iterator[Tuple[sp.csr_matrix, sp.csr_matrix]]:
         """

@@ -1,4 +1,4 @@
-# pylint: disable=R0913,R0914,R0902,R0801
+# pylint: disable=R0913,R0914,R0902,R0801,E1121
 """
 BaseTrainer module
 =================
@@ -18,8 +18,6 @@ from typing import Any, Dict, Iterator, List, Tuple, Union
 import numpy as np
 import scipy.sparse as sp
 import smurff
-from tqdm import tqdm
-
 from NEGradient_GenePriority.evaluation.evaluation import Evaluation
 from NEGradient_GenePriority.evaluation.results import Results
 from NEGradient_GenePriority.preprocessing.dataloader import DataLoader
@@ -27,6 +25,7 @@ from NEGradient_GenePriority.preprocessing.side_information_loader import (
     SideInformationLoader,
 )
 from NEGradient_GenePriority.utils import save_evaluations
+from tqdm import tqdm
 
 
 class BaseTrainer(metaclass=ABCMeta):
@@ -55,7 +54,7 @@ class BaseTrainer(metaclass=ABCMeta):
         seed: int,
         side_info_loader: SideInformationLoader = None,
         logger: logging.Logger = None,
-    ) -> None:
+    ):
         """
         Initialize the Trainer class with the given configuration.
 
@@ -169,7 +168,7 @@ class BaseTrainer(metaclass=ABCMeta):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def log_training_info(training_status: Any):
+    def log_training_info(self, training_status: Any):
         """
         Logs training information for monitoring and debugging purposes.
 
@@ -227,7 +226,21 @@ class BaseTrainer(metaclass=ABCMeta):
         return Evaluation(results)
 
     def log_data(self, set_name: str, data: sp.csr_matrix):
-        self.logger.debug("%s data nnz %s", set_name.capitaliser(), f"{data.nnz:_}")
+        """
+        Logs detailed information about a given sparse matrix dataset.
+
+        This method logs the following details for a dataset represented as a
+        sparse matrix in Compressed Sparse Row (CSR) format:
+        - The number of non-zero elements (`nnz`).
+        - The number of elements with a value of 1.
+        - The number of elements with a value of 0.
+
+        Args:
+            set_name (str): The name of the dataset (e.g., "train", "validation", or "test").
+            data (sp.csr_matrix): The dataset represented as a sparse matrix
+                                in CSR format.
+        """
+        self.logger.debug("%s data nnz %s", set_name.capitalize(), f"{data.nnz:_}")
         self.logger.debug(
             "Number of 1s in the %s set %s",
             set_name,
