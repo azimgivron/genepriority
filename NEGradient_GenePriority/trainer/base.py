@@ -18,6 +18,8 @@ from typing import Any, Dict, Iterator, List, Tuple, Union
 import numpy as np
 import scipy.sparse as sp
 import smurff
+from tqdm import tqdm
+
 from NEGradient_GenePriority.evaluation.evaluation import Evaluation
 from NEGradient_GenePriority.evaluation.results import Results
 from NEGradient_GenePriority.preprocessing.dataloader import DataLoader
@@ -25,7 +27,6 @@ from NEGradient_GenePriority.preprocessing.side_information_loader import (
     SideInformationLoader,
 )
 from NEGradient_GenePriority.utils import save_evaluations
-from tqdm import tqdm
 
 
 class BaseTrainer(metaclass=ABCMeta):
@@ -54,6 +55,7 @@ class BaseTrainer(metaclass=ABCMeta):
         seed: int,
         side_info_loader: SideInformationLoader = None,
         logger: logging.Logger = None,
+        tensorboard_base_log_dir: Path = None
     ):
         """
         Initialize the Trainer class with the given configuration.
@@ -168,21 +170,30 @@ class BaseTrainer(metaclass=ABCMeta):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def log_training_info(self, training_status: Any):
+    def log_training_info(self, training_status: Any, session: Any, run_name: str) -> None:
         """
         Logs training information for monitoring and debugging purposes.
 
-        This method must be implemented by subclasses to handle logging
-        of training status details, which are typically returned from a
-        session's `run` call.
+        This method must be implemented by subclasses to provide a mechanism
+        for recording or displaying training metrics, hyperparameters, and
+        other relevant details that help monitor or debug the training process.
+        The typical usage might involve storing these metrics in a file,
+        database, or external visualization tool (e.g., TensorBoard).
 
         Args:
-            training_status (Any): An object or structure containing the
-                status and metrics of the training process, as returned
-                by the session `run` call. The exact type and structure
-                depend on the training framework being used.
+            training_status (Any): An object or structure containing information
+                about the training progress and outcomes. The exact format of
+                this object (e.g., metrics, losses, durations) depends on the
+                specific implementation and framework.
+            session (Any): A representation of the trained model's session,
+                which may include parameters such as rank, regularization, and
+                other session-specific configurations.
+            run_name (str): A custom name to uniquely identify this training
+                session when logging. Subclasses may use this name to create
+                separate directories, namespaces, or keys for storing logs.
         """
         raise NotImplementedError
+
 
     def train_test(
         self,
@@ -219,7 +230,7 @@ class BaseTrainer(metaclass=ABCMeta):
                 i, matrix, train_mask, test_mask, num_latent, save_name
             )
             training_status = session.run()
-            self.log_training_info(training_status)
+            self.log_training_info(training_status, session)
 
             y_pred = self.predict(session)
             results.append(Results(y_true=matrix.tocsr(), y_pred=y_pred))

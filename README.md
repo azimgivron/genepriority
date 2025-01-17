@@ -65,16 +65,13 @@ The above procedure describes the general approach. However, the reference paper
 - Sparsity factor $\alpha$, the ratio of 0s to 1s.  
 
 **Output**:  
-- Unified sparse matrices: $O_{1_{i}} \quad \forall i \in \{1, N\}$  
-- Combined splits: $S_{1_{i}} \quad \forall i \in \{1, N\}$  
+- Sparse matrix: $O_{1}$  
+- Splits: $S_{1_{i}} \quad \forall i \in \{1, N\}$  
 
 **Procedure**:  
 1. Convert $d$ into a sparse matrix $O_{1_{1s}}$.  
-2. Sample $N$ zero matrices $O_{1_{0s, i}}$ from $O_{1_{1s}}$ using $\alpha \quad \forall i \in \{1, N\}$.  
-3. Combine $O_{1_{1s}}$ and $O_{1_{0s, i}}$ into unified matrices $O_{1_{i}} \quad \forall i \in \{1, N\}$.  
-4. Split $O_{1_{1s}}$ indices randomly into subsets $S_{1_{1s}}$.  
-5. Split $O_{1_{0s, i}}$ indices randomly into subsets $S_{1_{0s, i}} \quad \forall i \in \{1, N\}$.  
-6. Merge splits from positive ($S_{1_{1s}}$) and zero ($S_{1_{0s, i}}$) samples into $S_{1_{i}} \quad \forall i \in \{1, N\}$.  
+2. Sample $N$ zeros to get $O_{1}$ from $O_{1_{1s}}$ using $\alpha$.  
+3. Split $O_{1}$ indices randomly into subsets $S_{1_{i}} \quad \forall i \in \{1, N\}$.  
 
 ---
 
@@ -87,17 +84,14 @@ The above procedure describes the general approach. However, the reference paper
 - Sparsity factor $\alpha$, the ratio of 0s to 1s.  
 
 **Output**:  
-- Unified sparse matrix: $O_2$
-- Combined folds: $S_2$  
+- Sparse matrix: $O_2$
+- Folds: $F_{2_{i}} \quad \forall i \in \{1, N\}$
 
 **Procedure**:  
 1. Filter diseases with fewer than $T$ associations.  
 2. Convert $d$ into a sparse matrix $O_{2_{1s}}$.  
-3. Sample zeros from $O_{2_{1s}}$ using $\alpha$.  
-4. Combine $O_{2_{1s}}$ and $O_{2_{0s}}$ into a unified matrix $O_2$.  
-5. Split $O_{2_{1s}}$ indices randomly into subsets $S_{2_{1s}}$.  
-6. Split $O_{2_{0s}}$ indices randomly into subsets $S_{2_{0s}}$.  
-7. Merge splits from positive ($S_{2_{1s}}$) and zero ($S_{2_{0s}}$) samples into $S_2$.  
+5. Sample $N$ zeros to get $O_{2}$ from $O_{2_{1s}}$ using $\alpha$.  
+6. Split $O_{2}$ indices randomly into $N$ folds $F_{2_{i}} \quad \forall i \in \{1, N\}$.  
 
 ---
 

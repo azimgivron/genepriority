@@ -12,6 +12,7 @@ and efficient manner.
 from typing import Dict, Iterator, List, Tuple
 
 import numpy as np
+
 from NEGradient_GenePriority.evaluation.evaluation import Evaluation
 
 

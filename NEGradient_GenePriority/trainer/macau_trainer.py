@@ -16,6 +16,7 @@ from typing import Dict, List, Literal, Union
 import numpy as np
 import scipy.sparse as sp
 import smurff
+
 from NEGradient_GenePriority.preprocessing.dataloader import DataLoader
 from NEGradient_GenePriority.preprocessing.side_information_loader import (
     SideInformationLoader,
@@ -62,6 +63,7 @@ class MACAUTrainer(BaseTrainer):
         verbose: Literal[0, 1, 2],
         side_info_loader: SideInformationLoader = None,
         logger: logging.Logger = None,
+        tensorboard_base_log_dir: Path = None
     ):
         """
         Initialize the MACAUTrainer class with the given configuration.
@@ -189,11 +191,15 @@ class MACAUTrainer(BaseTrainer):
             else None,
         )
 
-    def log_training_info(self, training_status: List[smurff.Prediction]):
+    def log_training_info(
+        self, training_status: List[smurff.Prediction], session: smurff.MacauSession, run_name: str
+    ):
         """
         Logs training information for monitoring and debugging purposes.
 
         Args:
             training_status (List[smurff.Prediction]): The predictions on
                 the test set during training.
+            session (smurff.MacauSession): Trained model session.
+            run_name (str): Custom run name for this training session.
         """

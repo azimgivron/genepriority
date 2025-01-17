@@ -60,10 +60,10 @@ class MatrixCompletionSession:
         test_mask (sp.csr_matrix): Mask indicating observed entries in `matrix` for test.
             Shape: (m, n).
         rank (int): The rank of the low-rank approximation.
-        optim_reg (float): Regularization parameter for the optimization.
+        regularization_parameter (float): Regularization parameter for the optimization.
         iterations (int): Maximum number of optimization iterations.
-        lam (float): Regularization parameter for the gradient adjustment.
-        step_size (float): Initial step size for gradient-based updates.
+        symmetry_parameter (float): Regularization parameter for the gradient adjustment.
+        smoothness_parameter (float): Initial smoothness parameter.
         rho_increase (float): Factor for increasing the step size dynamically.
         rho_decrease (float): Factor for decreasing the step size dynamically.
         threshold (int): Maximum iterations allowed for the inner optimization loop.
@@ -83,10 +83,10 @@ class MatrixCompletionSession:
         train_mask: sp.csr_matrix,
         test_mask: sp.csr_matrix,
         rank: int,
-        optim_reg: float,
+        regularization_parameter: float,
         iterations: int,
-        lam: float,
-        step_size: float,
+        symmetry_parameter: float,
+        smoothness_parameter: float,
         rho_increase: float,
         rho_decrease: float,
         threshold: int,
@@ -105,10 +105,10 @@ class MatrixCompletionSession:
             test_mask (sp.csr_matrix): Mask indicating observed entries in
                 `matrix` for test. Shape: (m, n).
             rank (int): Desired rank for the low-rank approximation.
-            optim_reg (float): Regularization parameter for the optimization.
+            regularization_parameter (float): Regularization parameter for the optimization.
             iterations (int): Maximum number of optimization iterations.
-            lam (float): Regularization parameter for gradient adjustment.
-            step_size (float): Initial step size for optimization updates.
+            symmetry_parameter (float): The symmetry parameter.
+            smoothness_parameter (float): Initial smoothness parameter.
             rho_increase (float): Multiplicative factor to increase step size dynamically.
             rho_decrease (float): Multiplicative factor to decrease step size dynamically.
             threshold (int): Maximum number of iterations for the inner loop.
@@ -123,10 +123,10 @@ class MatrixCompletionSession:
         self.train_mask = train_mask
         self.test_mask = test_mask
         self.rank = rank
-        self.optim_reg = optim_reg
+        self.regularization_parameter = regularization_parameter
         self.iterations = iterations
-        self.lam = lam
-        self.step_size = step_size
+        self.symmetry_parameter = symmetry_parameter
+        self.smoothness_parameter = smoothness_parameter
         self.rho_increase = rho_increase
         self.rho_decrease = rho_decrease
         self.threshold = threshold
@@ -241,7 +241,7 @@ class MatrixCompletionSession:
         rmse = np.sqrt(mean_squared_error(test_values_actual, test_predictions))
         return rmse
 
-    def update_factors(self, Wk, tau, alpha_k, grad_f_Wk, t1, m):
+    def substep(self, W_k, tau, step_size, grad_f_W_k, tau1, m):
         """
         Performs a single substep in the optimization process to update the factor matrices.
 
@@ -251,18 +251,18 @@ class MatrixCompletionSession:
         Steps in the Substep Process:
 
         1. Compute the Gradient Step:
-           grad = (||Wk||_F^2 + tau) * Wk - alpha_k * grad_f_Wk
+           grad = (||W_k||_F^2 + tau) * W_k - step_size * grad_f_W_k
 
-           - ||Wk||_F: Frobenius norm of the current matrix Wk.
+           - ||W_k||_F: Frobenius norm of the current matrix W_k.
            - tau: Regularization parameter.
-           - alpha_k: Learning rate for the gradient step.
-           - grad_f_Wk: Gradient of the objective function at Wk.
+           - step_size: Learning rate for the gradient step.
+           - grad_f_W_k: Gradient of the objective function at W_k.
 
         2. Solve the Cubic Equation for the Step Size t:
            t = (tau / 3) + cube_root(T_1) + cube_root(T_2)
 
-           - T_1 = -tau_2 + sqrt(tau_2^2 + t1^3)
-           - T_2 = -tau_2 - sqrt(tau_2^2 + t1^3)
+           - T_1 = -tau_2 + sqrt(tau_2^2 + (tau1/3)^3)
+           - T_2 = -tau_2 - sqrt(tau_2^2 + (tau1/3)^3)
            - tau_2 = (-2 * tau^3 - 27 * ||grad||_F^2) / 54
 
            The cubic root function ensures stability, even for negative T_1 and T_2.
@@ -275,11 +275,11 @@ class MatrixCompletionSession:
            - h_2 = W_{k+1}[m:, :].T
 
         Args:
-            Wk (sp.csr_matrix): Current stacked factor matrices.
+            W_k (sp.csr_matrix): Current stacked factor matrices.
             tau (float): Regularization parameter.
-            alpha_k (float): Learning rate for the gradient step.
-            grad_f_Wk (sp.csr_matrix): Gradient of the objective function at Wk.
-            t1 (float): Cubic root parameter for step size adjustment.
+            step_size (float): Learning rate for the gradient step.
+            grad_f_W_k (sp.csr_matrix): Gradient of the objective function at W_k.
+            tau1 (float): Cubic root parameter for step size adjustment.
             m (int): Number of rows in the original matrix.
 
         Returns:
@@ -287,23 +287,20 @@ class MatrixCompletionSession:
                 - Updated stacked matrix W_{k+1} (sp.csr_matrix).
                 - New loss value f(W_{k+1}) (float).
         """
-        # Compute the gradient step
-        grad = (sp.linalg.norm(Wk, ord="fro") ** 2 + tau) * Wk - (alpha_k * grad_f_Wk)
-        tau2 = (-2 * (tau**3) - 27 * (sp.linalg.norm(grad, ord="fro") ** 2)) / 27 / 2
-
-        # Compute step sizes
-        T1 = -tau2 + np.sqrt(tau2**2 + t1**3)
-        T2 = -tau2 - np.sqrt(tau2**2 + t1**3)
-        t = (tau / 3) + pow(T1, 1 / 3) + pow(T2, 1 / 3)
-
-        # Update Wk
-        Wk1 = (1 / t) * grad
-        self.h1 = sp.csr_matrix(Wk1[:m, :])
-        self.h2 = sp.csr_matrix(Wk1[m:, :].T)
-
-        # Compute the new loss
-        fk1 = self.calculate_loss()
-        return Wk1, fk1
+        step = (sp.linalg.norm(W_k, ord="fro") ** 2 + tau) * W_k - (
+            step_size * grad_f_W_k
+        )
+        tau2 = (-2 * (tau**3) - 27 * (sp.linalg.norm(step, ord="fro") ** 2)) / 27
+        t_k = (
+            (tau / 3)
+            + np.cbrt(-tau2 + np.sqrt((tau2 / 2) ** 2 + (tau1 / 3) ** 3))
+            + np.cbrt(-tau2 - np.sqrt((tau2 / 2) ** 2 + (tau1 / 3) ** 3))
+        )
+        W_k_next = (1 / t_k) * step
+        self.h1 = sp.csr_matrix(W_k_next[:m, :])
+        self.h2 = sp.csr_matrix(W_k_next[m:, :].T)
+        res_norm_next_it = self.calculate_loss()
+        return W_k_next, res_norm_next_it
 
     def run(self) -> MatrixCompletionResult:
         """
@@ -330,13 +327,13 @@ class MatrixCompletionSession:
            step sizes:
                - ∇_u = (mask ⊙ (h_1 @ h_2 - M)) @ h_2^T + mu * h_1,
                - ∇_v = (mask.T ⊙ (h_2^T @ h_1^T - M.T)) @ h_1 + mu * h_2^T,
-           where ⊙ represents element-wise multiplication.
+           where ⊙ represents hadamard product.
 
         3. **Dynamic Step Size Adjustment**:
            Adjust the step size if the new loss does not satisfy the improvement condition:
-               f(W_{k+1}) > f(W_k) + ∇f(W_k)^T (W_{k+1} - W_k) + η * D_h(W_{k+1}, W_k, τ),
+               f(W_{k+1}) <= f(W_k) + ∇f(W_k)^T (W_{k+1} - W_k) + η * D_h(W_{k+1}, W_k, τ),
            where:
-               - η is the step size adjustment parameter,
+               - η is the step size/smoothness adjustment parameter,
                - D_h is the difference in h-function values.
 
         4. **Termination**:
@@ -352,124 +349,152 @@ class MatrixCompletionSession:
         """
         # Start measuring runtime
         start_time = time.time()
-        m, n = self.matrix.shape
+        rows, columns = self.matrix.shape
+        nb_elements = rows * columns
 
         # Initialize loss and RMSE history
-        f = self.calculate_loss()
-        loss = [f / (m * n)]
+        res_norm = self.calculate_loss()
+        loss = [res_norm / nb_elements]
         rmse = [self.calculate_rmse()]
 
         # Stack h1 and h2 for optimization
-        Wk = sp.vstack([self.h1, self.h2.T])
-        alpha_k = 1 / self.step_size
+        W_k = sp.vstack([self.h1, self.h2.T])
+        step_size = 1 / self.smoothness_parameter
         tau = sp.linalg.norm(self.matrix, ord="fro") / 3
         tau1 = -(tau**2) / 3
-        t1 = tau1 / 3
 
-        self.logger.debug("Starting optimization with tau=%f, alpha_k=%f", tau, alpha_k)
+        self.logger.debug(
+            "Starting optimization with tau=%f, step_size=%f", tau, step_size
+        )
 
         # Main optimization loop
         iterations_count = 0
-        for i in range(self.iterations):
-            iterations_count = i
-            self.logger.debug("[Main Loop] Iteration %d started.", i)
+        for ith_iteration in range(self.iterations):
+            iterations_count = ith_iteration
+            self.logger.debug("[Main Loop] Iteration %d started.", ith_iteration)
             # Compute gradients for h1 and h2
             residual = (
                 self.train_mask.multiply(self.h1 @ self.h2) - self.matrix
             ).toarray()
-            grad_u = residual @ self.h2.T + self.optim_reg * self.h1
-            grad_v = residual.T @ self.h1 + self.optim_reg * self.h2.T
-            grad_f_Wk = sp.vstack([grad_u, grad_v])
+            grad_u = residual @ self.h2.T + self.regularization_parameter * self.h1
+            grad_v = residual.T @ self.h1 + self.regularization_parameter * self.h2.T
+            grad_f_W_k = sp.vstack([grad_u, grad_v])
 
-            Wk1, fk1 = self.update_factors(Wk, tau, alpha_k, grad_f_Wk, t1, m)
-            self.logger.debug("[Iteration %d] Loss calculated: %.6e", i, fk1)
-            j = 0
-            flag = 0
-
-            # Inner loop to adjust step size
-            gradient_term = (grad_f_Wk.T @ (Wk1 - Wk)).sum()
-            h_difference_term = self.step_size * compute_h_difference(Wk1, Wk, tau)
-            self.logger.debug(
-                "[Inner Loop Entry] Iteration %d: Loss=%.6e, GradientTerm=%.6e, H-Difference=%.6e",
-                i,
-                fk1,
-                gradient_term,
-                h_difference_term,
+            W_k_next, res_norm_next_it = self.substep(
+                W_k, tau, step_size, grad_f_W_k, tau1, rows
             )
-            while fk1 > f + gradient_term + h_difference_term:
+            self.logger.debug(
+                "[Iteration %d] Loss calculated: %.6e", ith_iteration, res_norm_next_it
+            )
+            # Inner loop to adjust step size
+            linear_approx = (grad_f_W_k.T @ (W_k_next - W_k)).sum()
+            bregman = bregman_distance(W_k_next, W_k, tau)
+            self.logger.debug(
+                (
+                    "[Inner Loop Entry] Iteration %d: Loss=%.6e, GradientTerm=%.6e, "
+                    "smoothness_parameter=%.6e, bregman_distance=%.6e"
+                ),
+                ith_iteration,
+                res_norm_next_it,
+                linear_approx,
+                self.smoothness_parameter,
+                bregman,
+            )
+
+            inner_loop_it = 0
+            flag = 0
+            while not (
+                res_norm_next_it
+                <= res_norm + linear_approx + self.smoothness_parameter * bregman
+            ):
                 flag = 1
-                j += 1
+                inner_loop_it += 1
                 self.logger.debug(
                     "[Step Adjustment] Iteration %d, Inner Loop %d: Step size being adjusted.",
-                    i,
-                    j,
+                    ith_iteration,
+                    inner_loop_it,
                 )
                 # Detect overflow and exit if necessary
-                if self.rho_increase**j > np.finfo(float).max:
+                if self.rho_increase**inner_loop_it > np.finfo(float).max:
                     self.logger.warning(
                         "[Overflow Detected] Iteration %d, Inner Loop %d: "
                         "Exiting to prevent overflow.",
-                        i,
-                        j,
+                        ith_iteration,
+                        inner_loop_it,
                     )
                     break
-                if j == self.threshold:
-                    self.logger.warning(
+                if inner_loop_it == self.threshold:
+                    self.logger.debug(
                         "[Inner Loop Limit] Iteration %d, Inner Loop %d: Maximum "
                         "allowed iterations reached.",
-                        i,
-                        j,
+                        ith_iteration,
+                        inner_loop_it,
                     )
                     break
                 # Adjust step size
                 self.logger.debug(
                     "[Step Size Adjustment] Increasing step size at Iteration %d, Inner Loop %d.",
-                    i,
-                    j,
+                    ith_iteration,
+                    inner_loop_it,
                 )
-                self.step_size *= self.rho_increase**j
-                alpha_k = (1 + self.lam) / self.step_size
+                self.smoothness_parameter *= self.rho_increase**inner_loop_it
+                step_size = (1 + self.symmetry_parameter) / self.smoothness_parameter
 
-                Wk1, fk1 = self.update_factors(Wk, tau, alpha_k, grad_f_Wk, t1 / 3, m)
+                W_k_next, res_norm_next_it = self.substep(
+                    W_k, tau, step_size, grad_f_W_k, tau1, rows
+                )
                 self.logger.debug(
                     "[Inner Loop Update] Iteration %d, Inner Loop %d: Updated Loss=%.6e",
-                    i,
-                    j,
-                    fk1,
+                    ith_iteration,
+                    inner_loop_it,
+                    res_norm_next_it,
                 )
 
-                gradient_term = (grad_f_Wk.T @ (Wk1 - Wk)).sum()
-                h_difference_term = self.step_size * compute_h_difference(Wk1, Wk, tau)
-            self.logger.debug("[Inner Loop Exit] Iteration %d: Loss=%.6e", i, fk1)
+                linear_approx = (grad_f_W_k.T @ (W_k_next - W_k)).sum()
+                bregman = bregman_distance(W_k_next, W_k, tau)
+                # Detect overflow and exit if necessary
+                if self.rho_increase**inner_loop_it > np.finfo(float).max:
+                    self.logger.warning(
+                        "[Overflow Detected] Iteration %d, Inner Loop %d: "
+                        "Exiting to prevent overflow.",
+                        ith_iteration,
+                        inner_loop_it,
+                    )
+                    break
+            self.logger.debug(
+                "[Inner Loop Exit] Iteration %d: Loss=%.6e",
+                ith_iteration,
+                res_norm_next_it,
+            )
             if flag == 1:
                 # Adjust step size
                 self.logger.debug(
                     "[Step Size Adjustment] Decreasing step size after Inner Loop at Iteration %d.",
-                    i,
+                    ith_iteration,
                 )
-                self.step_size *= self.rho_decrease
+                self.smoothness_parameter *= self.rho_decrease
 
             # Update variables for the next iteration
-            Wk = Wk1
-            alpha_k = (1 + self.lam) / self.step_size
-            loss.append(fk1 / (m * n))
+            W_k = W_k_next
+            step_size = (1 + self.symmetry_parameter) / self.smoothness_parameter
+            loss.append(res_norm_next_it / nb_elements)
             rmse.append(self.calculate_rmse())
 
             # Log iteration metrics
             self.logger.debug(
                 "[Metrics Log] Iteration %d: RMSE=%.6f, Normalized Loss=%.6f",
-                i,
+                ith_iteration,
                 rmse[-1],
                 loss[-1],
             )
 
             # Break if loss becomes NaN
-            if np.isnan(fk1):
+            if np.isnan(res_norm_next_it):
                 self.logger.warning(
-                    "[NaN Loss] Iteration %d: Loss is NaN, exiting loop.", i
+                    "[NaN Loss] Iteration %d: Loss is NaN, exiting loop.", ith_iteration
                 )
                 break
-            f = fk1
+            res_norm = res_norm_next_it
 
         # Compute runtime
         runtime = time.time() - start_time
@@ -489,9 +514,10 @@ class MatrixCompletionSession:
         return training_data
 
 
-def compute_h_function(W: sp.csr_matrix, tau: float) -> float:
+def kernel(W: sp.csr_matrix, tau: float) -> float:
     """
-    Computes the value of the h function for a given matrix W and regularization parameter tau.
+    Computes the value of the kernel function h for a given matrix W and
+    regularization parameter tau.
 
     The h function is defined as:
         h(W) = 0.25 * ||W||_F^4 + 0.5 * tau * ||W||_F^2
@@ -503,20 +529,14 @@ def compute_h_function(W: sp.csr_matrix, tau: float) -> float:
     Returns:
         float: The computed value of the h function.
     """
-    # Calculate the Frobenius norm of the matrix W
-    frobenius_norm = sp.linalg.norm(W, ord="fro")
-
-    # Compute the h function value
-    h_value = 0.25 * frobenius_norm**4 + 0.5 * tau * frobenius_norm**2
+    norm = sp.linalg.norm(W, ord="fro")
+    h_value = 0.25 * norm**4 + 0.5 * tau * norm**2
     return h_value
 
 
-def compute_h_difference(W1: sp.csr_matrix, W2: sp.csr_matrix, tau: float) -> float:
+def bregman_distance(W1: sp.csr_matrix, W2: sp.csr_matrix, tau: float) -> float:
     """
-    Computes the difference in h function values between two matrices (W1 and W2),
-    adjusted by the gradient of h at W2.
-
-    The difference is computed as:
+    Computes the Bregman distance:
         D_h = h(W1) - h(W2) - <grad_h(W2), W1 - W2>
 
     Args:
@@ -525,18 +545,11 @@ def compute_h_difference(W1: sp.csr_matrix, W2: sp.csr_matrix, tau: float) -> fl
         tau (float): Regularization parameter.
 
     Returns:
-        float: The computed difference in h function values.
+        float: The computed Bregman distance.
     """
-    # Compute h function values for W1 and W2
-    h_value_W1 = compute_h_function(W1, tau)
-    h_value_W2 = compute_h_function(W2, tau)
-
-    # Compute the gradient of the h function at W2
-    frobenius_norm_W2 = sp.linalg.norm(W2, ord="fro")
-    grad_h_W2 = (frobenius_norm_W2**2 + tau) * W2
-
-    # Compute the difference in h values, incorporating the gradient adjustment
-    gradient_adjustment = (grad_h_W2.T @ (W1 - W2)).sum()
-    h_difference = h_value_W1 - h_value_W2 - gradient_adjustment
-
-    return h_difference
+    h_W1 = kernel(W1, tau)
+    h_W2 = kernel(W2, tau)
+    grad_h_W2 = (sp.linalg.norm(W2, ord="fro") ** 2 + tau) * W2
+    linear_approx = (grad_h_W2.T @ (W1 - W2)).sum()
+    dist = h_W1 - h_W2 - linear_approx
+    return dist

@@ -7,8 +7,8 @@ This module defines the utility functions.
 import pickle
 from typing import Dict
 
-import numpy as np
 import scipy.sparse as sp
+
 from NEGradient_GenePriority.evaluation.evaluation import Evaluation
 
 

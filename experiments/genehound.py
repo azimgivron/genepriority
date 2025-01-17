@@ -1,7 +1,25 @@
 # pylint: disable=R0914, R0915
-"""Reproduce GeneHound results."""
+"""
+Reproduce GeneHound results using a MACAU-based approach.
+
+This script:
+1. Loads gene-disease association data.
+2. Loads side information for genes and diseases.
+3. Trains multiple MACAU models (with different latent dimensions).
+4. Evaluates the models and produces:
+   - ROC curves
+   - AUC/loss tables
+   - BEDROC scores
+
+Usage:
+    python genehound_pipeline.py \
+        --input-path /path/to/data \
+        --output-path /path/to/results
+"""
+import argparse
 import logging
 import os
+import sys
 import traceback
 from pathlib import Path
 
@@ -18,24 +36,46 @@ from NEGradient_GenePriority import (
 )
 
 
-def setup_logger(log_file: str):
+def setup_logger(log_file: Path) -> None:
     """
-    Configures the root logger to write to a log file and console.
+    Configures the root logger to write to a log file and also to the console.
+
+    Args:
+        log_file (Path): Path to the log file where logs will be written.
     """
     logging.basicConfig(
         level=logging.DEBUG,
         format="%(asctime)s - %(name)s - [%(funcName)s] - %(levelname)s - %(message)s",
         handlers=[
             logging.FileHandler(log_file, mode="w"),
+            logging.StreamHandler(sys.stdout),
         ],
     )
 
 
-def main():
-    """Main"""
-    # Setup paths
-    input_path = Path("/home/TheGreatestCoder/code/data/postprocessed/").absolute()
-    output_path = Path("/home/TheGreatestCoder/code/genehounds/").absolute()
+def main() -> None:
+    """
+    Main entry point for the GeneHound reproduction pipeline.
+    """
+    parser = argparse.ArgumentParser(
+        description="Reproduce GeneHound results using MACAU-based approach."
+    )
+    parser.add_argument(
+        "--input-path",
+        type=str,
+        default="/home/TheGreatestCoder/code/data/postprocessed/",
+        help="Path to the directory containing input data, including 'gene-disease.csv'.",
+    )
+    parser.add_argument(
+        "--output-path",
+        type=str,
+        default="/home/TheGreatestCoder/code/genehounds/",
+        help="Path to the directory where output results will be saved.",
+    )
+    args = parser.parse_args()
+
+    input_path = Path(args.input_path).absolute()
+    output_path = Path(args.output_path).absolute()
     os.makedirs(output_path, exist_ok=True)
 
     # Setup logger
@@ -43,6 +83,7 @@ def main():
     setup_logger(log_file)
     logger = logging.getLogger(__name__)
 
+    # Validate input path
     if not input_path.exists():
         logger.error("The input path does not exist: %s", input_path)
         raise FileNotFoundError(f"The input path does not exist: {input_path}")
@@ -51,7 +92,6 @@ def main():
         ############################
         # LOAD DATA
         ############################
-        # Set parameters
         logger.debug("Setting parameters for splits and MACAU")
         latent_dimensions = [25, 30, 40]
         num_splits = 6
@@ -63,7 +103,7 @@ def main():
         train_size = 0.9
         min_associations = 10
 
-        # load data
+        # Load gene-disease data
         dataloader = DataLoader(
             nb_genes=nb_genes,
             nb_diseases=nb_diseases,
@@ -75,9 +115,9 @@ def main():
             train_size=train_size,
             min_associations=min_associations,
         )
-        dataloader(filter_column="Disease ID")  # load the data
+        dataloader(filter_column="Disease ID")
 
-        # load side information
+        # Load side information
         interpro_path = input_path / "interpro.csv"
         uniprot_path = input_path / "uniprot.csv"
         go_path = input_path / "go.csv"
@@ -94,19 +134,15 @@ def main():
         ############################
         # RUN TRAINING AND PREDICT
         ############################
-        # Configure and run MACAU
         logger.debug("Configuring MACAU session")
         num_samples = 3_500
         burnin_period = 500
         save_freq = 100
-        # Whether to use a Cholesky instead of conjugate gradient (CG) solver.
-        # Keep true until the column features side information (F_e) reaches ~20,000.
-        direct = False
-        univariate = True  # Whether to use univariate or multivariate sampling.
+        direct = False  # Whether to use Cholesky solver
+        univariate = True  # Whether to use univariate or multivariate sampling
         verbose = 0
-        omim1_results = {}
-        omim2_results = {}
 
+        # Initialize MACAUTrainer
         trainer = MACAUTrainer(
             dataloader=dataloader,
             side_info_loader=side_info_loader,
@@ -120,6 +156,8 @@ def main():
             verbose=verbose,
             logger=logger,
         )
+
+        # Run training for multiple latent dimensions
         omim1_results, omim2_results = trainer(
             latent_dimensions=latent_dimensions, save_results=True
         )
@@ -137,32 +175,45 @@ def main():
             ModelEvaluationCollection(omim1_results),
             ModelEvaluationCollection(omim2_results),
         ]
-        for i, collection in enumerate(collections, 1):
+
+        # Plot ROC curves for OMIM1 and OMIM2
+        for i, collection in enumerate(collections, start=1):
             plot_roc_curves(
                 evaluation_collection=collection,
-                output_file=(output_path / f"roc_curve_omim{i}"),
+                output_file=output_path / f"roc_curve_omim{i}",
             )
 
-        collection = collections[0]
+        # Generate AUC/Loss table for OMIM1
+        collection_omim1 = collections[0]
         auc_loss_dataframe = generate_auc_loss_table(
-            collection.compute_auc_losses(),
-            model_names=collection.model_names,
+            collection_omim1.compute_auc_losses(),
+            model_names=collection_omim1.model_names,
         )
-        auc_loss_dataframe.to_csv(output_path / f"auc_loss_omim1.csv")
+        auc_loss_csv_path = output_path / "auc_loss_omim1.csv"
+        auc_loss_dataframe.to_csv(auc_loss_csv_path)
+        logger.info("AUC/Loss table saved: %s", auc_loss_csv_path)
 
-        collection = collections[1]
+        # Generate BEDROC plots for OMIM2
+        collection_omim2 = collections[1]
+        bedroc_scores = collection_omim2.compute_bedroc_scores()
+        bedroc_plot_path = output_path / "bedroc_omim2.png"
         plot_bedroc_boxplots(
-            collection.compute_bedroc_scores(),
-            model_names=latent_dimensions,
-            output_file=(output_path / f"bedroc_omim2.png"),
+            bedroc_scores, model_names=latent_dimensions, output_file=bedroc_plot_path
         )
-        bedroc_dataframe = generate_bedroc_table(
-            collection.compute_bedroc_scores(),
-            model_names=collection.model_names,
+        logger.info("BEDROC boxplots saved: %s", bedroc_plot_path)
+
+        # Generate BEDROC table for OMIM2
+        bedroc_df = generate_bedroc_table(
+            bedroc_scores,
+            model_names=collection_omim2.model_names,
             alpha_map=alpha_map,
         )
-        bedroc_dataframe.to_csv(output_path / f"bedroc_omim2.csv")
+        bedroc_csv_path = output_path / "bedroc_omim2.csv"
+        bedroc_df.to_csv(bedroc_csv_path)
+        logger.info("BEDROC table saved: %s", bedroc_csv_path)
+
         logger.debug("Figures and tables creation completed successfully")
+
     except Exception as exception:
         logger.error("An error occurred during processing: %s", exception)
         logger.error("%s", traceback.format_exc())
