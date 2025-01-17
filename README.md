@@ -12,7 +12,7 @@ The repository **NEGradient_GenePriority** (short for "Non-Euclidean Gradient Me
 
 ## Overview
 
-[![](https://mermaid.ink/img/pako:eNptlEtv4jAQx7_KyGeKyJPHYSUKLItEilQ4beDgkmmwSpzIdnbbAt-9jh3Y0KwPyJ7feMJ_Hj6RfZ4gGZFU0OIAy-ctB71k-WINz1ggVRC-W_s4XkWLaAcPDz_Oa5oVR4SePMOjMTs76_RYYZjEG0EZh3VxZOqOTOMNSnUHkCd2Y38nxm8eT_KsKBXCc7SewbQUjKdgoupNfXNqXe1hFi9zmsCaJQgL_pqLjCqWc6A8gafqdGSfCH-ZOsBPkb8gZ6U0wCpacIlCta6fr-F_xROhs4H6CpMIkc7ccdf8_twcFlY5JtZD7prSbpm1zBqrtTB3Iyc2AK7JbCC3Rm4beTXy2sivkd9GQY2CNgprFP6_QDcVVYWOqCqtVAm2x4aiyDGxVlpTsz0McmvkGtRUFHk18gxqKor8GvkGNRVFQY0Cg5qKorBGoUF3ir6pGaepwLSq8OYg8jLVVULKYVWgMJ3wL-iqFrc0MWH8R3ukmOyaHlbjsmny2ia_bQraprBp-laMpWnesZRlppuSSVmNyZQqClTY-XyK58grDXqUKH-ToHsbZnR_gKluZKp7uZqQ27RplypEhFVF5Y50SIZ6Flii34lT9c0tUQfMcEtGeptQ8bYlW37RfrRU-fqD78lIiRI7xCSRjF7pUepTWST6L0wZ1dnObtaC8t95nl2vYMJULiL7KpnHybiQ0Ym8k5HbDQKv54RuLwjDoet6fod8aLMz7A5DPxgMQ2cw7Pd7_UuHfJqoTrdnV-CEQS_wBpcvmgtl3Q?type=png)](https://mermaid.live/edit#pako:eNptlEtv4jAQx7_KyGeKyJPHYSUKLItEilQ4beDgkmmwSpzIdnbbAt-9jh3Y0KwPyJ7feMJ_Hj6RfZ4gGZFU0OIAy-ctB71k-WINz1ggVRC-W_s4XkWLaAcPDz_Oa5oVR4SePMOjMTs76_RYYZjEG0EZh3VxZOqOTOMNSnUHkCd2Y38nxm8eT_KsKBXCc7SewbQUjKdgoupNfXNqXe1hFi9zmsCaJQgL_pqLjCqWc6A8gafqdGSfCH-ZOsBPkb8gZ6U0wCpacIlCta6fr-F_xROhs4H6CpMIkc7ccdf8_twcFlY5JtZD7prSbpm1zBqrtTB3Iyc2AK7JbCC3Rm4beTXy2sivkd9GQY2CNgprFP6_QDcVVYWOqCqtVAm2x4aiyDGxVlpTsz0McmvkGtRUFHk18gxqKor8GvkGNRVFQY0Cg5qKorBGoUF3ir6pGaepwLSq8OYg8jLVVULKYVWgMJ3wL-iqFrc0MWH8R3ukmOyaHlbjsmny2ia_bQraprBp-laMpWnesZRlppuSSVmNyZQqClTY-XyK58grDXqUKH-ToHsbZnR_gKluZKp7uZqQ27RplypEhFVF5Y50SIZ6Flii34lT9c0tUQfMcEtGeptQ8bYlW37RfrRU-fqD78lIiRI7xCSRjF7pUepTWST6L0wZ1dnObtaC8t95nl2vYMJULiL7KpnHybiQ0Ym8k5HbDQKv54RuLwjDoet6fod8aLMz7A5DPxgMQ2cw7Pd7_UuHfJqoTrdnV-CEQS_wBpcvmgtl3Q)
+[![](https://mermaid.ink/img/pako:eNptlE1P4zAQhv_KyOeC2nxCDiuVlu1WaqhEOW2ag2mG1KJxItvZBVr-O44duoZsDpE9z8wkr2fGR7KrCyQJKQVt9rC633LQzzRbp8s0h4uLH6cNrZoDwlie4MaYJ7l1ku2jjbrHBqmC6MXab7owmGUPgjIOm-bAVO6SefaAUn0ByAu7sO-Z8Vtks7pqWoVwn25uYd4KxkswWfWij5xbV7u5zVY1LWDDCoQlf6pFRRWrOVBewF23O7A3hL9M7eGnqB-Rs1YaYJUuuUShBuGnz_S_spnQQlGHMImQ6pM75O73F2aztMqxsB4yd6WdD80ya-yepYlNJ5kB8HnIDvJ65A2R3yN_iIIeBUMU9igcoqhH0f8LdFbRVeiAqtNKlWA7dBSlE5NrrTW5bWOQ1yPPIFdR6vfIN8hVlAY9CgxyFaVhj0KDXEVp1KPIoC-KvqmZlqXAsqvww17UbamrhJTDukFhOuFf0nUvbmVywvSP9iixyF0Pq3HlmvyhKRiawqEpck3firEyzTuVsq10UzIpuzGZU0WBCju3d9kCeadBjxLlzxJ0b8Mt3e1hrhuZ6l7uJuQ8bdqlS5FiV1GZkxGpUM8CK_Q9cey-uSVqjxVuSaKXBRXPW7Ll79qPtqrevPIdSZRocUTMIZLkiR6k3rVNoX9hzqg-7epsbSj_XdfVZwgWTNUitbeSuZyMC0mO5IUkF17gX0aRF0-uwtAL4nHsjcgrSWL_0pvEkziIAz_249B_H5E3k9W79Pxr7R9ej4Pgyg8i7_0D2xRmHg?type=png)](https://mermaid.live/edit#pako:eNptlE1P4zAQhv_KyOeC2nxCDiuVlu1WaqhEOW2ag2mG1KJxItvZBVr-O44duoZsDpE9z8wkr2fGR7KrCyQJKQVt9rC633LQzzRbp8s0h4uLH6cNrZoDwlie4MaYJ7l1ku2jjbrHBqmC6MXab7owmGUPgjIOm-bAVO6SefaAUn0ByAu7sO-Z8Vtks7pqWoVwn25uYd4KxkswWfWij5xbV7u5zVY1LWDDCoQlf6pFRRWrOVBewF23O7A3hL9M7eGnqB-Rs1YaYJUuuUShBuGnz_S_spnQQlGHMImQ6pM75O73F2aztMqxsB4yd6WdD80ya-yepYlNJ5kB8HnIDvJ65A2R3yN_iIIeBUMU9igcoqhH0f8LdFbRVeiAqtNKlWA7dBSlE5NrrTW5bWOQ1yPPIFdR6vfIN8hVlAY9CgxyFaVhj0KDXEVp1KPIoC-KvqmZlqXAsqvww17UbamrhJTDukFhOuFf0nUvbmVywvSP9iixyF0Pq3HlmvyhKRiawqEpck3firEyzTuVsq10UzIpuzGZU0WBCju3d9kCeadBjxLlzxJ0b8Mt3e1hrhuZ6l7uJuQ8bdqlS5FiV1GZkxGpUM8CK_Q9cey-uSVqjxVuSaKXBRXPW7Ll79qPtqrevPIdSZRocUTMIZLkiR6k3rVNoX9hzqg-7epsbSj_XdfVZwgWTNUitbeSuZyMC0mO5IUkF17gX0aRF0-uwtAL4nHsjcgrSWL_0pvEkziIAz_249B_H5E3k9W79Pxr7R9ej4Pgyg8i7_0D2xRmHg)
 
 1. **Problem Formulation**:  
    - **Input**: Matrix $O$ of gene-disease associations ($O_{ij} = 1$ for known associations, $O_{ij} = 0$ for unknown or missing associations).  
@@ -65,16 +65,13 @@ The above procedure describes the general approach. However, the reference paper
 - Sparsity factor $\alpha$, the ratio of 0s to 1s.  
 
 **Output**:  
-- Unified sparse matrices: $O_{1_{i}} \quad \forall i \in \{1, N\}$  
-- Combined splits: $S_{1_{i}} \quad \forall i \in \{1, N\}$  
+- Sparse matrix: $O_{1}$  
+- Splits: $S_{1_{i}} \quad \forall i \in \{1, N\}$  
 
 **Procedure**:  
 1. Convert $d$ into a sparse matrix $O_{1_{1s}}$.  
-2. Sample $N$ zero matrices $O_{1_{0s, i}}$ from $O_{1_{1s}}$ using $\alpha \quad \forall i \in \{1, N\}$.  
-3. Combine $O_{1_{1s}}$ and $O_{1_{0s, i}}$ into unified matrices $O_{1_{i}} \quad \forall i \in \{1, N\}$.  
-4. Split $O_{1_{1s}}$ indices randomly into subsets $S_{1_{1s}}$.  
-5. Split $O_{1_{0s, i}}$ indices randomly into subsets $S_{1_{0s, i}} \quad \forall i \in \{1, N\}$.  
-6. Merge splits from positive ($S_{1_{1s}}$) and zero ($S_{1_{0s, i}}$) samples into $S_{1_{i}} \quad \forall i \in \{1, N\}$.  
+2. Sample $N$ zeros to get $O_{1}$ from $O_{1_{1s}}$ using $\alpha$.  
+3. Split $O_{1}$ indices randomly into subsets $S_{1_{i}} \quad \forall i \in \{1, N\}$.  
 
 ---
 
@@ -87,17 +84,14 @@ The above procedure describes the general approach. However, the reference paper
 - Sparsity factor $\alpha$, the ratio of 0s to 1s.  
 
 **Output**:  
-- Unified sparse matrix: $O_2$
-- Combined folds: $S_2$  
+- Sparse matrix: $O_2$
+- Folds: $F_{2_{i}} \quad \forall i \in \{1, N\}$
 
 **Procedure**:  
 1. Filter diseases with fewer than $T$ associations.  
 2. Convert $d$ into a sparse matrix $O_{2_{1s}}$.  
-3. Sample zeros from $O_{2_{1s}}$ using $\alpha$.  
-4. Combine $O_{2_{1s}}$ and $O_{2_{0s}}$ into a unified matrix $O_2$.  
-5. Split $O_{2_{1s}}$ indices randomly into subsets $S_{2_{1s}}$.  
-6. Split $O_{2_{0s}}$ indices randomly into subsets $S_{2_{0s}}$.  
-7. Merge splits from positive ($S_{2_{1s}}$) and zero ($S_{2_{0s}}$) samples into $S_2$.  
+5. Sample $N$ zeros to get $O_{2}$ from $O_{2_{1s}}$ using $\alpha$.  
+6. Split $O_{2}$ indices randomly into $N$ folds $F_{2_{i}} \quad \forall i \in \{1, N\}$.  
 
 ---
 

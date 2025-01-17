@@ -15,7 +15,9 @@ packages = [
     "NEGradient_GenePriority",
     "NEGradient_GenePriority.evaluation",
     "NEGradient_GenePriority.postprocessing",
-    "NEGradient_GenePriority.preprocessing"
+    "NEGradient_GenePriority.preprocessing",
+    "NEGradient_GenePriority.trainer",
+    "NEGradient_GenePriority.compute_models"
 ]
 
 [tool.setuptools.dynamic]

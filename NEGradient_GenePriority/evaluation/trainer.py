@@ -68,7 +68,7 @@ class Trainer:
         verbose: Literal[0, 1, 2],
         side_info_loader: SideInformationLoader = None,
         logger: logging.Logger = None,
-    ) -> None:
+    ):
         """
         Initialize the Trainer class with the given configuration.
 

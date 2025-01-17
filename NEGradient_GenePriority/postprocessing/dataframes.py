@@ -5,6 +5,7 @@ Dataframes module
 Post-processing producing dataframes for summarizing evaluation metrics and results.
 """
 from typing import Dict, List
+
 import numpy as np
 import pandas as pd
 
@@ -33,9 +34,7 @@ def generate_auc_loss_table(
     """
     dataframe = pd.DataFrame(
         auc_loss, columns=[avg_auc_loss_name, std_auc_loss_name], index=model_names
-    ).map(
-        lambda x: f"{x:.2e}"
-    )
+    ).map(lambda x: f"{x:.2e}")
     return dataframe
 
 
@@ -47,41 +46,45 @@ def generate_bedroc_table(
     std_bedroc_score_name: str = "Std BEDROC score",
 ) -> pd.DataFrame:
     """
-    Generates a table summarizing the averaged BEDROC scores and their 
+    Generates a table summarizing the averaged BEDROC scores and their
     standard deviations for each model across specified alpha values.
 
     Args:
-        bedroc (np.ndarray): A 3D array containing BEDROC scores for each model, 
+        bedroc (np.ndarray): A 3D array containing BEDROC scores for each model,
             each disease, and different alpha values.
             Shape: (alphas, diseases, models).
         model_names (List[str]): Names of the models corresponding to the BEDROC scores.
-        alpha_map (Dict[float, str]): A mapping of alpha values (e.g., 0.2, 0.5) to 
+        alpha_map (Dict[float, str]): A mapping of alpha values (e.g., 0.2, 0.5) to
             descriptive strings used for table column naming.
-        avg_bedroc_score_name (str, optional): Column name prefix for averaged BEDROC scores. 
+        avg_bedroc_score_name (str, optional): Column name prefix for averaged BEDROC scores.
             Defaults to "Averaged BEDROC score".
-        std_bedroc_score_name (str, optional): Column name prefix for standard deviation 
+        std_bedroc_score_name (str, optional): Column name prefix for standard deviation
             of BEDROC scores. Defaults to "Std BEDROC score".
 
     Returns:
-        pd.DataFrame: A DataFrame summarizing the averaged BEDROC scores and their 
-        standard deviations for each model across different alpha values. Columns 
+        pd.DataFrame: A DataFrame summarizing the averaged BEDROC scores and their
+        standard deviations for each model across different alpha values. Columns
         are dynamically generated based on the alpha values.
     """
     if len(alpha_map) != bedroc.shape[0]:
         raise ValueError
 
-    bedroc = np.hstack((bedroc.mean(axis=1), bedroc.std(axis=1))).reshape((-1, len(alpha_map)*2)) #shape = (model, alphas*2)
+    bedroc = np.hstack((bedroc.mean(axis=1), bedroc.std(axis=1))).reshape(
+        (-1, len(alpha_map) * 2)
+    )  # shape = (model, alphas*2)
 
-    column_names = np.array([
-        (f"{avg_bedroc_score_name} (top {alpha})",
-        f"{std_bedroc_score_name} (top {alpha})")
-        for alpha in alpha_map.values()
-    ]).flatten()
-    
-    dataframe = pd.DataFrame(
-        bedroc, 
-        columns=column_names, 
-        index=model_names
-    ).map(lambda x: f"{x:.2e}")
-    
+    column_names = np.array(
+        [
+            (
+                f"{avg_bedroc_score_name} (top {alpha})",
+                f"{std_bedroc_score_name} (top {alpha})",
+            )
+            for alpha in alpha_map.values()
+        ]
+    ).flatten()
+
+    dataframe = pd.DataFrame(bedroc, columns=column_names, index=model_names).map(
+        lambda x: f"{x:.2e}"
+    )
+
     return dataframe

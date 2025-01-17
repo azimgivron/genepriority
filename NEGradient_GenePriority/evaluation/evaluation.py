@@ -6,7 +6,7 @@ Defines the `Evaluation` class for storing and managing evaluation metrics
 such as ROC curve data, AUC loss, and BEDROC scores.
 """
 
-from typing import Dict, List, Tuple
+from typing import Dict, List
 
 import numpy as np
 from scipy import interpolate
@@ -118,8 +118,20 @@ class Evaluation:
             thr.update(thr_per_disease)  # Add elements to the set, avoiding nested sets
             fpr_tpr_interp.append(
                 (
-                    interpolate.interp1d(thr_per_disease, fpr_per_disease, bounds_error=False, kind="nearest", fill_value="extrapolate"),
-                    interpolate.interp1d(thr_per_disease, tpr_per_disease, bounds_error=False, kind="nearest", fill_value="extrapolate"),
+                    interpolate.interp1d(
+                        thr_per_disease,
+                        fpr_per_disease,
+                        bounds_error=False,
+                        kind="nearest",
+                        fill_value="extrapolate",
+                    ),
+                    interpolate.interp1d(
+                        thr_per_disease,
+                        tpr_per_disease,
+                        bounds_error=False,
+                        kind="nearest",
+                        fill_value="extrapolate",
+                    ),
                 )
             )
 
