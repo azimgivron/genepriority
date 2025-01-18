@@ -26,7 +26,7 @@ from NEGradient_GenePriority.preprocessing.dataloader import DataLoader
 from NEGradient_GenePriority.preprocessing.side_information_loader import (
     SideInformationLoader,
 )
-from NEGradient_GenePriority.utils import save_evaluations
+from NEGradient_GenePriority.utils import serialize
 
 
 class BaseTrainer(metaclass=ABCMeta):
@@ -55,7 +55,7 @@ class BaseTrainer(metaclass=ABCMeta):
         seed: int,
         side_info_loader: SideInformationLoader = None,
         logger: logging.Logger = None,
-        tensorboard_base_log_dir: Path = None
+        tensorboard_base_log_dir: Path = None,
     ):
         """
         Initialize the Trainer class with the given configuration.
@@ -122,8 +122,8 @@ class BaseTrainer(metaclass=ABCMeta):
         if save_results:
             omim2_results_path = self.path / omim2_filename
             omim1_results_path = self.path / omim1_filename
-            save_evaluations(omim2_results, omim2_results_path)
-            save_evaluations(omim1_results, omim1_results_path)
+            serialize(omim2_results, omim2_results_path)
+            serialize(omim1_results, omim1_results_path)
             self.logger.debug("Results serialization completed successfully")
         return omim1_results, omim2_results
 
@@ -170,7 +170,9 @@ class BaseTrainer(metaclass=ABCMeta):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def log_training_info(self, training_status: Any, session: Any, run_name: str) -> None:
+    def log_training_info(
+        self, training_status: Any, session: Any, run_name: str
+    ) -> None:
         """
         Logs training information for monitoring and debugging purposes.
 
@@ -193,7 +195,6 @@ class BaseTrainer(metaclass=ABCMeta):
                 separate directories, namespaces, or keys for storing logs.
         """
         raise NotImplementedError
-
 
     def train_test(
         self,

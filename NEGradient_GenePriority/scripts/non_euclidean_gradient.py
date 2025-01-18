@@ -18,7 +18,9 @@ from pathlib import Path
 
 import pint
 
-from NEGradient_GenePriority import DataLoader, NEGTrainer
+from NEGradient_GenePriority.preprocessing import DataLoader
+from NEGradient_GenePriority.trainer import NEGTrainer
+from NEGradient_GenePriority.utils import serialize
 
 
 def setup_logger(log_file: Path) -> None:
@@ -101,13 +103,12 @@ def cross_validation(
             load_if_exists=False,
             n_trials=n_trials,
             timeout=pint.Quantity(8, "h").to("s").m,  # 8-hour timeout
-            num_latent=rank
+            num_latent=rank,
         )
 
         # Save the Optuna study
         study_file = output_path / f"study-rank{rank}-it{iterations}.pickle"
-        with open(study_file, "wb") as handler:
-            pickle.dump(optuna_study, handler)
+        serialize(optuna_study, study_file)
         logger.info(
             "Cross-validation completed successfully. Optuna study saved at %s",
             study_file,
@@ -179,8 +180,7 @@ def train_eval(logger: logging.Logger, input_path: Path, output_path: Path) -> N
 
         # Save the evaluation results
         evaluation_file = output_path / "evaluation.pickle"
-        with open(evaluation_file, "wb") as handler:
-            pickle.dump(evaluation_results, handler)
+        serialize(evaluation_results, evaluation_file)
         logger.info(
             "Train-eval completed successfully. Results saved at %s", evaluation_file
         )

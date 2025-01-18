@@ -11,7 +11,6 @@ Features:
 - Evaluation through RMSE and loss metrics.
 """
 import logging
-import pickle
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -20,6 +19,8 @@ from typing import List
 import numpy as np
 import scipy.sparse as sp
 from sklearn.metrics import mean_squared_error
+
+from NEGradient_GenePriority.utils import serialize
 
 
 @dataclass
@@ -502,8 +503,7 @@ class MatrixCompletionSession:
             "[Completion] Optimization finished in %.2f seconds.", runtime
         )
         if self.save_name is not None:
-            with open(self.save_name, "wb") as handler:
-                pickle.dump(self, handler)
+            serialize(self, self.save_name)
         training_data = MatrixCompletionResult(
             completed_matrix=self.predict_all(),
             loss_history=loss,

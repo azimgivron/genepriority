@@ -5,25 +5,21 @@ Utils module
 This module defines the utility functions.
 """
 import pickle
-from typing import Dict
+from typing import Any, Dict
 
 import scipy.sparse as sp
 
-from NEGradient_GenePriority.evaluation.evaluation import Evaluation
 
-
-def save_evaluations(results: Dict[str, Evaluation], output_path: str):
+def serialize(object: Any, output_path: str):
     """
-    Save evaluation results to a file in binary format using pickle.
+    Save object to a file in binary format using pickle.
 
     Args:
-        results (Dict[str, Evaluation]): A dictionary where keys are descriptive strings
-            (e.g., latent dimensions or other identifiers) and values are `Evaluation` objects
-            containing evaluation metrics and results.
-        output_path (str): The file path where the results should be saved.
+        object (Any): An object to serialize.
+        output_path (str): The file path where the object should be saved.
     """
     with open(output_path, "wb") as handler:
-        pickle.dump(results, handler)
+        pickle.dump(object, handler)
 
 
 def mask_sparse_containing_0s(

@@ -13,7 +13,6 @@ for preprocessing, and saving evaluation results for further analysis.
 """
 
 import logging
-import pickle
 from typing import Dict, List, Literal, Tuple
 
 import numpy as np
@@ -26,6 +25,7 @@ from NEGradient_GenePriority.preprocessing.dataloader import DataLoader
 from NEGradient_GenePriority.preprocessing.side_information_loader import (
     SideInformationLoader,
 )
+from NEGradient_GenePriority.utils import serialize
 
 
 class Trainer:
@@ -165,8 +165,8 @@ class Trainer:
         if save_results:
             omim2_results_path = self.path / omim2_filename
             omim1_results_path = self.path / omim1_filename
-            save_evaluations(omim2_results, omim2_results_path)
-            save_evaluations(omim1_results, omim1_results_path)
+            serialize(omim2_results, omim2_results_path)
+            serialize(omim1_results, omim1_results_path)
             self.logger.debug("Results serialization completed successfully")
         return omim1_results, omim2_results
 
@@ -290,17 +290,3 @@ class Trainer:
                 Results(y_true=self.dataloader.omim1[i].tocsr(), y_pred=y_pred)
             )
         return Evaluation(results)
-
-
-def save_evaluations(results: Dict[str, Evaluation], output_path: str):
-    """
-    Save evaluation results to a file in binary format using pickle.
-
-    Args:
-        results (Dict[str, Evaluation]): A dictionary where keys are descriptive strings
-            (e.g., latent dimensions or other identifiers) and values are `Evaluation` objects
-            containing evaluation metrics and results.
-        output_path (str): The file path where the results should be saved.
-    """
-    with open(output_path, "wb") as handler:
-        pickle.dump(results, handler)

@@ -71,7 +71,7 @@ class NEGTrainer(BaseTrainer):
         threshold: int = None,
         side_info_loader: SideInformationLoader = None,
         logger: logging.Logger = None,
-        tensorboard_base_log_dir: Path = None
+        tensorboard_base_log_dir: Path = None,
     ):
         """
         Initializes the NEGTrainer class with the provided configuration.
@@ -195,7 +195,10 @@ class NEGTrainer(BaseTrainer):
         )
 
     def log_training_info(
-        self, training_status: MatrixCompletionResult, session: MatrixCompletionSession, run_name: str
+        self,
+        training_status: MatrixCompletionResult,
+        session: MatrixCompletionSession,
+        run_name: str,
     ):
         """
         Logs training information for monitoring and debugging purposes.
@@ -272,7 +275,6 @@ class NEGTrainer(BaseTrainer):
                     description="Maximum iterations allowed for the inner optimization loop.",
                 )
                 tf.summary.flush()
-
 
     def fine_tune(self, n_trials: int, timeout: float, num_latent: int, **kwargs):
         """
