@@ -11,8 +11,8 @@ requires-python = ">=3.11"
 dynamic = ["version", "dependencies"]
 
 [project.scripts]
-genehound = "NEGradient_GenePriority.scripts.genehound.main:main"
-nega = "NEGradient_GenePriority.scripts.nega.main:main"
+genehound = "NEGradient_GenePriority.scripts.genehound:main"
+nega = "NEGradient_GenePriority.scripts.nega:main"
 
 [tool.setuptools]
 packages = [

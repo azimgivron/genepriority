@@ -1,0 +1,29 @@
+services:
+  nega:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: nega
+    command: zsh
+    stdin_open: true  # Keeps the container open for interactive sessions
+    tty: true         # Allocates a pseudo-TTY
+    ports:
+      - "8080:8080" # Adjust if needed for your custom service
+    environment:
+      - HOSTNAME=thesis-server
+      - USERNAME=TheGreatestCoder
+    volumes:
+      - shared-logs:/home/TheGreatestCoder/code/logs
+      - ..:/home/TheGreatestCoder/code
+
+  tensorboard:
+    image: tensorflow/tensorflow:latest
+    command: tensorboard --logdir=/logs --host=0.0.0.0
+    ports:
+      - "6006:6006"
+    volumes:
+      - shared-logs:/logs
+
+volumes:
+  shared-logs:
+    driver: local

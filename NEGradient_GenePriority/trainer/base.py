@@ -55,7 +55,6 @@ class BaseTrainer(metaclass=ABCMeta):
         seed: int,
         side_info_loader: SideInformationLoader = None,
         logger: logging.Logger = None,
-        tensorboard_base_log_dir: Path = None,
     ):
         """
         Initialize the Trainer class with the given configuration.
@@ -231,7 +230,8 @@ class BaseTrainer(metaclass=ABCMeta):
                 i, matrix, train_mask, test_mask, num_latent, save_name
             )
             training_status = session.run()
-            self.log_training_info(training_status, session)
+            run_name = f"{desc}{i+1}-latent{num_latent}"
+            self.log_training_info(training_status, session, run_name)
 
             y_pred = self.predict(session)
             results.append(Results(y_true=matrix.tocsr(), y_pred=y_pred))

@@ -10,16 +10,16 @@ from typing import Any
 import scipy.sparse as sp
 
 
-def serialize(object: Any, output_path: str):
+def serialize(object_instance: Any, output_path: str):
     """
     Save object to a file in binary format using pickle.
 
     Args:
-        object (Any): An object to serialize.
+        object_instance (Any): An object to serialize.
         output_path (str): The file path where the object should be saved.
     """
     with open(output_path, "wb") as handler:
-        pickle.dump(object, handler)
+        pickle.dump(object_instance, handler)
 
 
 def mask_sparse_containing_0s(

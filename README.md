@@ -177,6 +177,68 @@ NEGradient_GenePriority/
 
 ---
 
+Here’s how you can add a **Scripts Usage** section to your README file, providing detailed guidance on how to use the `nega.py` and `genehound.py` scripts:
+
+---
+
+### Scripts Usage
+
+The `NEGradient_GenePriority` repository provides two main scripts for running experiments and reproducing results. Below is a guide to using these scripts:
+
+#### 1. **`nega.py`**: Non-Euclidean Gradient Algorithm (NEGA2)
+This script performs **cross-validation** for hyperparameter tuning or a **train-eval pipeline** for gene prioritization using the NEGA2 algorithm.
+
+**Usage**:
+```bash
+python -m NEGradient_GenePriority.scripts.nega \
+    --mode <cross-validation|train-eval> \
+    [--input-path <path_to_input_data>] \
+    [--output-path <path_to_output_data>]
+```
+
+**Arguments**:
+- `--mode`: Specifies the pipeline step to run. Options are:
+  - `cross-validation`: For hyperparameter tuning using Optuna.
+  - `train-eval`: For training and testing the model on a predefined split.
+- `--input-path` (optional): Path to the input data directory. Defaults to `/home/TheGreatestCoder/code/data/postprocessed/`.
+- `--output-path` (optional): Path to the output directory. Defaults to `/home/TheGreatestCoder/code/neg/`.
+
+**Example**:
+```bash
+python -m NEGradient_GenePriority.scripts.nega \
+    --mode cross-validation \
+    --input-path /path/to/input/data \
+    --output-path /path/to/output/data
+```
+
+#### 2. **`genehound.py`**: Reproduce GeneHound Results
+This script reproduces the GeneHound pipeline using the MACAU-based approach. It trains multiple models, evaluates their performance, and generates visualizations and metrics.
+
+**Usage**:
+```bash
+python -m NEGradient_GenePriority.scripts.genehound \
+    [--input-path <path_to_input_data>] \
+    [--output-path <path_to_output_data>]
+```
+
+**Arguments**:
+- `--input-path` (optional): Path to the directory containing input data, including `gene-disease.csv`. Defaults to `/home/TheGreatestCoder/code/data/postprocessed/`.
+- `--output-path` (optional): Path to the directory where output results will be saved. Defaults to `/home/TheGreatestCoder/code/genehounds/`.
+
+**Example**:
+```bash
+python -m NEGradient_GenePriority.scripts.genehound \
+    --input-path /path/to/input/data \
+    --output-path /path/to/output/results
+```
+
+**Outputs**:
+- ROC Curves: Visualizations of model performance.
+- AUC and BEDROC tables: Tabular metrics evaluating the ranking quality.
+- Boxplots: Visual comparison of BEDROC scores for multiple models.
+
+---
+
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
