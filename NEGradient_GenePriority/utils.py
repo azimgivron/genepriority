@@ -5,7 +5,7 @@ Utils module
 This module defines the utility functions.
 """
 import pickle
-from typing import Any, Dict
+from typing import Any
 
 import scipy.sparse as sp
 

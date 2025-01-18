@@ -6,9 +6,14 @@
     <img width="40%" src=".images/NEGradient_GenePriority-logo.png" >
 </p>
 
-The repository **NEGradient_GenePriority** (short for "Non-Euclidean Gradient Methods for Matrix Completion in Gene Prioritization") provides the code and data to reproduce the results presented in the paper "[Gene prioritization using Bayesian matrix factorization with genomic and phenotypic side information.](https://pubmed.ncbi.nlm.nih.gov/29949967/)" This study introduces a novel method for gene prioritization by combining Bayesian matrix factorization (BMF) with genomic and phenotypic side information, enabling robust predictions and improved identification of disease-associated genes.
+The repository **NEGradient_GenePriority** (short for "Non-Euclidean Gradient Methods for Matrix Completion in Gene Prioritization") is designed to implement and evaluate algorithms on the *Online Mendelian Inheritance in Man* (OMIM) dataset for gene prioritization. The goal is to identify disease-associated genes by leveraging genomic and phenotypic side information. 
 
----
+This repository focuses on producing results using the **NEGA2 algorithm**, as described in the paper *"Non-Euclidean Gradient Methods: Convergence, Complexity, and Applications"*. The results will be compared with the outcomes from the method presented in *"Gene prioritization using Bayesian matrix factorization with genomic and phenotypic side information"* ([Zakeri et al., 2018](https://pubmed.ncbi.nlm.nih.gov/29949967/)). To ensure coherence in algorithm implementation and evaluation, results from the GeneHound method were reproduced as a baseline.
+
+**References**
+
+1. Ghaderi, S., Moreau, Y., & Ahookhosh, M. (2022). *Non-Euclidean Gradient Methods: Convergence, Complexity, and Applications*. Journal of Machine Learning Research, 23(2022):1-44.
+2. Zakeri, P., Simm, J., Arany, A., ElShal, S., & Moreau, Y. (2018). *Gene prioritization using Bayesian matrix factorization with genomic and phenotypic side information.* Bioinformatics, 34(13), i447–i456. doi:10.1093/bioinformatics/bty289. PMID: 29949967; PMCID: PMC6022676.
 
 ## Overview
 
@@ -127,40 +132,48 @@ The above procedure describes the general approach. However, the reference paper
 
 ---
 
-## Usage
-
-Run the main script to reproduce the results:
-
-```bash
-python main.py
-```
-
-This script performs gene prioritization using Bayesian matrix factorization with genomic and phenotypic side information.
-
----
-
 ## Repository Structure
 
+### Root Directory
+
 - **`NEGradient_GenePriority/`**: Main modules for preprocessing, matrix operations, and evaluation.
-- **`main.py`**: Main script for running the gene prioritization pipeline.
 - **`requirements.txt`**: List of dependencies for the project.
 - **`Dockerfile`**: Configuration for containerized deployment.
 - **`pyproject.toml`**: Project and dependency configuration for building and distribution.
 - **`.gitignore`**: Specifies files to ignore in the repository.
 - **`LICENSE`**: Project license.
 
----
+### Module
+# Folder Structure
 
-## Key Features
+# Folder Structure
 
-1. **Matrix Completion with Bayesian Matrix Factorization (BMF)**:  
-   - Predicts gene-disease associations based on sparse data.
-
-2. **Support for Genomic and Phenotypic Side Information**:  
-   - Combines genomic and phenotypic data to improve prioritization accuracy.
-
-3. **Flexible Preprocessing and Evaluation**:  
-   - Tools for data preprocessing, creating folds/splits, and computing metrics like ROC-AUC and BEDROC.
+```bash
+NEGradient_GenePriority/
+├── compute_models/
+│   └── # NEGA2 algorithm implementation
+├── evaluation/
+│   └── # Defines `Evaluation` class for managing evaluation metrics
+├── postprocessing/
+│   └── # `ModelEvaluationCollection` class for aggregating and analyzing results
+├── preprocessing/
+│   └── # `DataLoader` class for preprocessing gene-disease association data
+├── scripts/
+│   ├── genehound.py
+│   │   └── # Script for reproducing GeneHound results
+│   ├── nega.py
+│       └── # Script for NEGA2 cross-validation and evaluation
+├── trainer/
+│   └── # Facilitates training and evaluation of predictive models
+├── utils/
+│   └── # Utility functions for supporting operations across the repository
+├── README.md
+│   └── # Documentation for the repository
+├── requirements.txt
+│   └── # Python dependencies for the project
+├── pyproject.toml
+│   └── # Build system and project metadata
+```
 
 ---
 

@@ -10,6 +10,10 @@ classifiers = ["Programming Language :: Python :: 3.11"]
 requires-python = ">=3.11"
 dynamic = ["version", "dependencies"]
 
+[project.scripts]
+genehound = "NEGradient_GenePriority.scripts.genehound.main:main"
+nega = "NEGradient_GenePriority.scripts.nega.main:main"
+
 [tool.setuptools]
 packages = [
     "NEGradient_GenePriority",
