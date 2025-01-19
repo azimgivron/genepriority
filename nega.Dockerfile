@@ -99,7 +99,8 @@ RUN python3 -m venv $VENV_PATH && \
     sudo $VENV_PATH/bin/pip install /tmp/smurff && \
     sudo rm -rf /tmp/smurff && \
     echo "source $VENV_PATH/bin/activate" >> /home/$USERNAME/.zshrc && \
-    mkdir -p $LOGS_DIR && chmod -R u+w $LOGS_DIR
+    mkdir -p $LOGS_DIR && chmod -R u+w $LOGS_DIR && \
+    rm /home/$USERNAME/requirements.txt
 
 # Default shell and command
 SHELL ["/bin/zsh", "-c"]

@@ -52,10 +52,10 @@ def cross_validation(
         validation_size = 0.1
         train_size = 0.8
         min_associations = 10
-        rank = 20
-        iterations = 500
+        rank = 100
+        iterations = 700
         threshold = 10
-        n_trials = 5
+        n_trials = 100
 
         # Load data
         dataloader = DataLoader(
@@ -113,7 +113,7 @@ def train_eval(logger: logging.Logger, input_path: Path, output_path: Path) -> N
         validation_size = 0.1
         train_size = 0.8
         min_associations = 10
-        rank = 25
+        rank = 20
         iterations = 1_000
         threshold = 10
         regularization_parameter = 0.003
@@ -196,7 +196,7 @@ def main() -> None:
     output_path = Path(args.output_path).absolute()
     os.makedirs(output_path, exist_ok=True)
 
-    log_file = output_path / "pipeline.log"
+    log_file = output_path / "pipeline100.log"
     setup_logger(log_file)
     logger = logging.getLogger(__name__)
 

@@ -308,7 +308,7 @@ class NEGTrainer(BaseTrainer):
                 "Initial smoothness parameter.", 0.001, 0.01, step=0.001
             )
             rho_increase = trial.suggest_float(
-                "Factor for increasing the step size dynamically.", 2.0, 10.0, step=0.0
+                "Factor for increasing the step size dynamically.", 2.0, 10.0, step=1.0
             )
             rho_decrease = trial.suggest_float(
                 "Factor for decreasing the step size dynamically.", 0.1, 0.9, step=0.1
