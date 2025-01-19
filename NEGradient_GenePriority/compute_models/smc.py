@@ -410,7 +410,7 @@ class MatrixCompletionSession:
                 self.smoothness_parameter,
                 bregman,
             )
-            gradient_lemma_cond = (
+            non_euclidean_descent_lemma_cond = (
                 res_norm_next_it
                 <= res_norm + linear_approx + self.smoothness_parameter * bregman
             )
@@ -418,7 +418,7 @@ class MatrixCompletionSession:
                 with self.writer.as_default():
                     tf.summary.scalar(name="training_loss", data=training_loss, step=ith_iteration)
                     tf.summary.scalar(name="testing_loss", data=testing_loss, step=ith_iteration)
-                    tf.summary.scalar(name="gradient_lemma_cond", data=int(gradient_lemma_cond), step=ith_iteration)
+                    tf.summary.scalar(name="non_euclidean_descent_lemma_cond", data=int(non_euclidean_descent_lemma_cond), step=ith_iteration)
                     tf.summary.scalar(name="res_norm", data=res_norm, step=ith_iteration)
                     tf.summary.scalar(name="linear_approx", data=linear_approx, step=ith_iteration)
                     tf.summary.scalar(
@@ -431,7 +431,7 @@ class MatrixCompletionSession:
 
             inner_loop_it = 0
             flag = 0
-            while not gradient_lemma_cond:
+            while not non_euclidean_descent_lemma_cond:
                 flag = 1
                 inner_loop_it += 1
                 self.logger.debug(
@@ -486,7 +486,7 @@ class MatrixCompletionSession:
                         inner_loop_it,
                     )
                     break
-                gradient_lemma_cond = (
+                non_euclidean_descent_lemma_cond = (
                     res_norm_next_it
                     <= res_norm + linear_approx + self.smoothness_parameter * bregman
                 )
