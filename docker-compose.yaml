@@ -2,7 +2,7 @@ services:
   nega:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: nega.Dockerfile
     image: nega
     command: zsh
     stdin_open: true  # Keeps the container open for interactive sessions
