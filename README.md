@@ -232,8 +232,7 @@ This script performs **cross-validation** for hyperparameter tuning or a **train
 
 **Usage**:
 ```bash
-python -m NEGradient_GenePriority.scripts.nega \
-    --mode <cross-validation|train-eval> \
+nega --mode <cross-validation|train-eval> \
     [--input-path <path_to_input_data>] \
     [--output-path <path_to_output_data>]
 ```
@@ -247,8 +246,7 @@ python -m NEGradient_GenePriority.scripts.nega \
 
 **Example**:
 ```bash
-python -m NEGradient_GenePriority.scripts.nega \
-    --mode cross-validation \
+nega --mode cross-validation \
     --input-path /path/to/input/data \
     --output-path /path/to/output/data
 ```
@@ -258,8 +256,7 @@ This script reproduces the GeneHound pipeline using the MACAU-based approach. It
 
 **Usage**:
 ```bash
-python -m NEGradient_GenePriority.scripts.genehound \
-    [--input-path <path_to_input_data>] \
+genehound [--input-path <path_to_input_data>] \
     [--output-path <path_to_output_data>]
 ```
 
@@ -269,8 +266,7 @@ python -m NEGradient_GenePriority.scripts.genehound \
 
 **Example**:
 ```bash
-python -m NEGradient_GenePriority.scripts.genehound \
-    --input-path /path/to/input/data \
+genehound --input-path /path/to/input/data \
     --output-path /path/to/output/results
 ```
 
