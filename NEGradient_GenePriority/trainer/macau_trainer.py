@@ -63,7 +63,6 @@ class MACAUTrainer(BaseTrainer):
         verbose: Literal[0, 1, 2],
         side_info_loader: SideInformationLoader = None,
         logger: logging.Logger = None,
-        tensorboard_base_log_dir: Path = None
     ):
         """
         Initialize the MACAUTrainer class with the given configuration.
@@ -191,11 +190,27 @@ class MACAUTrainer(BaseTrainer):
             else None,
         )
 
-    def log_training_info(
-        self, training_status: List[smurff.Prediction], session: smurff.MacauSession, run_name: str
+    def pre_training_callback(
+        self,
+        session: smurff.MacauSession,
+        run_name: str,
     ):
         """
-        Logs training information for monitoring and debugging purposes.
+        Pre training callback used for monitoring and debugging purposes.
+
+        Args:
+            session (smurff.MacauSession): Model session to train.
+            run_name (str): Custom run name for this training session.
+        """
+
+    def post_training_callback(
+        self,
+        training_status: List[smurff.Prediction],
+        session: smurff.MacauSession,
+        run_name: str,
+    ):
+        """
+        Post training callback used for monitoring and debugging purposes.
 
         Args:
             training_status (List[smurff.Prediction]): The predictions on

@@ -1,11 +1,13 @@
 FROM --platform=linux/arm64 debian:bookworm
 
-# Set environment variables
+# Environment variables
 ENV HOSTNAME=thesis-server
-ENV DEBIAN_FRONTEND=noninteractive
 ENV USERNAME=TheGreatestCoder
-ENV VENV_NAME=NEGradient_GenePriority_venv
-ENV VENV_PATH="/home/$USERNAME/$VENV_NAME"
+ENV HOME_DIR=/home/$USERNAME
+ENV CODE_DIR=$HOME_DIR/code
+ENV LOGS_DIR=$CODE_DIR/logs
+ENV VENV_NAME=nega_venv
+ENV VENV_PATH=$HOME_DIR/$VENV_NAME
 ENV PATH="$VENV_PATH/bin:$PATH"
 
 # Updates, package installation, Catch2, HighFive, and user setup
@@ -96,7 +98,8 @@ RUN python3 -m venv $VENV_PATH && \
     $VENV_PATH/bin/pip install -r /home/$USERNAME/requirements.txt && \
     sudo $VENV_PATH/bin/pip install /tmp/smurff && \
     sudo rm -rf /tmp/smurff && \
-    echo "source $VENV_PATH/bin/activate" >> /home/$USERNAME/.zshrc
+    echo "source $VENV_PATH/bin/activate" >> /home/$USERNAME/.zshrc && \
+    mkdir -p $LOGS_DIR && chmod -R u+w $LOGS_DIR
 
 # Default shell and command
 SHELL ["/bin/zsh", "-c"]

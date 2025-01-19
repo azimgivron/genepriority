@@ -15,6 +15,7 @@ from typing import Dict, Union
 
 import numpy as np
 import optuna
+import pandas as pd
 import scipy.sparse as sp
 import tensorflow as tf
 
@@ -55,6 +56,7 @@ class NEGTrainer(BaseTrainer):
         logger (logging.Logger): Logger instance for tracking progress and debugging.
         tensorboard_base_log_dir (Path): The base directory path where
             TensorBoard log files are saved.
+        writer (tf.summary.SummaryWriter): A tensorflow log writer.
     """
 
     def __init__(
@@ -71,7 +73,7 @@ class NEGTrainer(BaseTrainer):
         threshold: int = None,
         side_info_loader: SideInformationLoader = None,
         logger: logging.Logger = None,
-        tensorboard_base_log_dir: Path = None
+        tensorboard_base_log_dir: Path = None,
     ):
         """
         Initializes the NEGTrainer class with the provided configuration.
@@ -118,6 +120,7 @@ class NEGTrainer(BaseTrainer):
         self.rho_decrease = rho_decrease
         self.threshold = threshold
         self.tensorboard_base_log_dir = tensorboard_base_log_dir
+        self.writer = None
 
     @property
     def neg_session_kwargs(self) -> Dict[str, any]:
@@ -154,7 +157,7 @@ class NEGTrainer(BaseTrainer):
             np.ndarray: Predicted values as a NumPy array, computed by
                 averaging over the reconstructed matrix.
         """
-        y_pred = np.mean(session.predict_all(), axis=0)
+        y_pred = session.predict_all().toarray()
         return y_pred
 
     def create_session(
@@ -194,11 +197,58 @@ class NEGTrainer(BaseTrainer):
             save_name=str(self.path / f"{iteration}:{save_name}"),
         )
 
-    def log_training_info(
-        self, training_status: MatrixCompletionResult, session: MatrixCompletionSession, run_name: str
+    def pre_training_callback(
+        self,
+        session: MatrixCompletionResult,
+        run_name: str,
     ):
         """
-        Logs training information for monitoring and debugging purposes.
+        Pre training callback used for monitoring and debugging purposes.
+
+        Args:
+            session (smurff.MacauSession): Model session to train.
+            run_name (str): Custom run name for this training session.
+        """
+        if self.tensorboard_base_log_dir is not None:
+            run_log_dir = self.tensorboard_base_log_dir / run_name
+            run_log_dir.mkdir(parents=True, exist_ok=True)
+            self.writer = tf.summary.create_file_writer(str(run_log_dir))
+            with self.writer.as_default():
+                hyperparameter_table = pd.DataFrame(
+                    [
+                        [
+                            session.rank,
+                            session.regularization_parameter,
+                            session.symmetry_parameter,
+                            session.smoothness_parameter,
+                            session.rho_increase,
+                            session.rho_decrease,
+                            session.threshold,
+                        ]
+                    ],
+                    columns=[
+                        "Rank",
+                        "Regularization Parameter",
+                        "Symmetry Parameter",
+                        "Smoothness Parameter",
+                        "Rho Increase Factor",
+                        "Rho Decrease Factor",
+                        "Inner Loop Threshold",
+                    ],
+                    index=["Value"]
+                ).to_markdown()
+                tf.summary.text("hyperparameters", hyperparameter_table, step=0)
+                tf.summary.flush()
+                session.writer = self.writer
+
+    def post_training_callback(
+        self,
+        training_status: MatrixCompletionResult,
+        session: MatrixCompletionSession,
+        run_name: str,
+    ):
+        """
+        Post training callback used for monitoring and debugging purposes.
 
         Args:
             training_status (MatrixCompletionResult): The results from training.
@@ -209,70 +259,13 @@ class NEGTrainer(BaseTrainer):
             run_name (str): Custom run name for this training session.
         """
         if self.tensorboard_base_log_dir is not None:
-            run_log_dir = self.tensorboard_base_log_dir / run_name
-            run_log_dir.mkdir(parents=True, exist_ok=True)
-            writer = tf.summary.create_file_writer(str(run_log_dir))
-            with writer.as_default():
-                # Log training loss
-                for step_index, loss_value in enumerate(training_status.loss_history):
-                    tf.summary.scalar(
-                        name="Training Loss",
-                        data=loss_value,
-                        step=step_index,
-                        description="Per-iteration training loss (e.g., MSE).",
-                    )
-                # Log test RMSE (or similar metric) during training
-                for step_index, rmse_value in enumerate(training_status.rmse_history):
-                    tf.summary.scalar(
-                        name="Test RMSE",
-                        data=rmse_value,
-                        step=step_index,
-                        description="Per-iteration test root mean square error.",
-                    )
+            with self.writer.as_default():
                 # Log final runtime
-                tf.summary.scalar(
+                tf.summary.text(
                     name="Run Time (seconds)",
                     data=training_status.runtime,
-                    description="Total run time of the training procedure in seconds.",
-                )
-                # Log model/session parameters
-                tf.summary.scalar(
-                    name="Rank",
-                    data=session.rank,
-                    description="The rank of the low-rank approximation.",
-                )
-                tf.summary.scalar(
-                    name="Regularization Parameter",
-                    data=session.regularization_parameter,
-                    description="Regularization parameter for the optimization.",
-                )
-                tf.summary.scalar(
-                    name="Symmetry Parameter",
-                    data=session.symmetry_parameter,
-                    description="Regularization parameter for gradient adjustment.",
-                )
-                tf.summary.scalar(
-                    name="Smoothness Parameter",
-                    data=session.smoothness_parameter,
-                    description="Initial smoothness parameter for the optimizer.",
-                )
-                tf.summary.scalar(
-                    name="Rho Increase Factor",
-                    data=session.rho_increase,
-                    description="Factor by which the step size is increased dynamically.",
-                )
-                tf.summary.scalar(
-                    name="Rho Decrease Factor",
-                    data=session.rho_decrease,
-                    description="Factor by which the step size is decreased dynamically.",
-                )
-                tf.summary.scalar(
-                    name="Inner Loop Threshold",
-                    data=session.threshold,
-                    description="Maximum iterations allowed for the inner optimization loop.",
                 )
                 tf.summary.flush()
-
 
     def fine_tune(self, n_trials: int, timeout: float, num_latent: int, **kwargs):
         """
@@ -306,7 +299,7 @@ class NEGTrainer(BaseTrainer):
                 "Regularization parameter for the optimization.", 1e-5, 1e-1, log=True
             )
             symmetry_parameter = trial.suggest_float(
-                "Regularization parameter for the gradient adjustment.",
+                "Symmetry parameter for the gradient adjustment.",
                 1e-5,
                 1e-1,
                 log=True,
@@ -315,7 +308,7 @@ class NEGTrainer(BaseTrainer):
                 "Initial smoothness parameter.", 0.001, 0.01, step=0.001
             )
             rho_increase = trial.suggest_float(
-                "Factor for increasing the step size dynamically.", 2.0, 10.0, step=1.0
+                "Factor for increasing the step size dynamically.", 2.0, 10.0, step=0.0
             )
             rho_decrease = trial.suggest_float(
                 "Factor for decreasing the step size dynamically.", 0.1, 0.9, step=0.1

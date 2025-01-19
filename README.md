@@ -6,9 +6,14 @@
     <img width="40%" src=".images/NEGradient_GenePriority-logo.png" >
 </p>
 
-The repository **NEGradient_GenePriority** (short for "Non-Euclidean Gradient Methods for Matrix Completion in Gene Prioritization") provides the code and data to reproduce the results presented in the paper "[Gene prioritization using Bayesian matrix factorization with genomic and phenotypic side information.](https://pubmed.ncbi.nlm.nih.gov/29949967/)" This study introduces a novel method for gene prioritization by combining Bayesian matrix factorization (BMF) with genomic and phenotypic side information, enabling robust predictions and improved identification of disease-associated genes.
+The repository **NEGradient_GenePriority** (short for "Non-Euclidean Gradient Methods for Matrix Completion in Gene Prioritization") is designed to implement and evaluate algorithms on the *Online Mendelian Inheritance in Man* (OMIM) dataset for gene prioritization. The goal is to identify disease-associated genes by leveraging genomic and phenotypic side information. 
 
----
+This repository focuses on producing results using the **NEGA2 algorithm**, as described in the paper *"Non-Euclidean Gradient Methods: Convergence, Complexity, and Applications"*. The results will be compared with the outcomes from the method presented in *"Gene prioritization using Bayesian matrix factorization with genomic and phenotypic side information"* ([Zakeri et al., 2018](https://pubmed.ncbi.nlm.nih.gov/29949967/)). To ensure coherence in algorithm implementation and evaluation, results from the GeneHound method were reproduced as a baseline.
+
+**References**
+
+1. Ghaderi, S., Moreau, Y., & Ahookhosh, M. (2022). *Non-Euclidean Gradient Methods: Convergence, Complexity, and Applications*. Journal of Machine Learning Research, 23(2022):1-44.
+2. Zakeri, P., Simm, J., Arany, A., ElShal, S., & Moreau, Y. (2018). *Gene prioritization using Bayesian matrix factorization with genomic and phenotypic side information.* Bioinformatics, 34(13), i447–i456. doi:10.1093/bioinformatics/bty289. PMID: 29949967; PMCID: PMC6022676.
 
 ## Overview
 
@@ -97,25 +102,67 @@ The above procedure describes the general approach. However, the reference paper
 
 ## Installation
 
-**Steps**:
+You can set up the environment using one of the following methods:
 
-1. Clone the repository:
+### **Option 1: Using `pip` in a Virtual Environment**
+
+1. **Clone the Repository**:
    ```bash
    git clone https://github.com/azimgivron/NEGradient_GenePriority.git
    cd NEGradient_GenePriority
    ```
 
-2. Create and activate a virtual environment:
+2. **Set Up a Virtual Environment**:
    ```bash
-   python -m venv venv
+   python3 -m venv venv
    source venv/bin/activate
    ```
 
-3. Upgrade pip and install dependencies:
+3. **Install Dependencies**:
    ```bash
    pip install --upgrade pip
    pip install -r requirements.txt
    ```
+
+4. **Run Scripts**:
+   Use the `nega.py` and `genehound.py` scripts as described in the [Scripts Usage](#scripts-usage) section.
+
+### **Option 2: Using Docker for ARM64 Platform**
+
+Using Docker, two containers are launched: one for the working environment (`nega`) and another for TensorBoard.
+
+1. **Build the Docker Image**:
+   Build the image and set up the containers using the provided `docker-compose.yml`:
+   ```bash
+   docker compose build
+   ```
+
+2. **Start the Containers**:
+   Launch both containers (working environment and TensorBoard):
+   ```bash
+   docker compose up -d
+   ```
+
+3. **Access the Working Environment**:
+   Enter the `nega` container interactively:
+   ```bash
+   docker exec -it $(docker ps -q -f "name=nega") zsh
+   ```
+   This opens a `zsh` shell in the `nega` container, ready for running scripts and experiments.
+
+4. **Access TensorBoard**:
+   View TensorBoard logs and visualizations by navigating to:
+   [http://localhost:6006](http://localhost:6006)
+
+5. **Stopping the Containers**:
+  To stop the running containers, use:
+  ```bash
+  docker compose down
+  ```
+
+### **Notes**:
+- The Docker image and `docker-compose.yml` are preconfigured to handle permissions issues when working with mounted volumes.
+- The TensorBoard logs are located at `/home/TheGreatestCoder/code/logs` in the container and are accessible to both services.
 
 ---
 
@@ -127,40 +174,110 @@ The above procedure describes the general approach. However, the reference paper
 
 ---
 
-## Usage
-
-Run the main script to reproduce the results:
-
-```bash
-python main.py
-```
-
-This script performs gene prioritization using Bayesian matrix factorization with genomic and phenotypic side information.
-
----
-
 ## Repository Structure
 
+### Root Directory
+
 - **`NEGradient_GenePriority/`**: Main modules for preprocessing, matrix operations, and evaluation.
-- **`main.py`**: Main script for running the gene prioritization pipeline.
 - **`requirements.txt`**: List of dependencies for the project.
 - **`Dockerfile`**: Configuration for containerized deployment.
 - **`pyproject.toml`**: Project and dependency configuration for building and distribution.
 - **`.gitignore`**: Specifies files to ignore in the repository.
 - **`LICENSE`**: Project license.
 
+### Module
+# Folder Structure
+
+# Folder Structure
+
+```bash
+NEGradient_GenePriority/
+├── compute_models/
+│   └── # NEGA2 algorithm implementation
+├── evaluation/
+│   └── # Defines `Evaluation` class for managing evaluation metrics
+├── postprocessing/
+│   └── # `ModelEvaluationCollection` class for aggregating and analyzing results
+├── preprocessing/
+│   └── # `DataLoader` class for preprocessing gene-disease association data
+├── scripts/
+│   ├── genehound.py
+│   │   └── # Script for reproducing GeneHound results
+│   ├── nega.py
+│       └── # Script for NEGA2 cross-validation and evaluation
+├── trainer/
+│   └── # Facilitates training and evaluation of predictive models
+├── utils/
+│   └── # Utility functions for supporting operations across the repository
+├── README.md
+│   └── # Documentation for the repository
+├── requirements.txt
+│   └── # Python dependencies for the project
+├── pyproject.toml
+│   └── # Build system and project metadata
+```
+
 ---
 
-## Key Features
+Here’s how you can add a **Scripts Usage** section to your README file, providing detailed guidance on how to use the `nega.py` and `genehound.py` scripts:
 
-1. **Matrix Completion with Bayesian Matrix Factorization (BMF)**:  
-   - Predicts gene-disease associations based on sparse data.
+---
 
-2. **Support for Genomic and Phenotypic Side Information**:  
-   - Combines genomic and phenotypic data to improve prioritization accuracy.
+### Scripts Usage
 
-3. **Flexible Preprocessing and Evaluation**:  
-   - Tools for data preprocessing, creating folds/splits, and computing metrics like ROC-AUC and BEDROC.
+The `NEGradient_GenePriority` repository provides two main scripts for running experiments and reproducing results. Below is a guide to using these scripts:
+
+#### 1. **`nega.py`**: Non-Euclidean Gradient Algorithm (NEGA2)
+This script performs **cross-validation** for hyperparameter tuning or a **train-eval pipeline** for gene prioritization using the NEGA2 algorithm.
+
+**Usage**:
+```bash
+python -m NEGradient_GenePriority.scripts.nega \
+    --mode <cross-validation|train-eval> \
+    [--input-path <path_to_input_data>] \
+    [--output-path <path_to_output_data>]
+```
+
+**Arguments**:
+- `--mode`: Specifies the pipeline step to run. Options are:
+  - `cross-validation`: For hyperparameter tuning using Optuna.
+  - `train-eval`: For training and testing the model on a predefined split.
+- `--input-path` (optional): Path to the input data directory. Defaults to `/home/TheGreatestCoder/code/data/postprocessed/`.
+- `--output-path` (optional): Path to the output directory. Defaults to `/home/TheGreatestCoder/code/neg/`.
+
+**Example**:
+```bash
+python -m NEGradient_GenePriority.scripts.nega \
+    --mode cross-validation \
+    --input-path /path/to/input/data \
+    --output-path /path/to/output/data
+```
+
+#### 2. **`genehound.py`**: Reproduce GeneHound Results
+This script reproduces the GeneHound pipeline using the MACAU-based approach. It trains multiple models, evaluates their performance, and generates visualizations and metrics.
+
+**Usage**:
+```bash
+python -m NEGradient_GenePriority.scripts.genehound \
+    [--input-path <path_to_input_data>] \
+    [--output-path <path_to_output_data>]
+```
+
+**Arguments**:
+- `--input-path` (optional): Path to the directory containing input data, including `gene-disease.csv`. Defaults to `/home/TheGreatestCoder/code/data/postprocessed/`.
+- `--output-path` (optional): Path to the directory where output results will be saved. Defaults to `/home/TheGreatestCoder/code/genehounds/`.
+
+**Example**:
+```bash
+python -m NEGradient_GenePriority.scripts.genehound \
+    --input-path /path/to/input/data \
+    --output-path /path/to/output/results
+```
+
+**Outputs**:
+- ROC Curves: Visualizations of model performance.
+- AUC and BEDROC tables: Tabular metrics evaluating the ranking quality.
+- Boxplots: Visual comparison of BEDROC scores for multiple models.
 
 ---
 

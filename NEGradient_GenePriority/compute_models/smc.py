@@ -11,7 +11,6 @@ Features:
 - Evaluation through RMSE and loss metrics.
 """
 import logging
-import pickle
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -19,7 +18,10 @@ from typing import List
 
 import numpy as np
 import scipy.sparse as sp
+import tensorflow as tf
 from sklearn.metrics import mean_squared_error
+
+from NEGradient_GenePriority.utils import serialize
 
 
 @dataclass
@@ -62,7 +64,7 @@ class MatrixCompletionSession:
         rank (int): The rank of the low-rank approximation.
         regularization_parameter (float): Regularization parameter for the optimization.
         iterations (int): Maximum number of optimization iterations.
-        symmetry_parameter (float): Regularization parameter for the gradient adjustment.
+        symmetry_parameter (float): Symmetry parameter for the gradient adjustment.
         smoothness_parameter (float): Initial smoothness parameter.
         rho_increase (float): Factor for increasing the step size dynamically.
         rho_decrease (float): Factor for decreasing the step size dynamically.
@@ -72,6 +74,7 @@ class MatrixCompletionSession:
         h2 (sp.csr_matrix): Right factor matrix in the low-rank approximation
             (shape: `rank` x columns of `matrix`).
         logger (logging.Logger): Logger instance for debugging and progress tracking.
+        writer (tf.summary.SummaryWriter): Tensorflow summary writer.
         seed (int, optional): Seed for reproducible random initialization.
         save_name (str, optional): The file path where the model will be saved.
             If set to None, the model will not be saved after training.
@@ -91,6 +94,7 @@ class MatrixCompletionSession:
         rho_decrease: float,
         threshold: int,
         logger: logging.Logger = None,
+        writer: tf.summary.SummaryWriter = None,
         seed: int = 123,
         save_name: str = None,
     ):
@@ -113,6 +117,8 @@ class MatrixCompletionSession:
             rho_decrease (float): Multiplicative factor to decrease step size dynamically.
             threshold (int): Maximum number of iterations for the inner loop.
             logger (logging.Logger, optional): Logger instance for tracking progress.
+                Default is `None`.
+            writer (tf.summary.SummaryWriter, optional): Tensorflow summary writer.
                 Default is `None`.
             seed (int, optional): Seed for reproducible random initialization.
                 Default is 123.
@@ -161,6 +167,7 @@ class MatrixCompletionSession:
         if logger is None:
             logger = logging.getLogger(__name__)
         self.logger = logger
+        self.writer = writer
 
         # Initialize factor matrices h1 and h2 with random values
         num_rows, num_cols = matrix.shape
@@ -354,8 +361,10 @@ class MatrixCompletionSession:
 
         # Initialize loss and RMSE history
         res_norm = self.calculate_loss()
-        loss = [res_norm / nb_elements]
-        rmse = [self.calculate_rmse()]
+        training_loss = res_norm / nb_elements
+        testing_loss = self.calculate_rmse()
+        loss = [training_loss]
+        rmse = [testing_loss]
 
         # Stack h1 and h2 for optimization
         W_k = sp.vstack([self.h1, self.h2.T])
@@ -376,6 +385,7 @@ class MatrixCompletionSession:
             residual = (
                 self.train_mask.multiply(self.h1 @ self.h2) - self.matrix
             ).toarray()
+
             grad_u = residual @ self.h2.T + self.regularization_parameter * self.h1
             grad_v = residual.T @ self.h1 + self.regularization_parameter * self.h2.T
             grad_f_W_k = sp.vstack([grad_u, grad_v])
@@ -400,13 +410,28 @@ class MatrixCompletionSession:
                 self.smoothness_parameter,
                 bregman,
             )
+            gradient_lemma_cond = (
+                res_norm_next_it
+                <= res_norm + linear_approx + self.smoothness_parameter * bregman
+            )
+            if self.logger.isEnabledFor(logging.DEBUG) and self.writer is not None:
+                with self.writer.as_default():
+                    tf.summary.scalar(name="training_loss", data=training_loss, step=ith_iteration)
+                    tf.summary.scalar(name="testing_loss", data=testing_loss, step=ith_iteration)
+                    tf.summary.scalar(name="gradient_lemma_cond", data=int(gradient_lemma_cond), step=ith_iteration)
+                    tf.summary.scalar(name="res_norm", data=res_norm, step=ith_iteration)
+                    tf.summary.scalar(name="linear_approx", data=linear_approx, step=ith_iteration)
+                    tf.summary.scalar(
+                        name="smoothness_parameter",
+                        data=self.smoothness_parameter,
+                        step=ith_iteration
+                    )
+                    tf.summary.scalar(name="bregman", data=bregman, step=ith_iteration)
+                    tf.summary.flush()
 
             inner_loop_it = 0
             flag = 0
-            while not (
-                res_norm_next_it
-                <= res_norm + linear_approx + self.smoothness_parameter * bregman
-            ):
+            while not gradient_lemma_cond:
                 flag = 1
                 inner_loop_it += 1
                 self.logger.debug(
@@ -461,6 +486,11 @@ class MatrixCompletionSession:
                         inner_loop_it,
                     )
                     break
+                gradient_lemma_cond = (
+                    res_norm_next_it
+                    <= res_norm + linear_approx + self.smoothness_parameter * bregman
+                )
+
             self.logger.debug(
                 "[Inner Loop Exit] Iteration %d: Loss=%.6e",
                 ith_iteration,
@@ -477,12 +507,15 @@ class MatrixCompletionSession:
             # Update variables for the next iteration
             W_k = W_k_next
             step_size = (1 + self.symmetry_parameter) / self.smoothness_parameter
-            loss.append(res_norm_next_it / nb_elements)
-            rmse.append(self.calculate_rmse())
+            
+            training_loss = res_norm_next_it / nb_elements
+            testing_loss = self.calculate_rmse()
+            loss.append(training_loss)
+            rmse.append(testing_loss)
 
             # Log iteration metrics
             self.logger.debug(
-                "[Metrics Log] Iteration %d: RMSE=%.6f, Normalized Loss=%.6f",
+                "[Metrics Log] Iteration %d: RMSE=%.6f, Normalized Mean Loss=%.6f",
                 ith_iteration,
                 rmse[-1],
                 loss[-1],
@@ -502,8 +535,7 @@ class MatrixCompletionSession:
             "[Completion] Optimization finished in %.2f seconds.", runtime
         )
         if self.save_name is not None:
-            with open(self.save_name, "wb") as handler:
-                pickle.dump(self, handler)
+            serialize(self, self.save_name)
         training_data = MatrixCompletionResult(
             completed_matrix=self.predict_all(),
             loss_history=loss,
