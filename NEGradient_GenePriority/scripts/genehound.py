@@ -1,4 +1,4 @@
-# pylint: disable=R0914, R0915
+# pylint: disable=R0914, R0915, R0801
 """
 Reproduce GeneHound results using a MACAU-based approach.
 
@@ -17,7 +17,6 @@ Usage:
 import argparse
 import logging
 import os
-import sys
 import traceback
 from pathlib import Path
 
@@ -61,8 +60,10 @@ def main() -> None:
         "--input-path",
         type=str,
         default="/home/TheGreatestCoder/code/data/postprocessed/",
-        help=("Path to the directory containing input data, including "
-              "'gene-disease.csv' (default: %(default)s)."),
+        help=(
+            "Path to the directory containing input data, including "
+            "'gene-disease.csv' (default: %(default)s)."
+        ),
     )
     parser.add_argument(
         "--output-path",

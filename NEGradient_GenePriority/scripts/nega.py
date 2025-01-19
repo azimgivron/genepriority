@@ -1,4 +1,4 @@
-# pylint: disable=R0914, R0915
+# pylint: disable=R0914, R0915, R0801
 """
 Run non-euclidean gradient-based method for gene prioritization.
 
@@ -11,7 +11,6 @@ search (cross-validation) or a single train/test cycle (train-eval).
 import argparse
 import logging
 import os
-import sys
 import traceback
 from pathlib import Path
 
@@ -68,7 +67,7 @@ def cross_validation(
             train_size=train_size,
             min_associations=min_associations,
             validation_size=validation_size,
-            num_folds=None
+            num_folds=None,
         )
         gene_disease = dataloader.load_data()
         dataloader.load_omim1(gene_disease)
@@ -104,6 +103,7 @@ def train_eval(logger: logging.Logger, input_path: Path, output_path: Path) -> N
     """
     Trains a model on the training set and evaluates it on the test set.
     """
+    tensorboard_base_log_dir = Path("/home/TheGreatestCoder/code/logs")
     try:
         # Parameters
         num_splits = 1
@@ -114,14 +114,13 @@ def train_eval(logger: logging.Logger, input_path: Path, output_path: Path) -> N
         train_size = 0.8
         min_associations = 10
         rank = 25
-        iterations = 500
+        iterations = 1_000
         threshold = 10
-
-        regularization_parameter = 0.01
-        symmetry_parameter = 0.05
-        smoothness_parameter = 0.1
-        rho_increase = 1.1
-        rho_decrease = 0.9
+        regularization_parameter = 0.003
+        symmetry_parameter = 0.0002
+        smoothness_parameter = 0.007
+        rho_increase = 4.0
+        rho_decrease = 0.6
 
         # Load data
         dataloader = DataLoader(
@@ -133,7 +132,7 @@ def train_eval(logger: logging.Logger, input_path: Path, output_path: Path) -> N
             train_size=train_size,
             min_associations=min_associations,
             validation_size=validation_size,
-            num_folds=None
+            num_folds=None,
         )
         gene_disease = dataloader.load_data()
         dataloader.load_omim1(gene_disease)
@@ -151,7 +150,7 @@ def train_eval(logger: logging.Logger, input_path: Path, output_path: Path) -> N
             smoothness_parameter=smoothness_parameter,
             rho_increase=rho_increase,
             rho_decrease=rho_decrease,
-            tensorboard_base_log_dir="/home/TheGreatestCoder/code/logs",
+            tensorboard_base_log_dir=tensorboard_base_log_dir,
         )
 
         evaluation_results = trainer.train_test_splits(rank, "trained_model.pickle")

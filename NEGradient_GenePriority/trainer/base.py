@@ -169,29 +169,42 @@ class BaseTrainer(metaclass=ABCMeta):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def log_training_info(
+    def pre_training_callback(self, session: Any, run_name: str) -> None:
+        """
+        Invoked before the training process starts for monitoring and debugging.
+
+        Subclasses must implement this method to log or record relevant details
+        about the training setup, such as metrics, hyperparameters, or configurations.
+        Typical use cases include storing logs in files, databases, or visualization
+        tools like TensorBoard.
+
+        Args:
+            session (Any): Represents the model's session.
+            run_name (str): Unique identifier for the training session, used to
+                organize logs or outputs.
+        """
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def post_training_callback(
         self, training_status: Any, session: Any, run_name: str
     ) -> None:
         """
-        Logs training information for monitoring and debugging purposes.
+        Invoked after the training process completes for monitoring and debugging.
 
-        This method must be implemented by subclasses to provide a mechanism
-        for recording or displaying training metrics, hyperparameters, and
-        other relevant details that help monitor or debug the training process.
-        The typical usage might involve storing these metrics in a file,
-        database, or external visualization tool (e.g., TensorBoard).
+        Subclasses must implement this method to log or record the outcomes of
+        the training process, such as metrics, losses, and durations. Typical
+        use cases include saving results to files, databases, or visualization
+        tools like TensorBoard.
 
         Args:
-            training_status (Any): An object or structure containing information
-                about the training progress and outcomes. The exact format of
-                this object (e.g., metrics, losses, durations) depends on the
-                specific implementation and framework.
-            session (Any): A representation of the trained model's session,
-                which may include parameters such as rank, regularization, and
-                other session-specific configurations.
-            run_name (str): A custom name to uniquely identify this training
-                session when logging. Subclasses may use this name to create
-                separate directories, namespaces, or keys for storing logs.
+            training_status (Any): Contains information about the training outcomes,
+                such as performance metrics or final losses. The structure depends
+                on the specific framework or implementation.
+            session (Any): Represents the model's session, including configurations
+                used during training.
+            run_name (str): Unique identifier for the training session, used to
+                organize logs or outputs.
         """
         raise NotImplementedError
 
@@ -229,9 +242,13 @@ class BaseTrainer(metaclass=ABCMeta):
             session = self.create_session(
                 i, matrix, train_mask, test_mask, num_latent, save_name
             )
-            training_status = session.run()
+            
             run_name = f"{desc}{i+1}-latent{num_latent}"
-            self.log_training_info(training_status, session, run_name)
+            self.pre_training_callback(session, run_name)
+            
+            training_status = session.run()
+            
+            self.post_training_callback(training_status, session, run_name)
 
             y_pred = self.predict(session)
             results.append(Results(y_true=matrix.tocsr(), y_pred=y_pred))

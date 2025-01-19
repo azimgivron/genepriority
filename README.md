@@ -102,25 +102,67 @@ The above procedure describes the general approach. However, the reference paper
 
 ## Installation
 
-**Steps**:
+You can set up the environment using one of the following methods:
 
-1. Clone the repository:
+### **Option 1: Using `pip` in a Virtual Environment**
+
+1. **Clone the Repository**:
    ```bash
    git clone https://github.com/azimgivron/NEGradient_GenePriority.git
    cd NEGradient_GenePriority
    ```
 
-2. Create and activate a virtual environment:
+2. **Set Up a Virtual Environment**:
    ```bash
-   python -m venv venv
+   python3 -m venv venv
    source venv/bin/activate
    ```
 
-3. Upgrade pip and install dependencies:
+3. **Install Dependencies**:
    ```bash
    pip install --upgrade pip
    pip install -r requirements.txt
    ```
+
+4. **Run Scripts**:
+   Use the `nega.py` and `genehound.py` scripts as described in the [Scripts Usage](#scripts-usage) section.
+
+### **Option 2: Using Docker for ARM64 Platform**
+
+Using Docker, two containers are launched: one for the working environment (`nega`) and another for TensorBoard.
+
+1. **Build the Docker Image**:
+   Build the image and set up the containers using the provided `docker-compose.yml`:
+   ```bash
+   docker compose build
+   ```
+
+2. **Start the Containers**:
+   Launch both containers (working environment and TensorBoard):
+   ```bash
+   docker compose up -d
+   ```
+
+3. **Access the Working Environment**:
+   Enter the `nega` container interactively:
+   ```bash
+   docker exec -it $(docker ps -q -f "name=nega") zsh
+   ```
+   This opens a `zsh` shell in the `nega` container, ready for running scripts and experiments.
+
+4. **Access TensorBoard**:
+   View TensorBoard logs and visualizations by navigating to:
+   [http://localhost:6006](http://localhost:6006)
+
+5. **Stopping the Containers**:
+  To stop the running containers, use:
+  ```bash
+  docker compose down
+  ```
+
+### **Notes**:
+- The Docker image and `docker-compose.yml` are preconfigured to handle permissions issues when working with mounted volumes.
+- The TensorBoard logs are located at `/home/TheGreatestCoder/code/logs` in the container and are accessible to both services.
 
 ---
 
