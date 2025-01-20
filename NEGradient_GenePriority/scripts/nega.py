@@ -1,4 +1,4 @@
-# pylint: disable=R0914, R0915, R0801
+# pylint: disable=R0914, R0915, R0801, R0913
 """
 Run non-Euclidean gradient-based method for gene prioritization.
 
@@ -13,7 +13,6 @@ import logging
 import os
 import traceback
 from pathlib import Path
-from typing import Optional
 
 import pint
 
@@ -212,7 +211,8 @@ def get_args() -> argparse.Namespace:
             "--input-path",
             type=str,
             default="/home/TheGreatestCoder/code/data/postprocessed/",
-            help="Path to input data directory containing 'gene-disease.csv' (default: %(default)s).",
+            help=("Path to input data directory containing "
+                  "'gene-disease.csv' (default: %(default)s)."),
         )
         subparser.add_argument(
             "--output-path",

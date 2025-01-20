@@ -382,9 +382,10 @@ class MatrixCompletionSession:
             iterations_count = ith_iteration
             inner_loop_it = 0
             flag = 0
-    
+
             self.logger.debug(
-                "[Main Loop] Iteration %d, Inner Loop %d: RMSE=%.6e (testing), Mean Loss=%.6e (training)",
+                ("[Main Loop] Iteration %d, Inner Loop %d:"
+                 " RMSE=%.6e (testing), Mean Loss=%.6e (training)"),
                 ith_iteration,
                 inner_loop_it,
                 rmse[-1],
