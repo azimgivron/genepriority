@@ -43,6 +43,7 @@ def load_data(
     validation_size: float,
     input_path: Path,
     seed: int,
+    zero_sampling_factor: int
 ) -> DataLoader:
     """
     Loads and preprocesses gene-disease association data.
@@ -53,6 +54,7 @@ def load_data(
         validation_size (float): Proportion of data to use for validation.
         input_path (Path): Path to the input data directory.
         seed (int): Random seed for reproducibility.
+        zero_sampling_factor (int): Multiplier for generating negative associations.
 
     Returns:
         DataLoader: A DataLoader instance with the loaded data.
@@ -71,6 +73,7 @@ def load_data(
         min_associations=min_associations,
         validation_size=validation_size,
         num_folds=None,
+        zero_sampling_factor=zero_sampling_factor
     )
     gene_disease = dataloader.load_data()
     dataloader.load_omim1(gene_disease)
@@ -265,6 +268,15 @@ def get_args() -> argparse.Namespace:
         subparser.add_argument(
             "--seed", type=int, default=42, help="Random seed (default: %(default)s)."
         )
+        subparser.add_argument(
+            "--zero-sampling-factor",
+            type=int,
+            default=None,
+            help=(
+                    "Factor to determine the number of zeros to sample, calculated as the "
+                    "specified factor multiplied by the number of ones (default: %(default)s)."
+                )
+            )
 
     eval_parser.add_argument(
         "--tensorboard-base-log-dir",
@@ -328,11 +340,12 @@ def main():
     os.makedirs(output_path, exist_ok=True)
 
     dataloader = load_data(
-        args.num_splits,
-        args.train_size,
-        args.validation_size,
-        input_path,
-        args.seed,
+        num_splits=args.num_splits,
+        train_size=args.train_size,
+        validation_size=args.validation_size,
+        input_path=input_path,
+        seed=args.seed,
+        zero_sampling_factor=args.zero_sampling_factor
     )
 
     log_file = output_path / args.log_filename
