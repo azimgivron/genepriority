@@ -3,6 +3,7 @@ from typing import List
 import numpy as np
 import pytest
 import scipy.sparse as sp
+
 from NEGradient_GenePriority import Evaluation, Results
 
 
@@ -61,7 +62,7 @@ def test_compute_avg_auc_loss(results, diseases):
     evaluation = Evaluation(results)
     loss = evaluation.compute_avg_auc_loss()
     assert isinstance(loss, np.ndarray)
-    assert loss.shape==(diseases,)
+    assert loss.shape == (diseases,)
 
 
 def test_compute_roc_curve(results, diseases):
@@ -69,4 +70,4 @@ def test_compute_roc_curve(results, diseases):
     evaluation = Evaluation(results)
     fpr_tpr_per_disease = evaluation.compute_roc_curve()
     assert isinstance(fpr_tpr_per_disease, np.ndarray)
-    assert fpr_tpr_per_disease.shape[:-1]==(diseases, 2)
+    assert fpr_tpr_per_disease.shape[:-1] == (diseases, 2)

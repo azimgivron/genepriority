@@ -242,12 +242,12 @@ class BaseTrainer(metaclass=ABCMeta):
             session = self.create_session(
                 i, matrix, train_mask, test_mask, num_latent, save_name
             )
-            
+
             run_name = f"{desc}{i+1}-latent{num_latent}"
             self.pre_training_callback(session, run_name)
-            
+
             training_status = session.run()
-            
+
             self.post_training_callback(training_status, session, run_name)
 
             y_pred = self.predict(session)

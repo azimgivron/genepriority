@@ -235,7 +235,7 @@ class NEGTrainer(BaseTrainer):
                         "Rho Decrease Factor",
                         "Inner Loop Threshold",
                     ],
-                    index=["Value"]
+                    index=["Value"],
                 ).to_markdown()
                 tf.summary.text("hyperparameters", hyperparameter_table, step=0)
                 tf.summary.flush()
@@ -262,8 +262,7 @@ class NEGTrainer(BaseTrainer):
             with self.writer.as_default():
                 # Log final runtime
                 tf.summary.text(
-                    name="Run Time (seconds)",
-                    data=training_status.runtime,
+                    name="Run Time", data=f"{training_status.runtime}s", step=0
                 )
                 tf.summary.flush()
 

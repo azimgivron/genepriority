@@ -380,7 +380,16 @@ class MatrixCompletionSession:
         iterations_count = 0
         for ith_iteration in range(self.iterations):
             iterations_count = ith_iteration
-            self.logger.debug("[Main Loop] Iteration %d started.", ith_iteration)
+            inner_loop_it = 0
+            flag = 0
+    
+            self.logger.debug(
+                "[Main Loop] Iteration %d, Inner Loop %d: RMSE=%.6e (testing), Mean Loss=%.6e (training)",
+                ith_iteration,
+                inner_loop_it,
+                rmse[-1],
+                loss[-1],
+            )
             # Compute gradients for h1 and h2
             residual = (
                 self.train_mask.multiply(self.h1 @ self.h2) - self.matrix
@@ -393,52 +402,42 @@ class MatrixCompletionSession:
             W_k_next, res_norm_next_it = self.substep(
                 W_k, tau, step_size, grad_f_W_k, tau1, rows
             )
-            self.logger.debug(
-                "[Iteration %d] Loss calculated: %.6e", ith_iteration, res_norm_next_it
-            )
             # Inner loop to adjust step size
             linear_approx = (grad_f_W_k.T @ (W_k_next - W_k)).sum()
             bregman = bregman_distance(W_k_next, W_k, tau)
-            self.logger.debug(
-                (
-                    "[Inner Loop Entry] Iteration %d: Loss=%.6e, GradientTerm=%.6e, "
-                    "smoothness_parameter=%.6e, bregman_distance=%.6e"
-                ),
-                ith_iteration,
-                res_norm_next_it,
-                linear_approx,
-                self.smoothness_parameter,
-                bregman,
-            )
             non_euclidean_descent_lemma_cond = (
                 res_norm_next_it
                 <= res_norm + linear_approx + self.smoothness_parameter * bregman
             )
             if self.logger.isEnabledFor(logging.DEBUG) and self.writer is not None:
                 with self.writer.as_default():
-                    tf.summary.scalar(name="training_loss", data=training_loss, step=ith_iteration)
-                    tf.summary.scalar(name="testing_loss", data=testing_loss, step=ith_iteration)
-                    tf.summary.scalar(name="non_euclidean_descent_lemma_cond", data=int(non_euclidean_descent_lemma_cond), step=ith_iteration)
-                    tf.summary.scalar(name="res_norm", data=res_norm, step=ith_iteration)
-                    tf.summary.scalar(name="linear_approx", data=linear_approx, step=ith_iteration)
+                    tf.summary.scalar(
+                        name="training_loss", data=training_loss, step=ith_iteration
+                    )
+                    tf.summary.scalar(
+                        name="testing_loss", data=testing_loss, step=ith_iteration
+                    )
+                    tf.summary.scalar(
+                        name="non_euclidean_descent_lemma_cond",
+                        data=int(non_euclidean_descent_lemma_cond),
+                        step=ith_iteration,
+                    )
+                    tf.summary.scalar(
+                        name="res_norm", data=res_norm, step=ith_iteration
+                    )
+                    tf.summary.scalar(
+                        name="linear_approx", data=linear_approx, step=ith_iteration
+                    )
                     tf.summary.scalar(
                         name="smoothness_parameter",
                         data=self.smoothness_parameter,
-                        step=ith_iteration
+                        step=ith_iteration,
                     )
                     tf.summary.scalar(name="bregman", data=bregman, step=ith_iteration)
                     tf.summary.flush()
-
-            inner_loop_it = 0
-            flag = 0
             while not non_euclidean_descent_lemma_cond:
                 flag = 1
                 inner_loop_it += 1
-                self.logger.debug(
-                    "[Step Adjustment] Iteration %d, Inner Loop %d: Step size being adjusted.",
-                    ith_iteration,
-                    inner_loop_it,
-                )
                 # Detect overflow and exit if necessary
                 if self.rho_increase**inner_loop_it > np.finfo(float).max:
                     self.logger.warning(
@@ -449,32 +448,14 @@ class MatrixCompletionSession:
                     )
                     break
                 if inner_loop_it == self.threshold:
-                    self.logger.debug(
-                        "[Inner Loop Limit] Iteration %d, Inner Loop %d: Maximum "
-                        "allowed iterations reached.",
-                        ith_iteration,
-                        inner_loop_it,
-                    )
                     break
                 # Adjust step size
-                self.logger.debug(
-                    "[Step Size Adjustment] Increasing step size at Iteration %d, Inner Loop %d.",
-                    ith_iteration,
-                    inner_loop_it,
-                )
                 self.smoothness_parameter *= self.rho_increase**inner_loop_it
                 step_size = (1 + self.symmetry_parameter) / self.smoothness_parameter
 
                 W_k_next, res_norm_next_it = self.substep(
                     W_k, tau, step_size, grad_f_W_k, tau1, rows
                 )
-                self.logger.debug(
-                    "[Inner Loop Update] Iteration %d, Inner Loop %d: Updated Loss=%.6e",
-                    ith_iteration,
-                    inner_loop_it,
-                    res_norm_next_it,
-                )
-
                 linear_approx = (grad_f_W_k.T @ (W_k_next - W_k)).sum()
                 bregman = bregman_distance(W_k_next, W_k, tau)
                 # Detect overflow and exit if necessary
@@ -490,43 +471,24 @@ class MatrixCompletionSession:
                     res_norm_next_it
                     <= res_norm + linear_approx + self.smoothness_parameter * bregman
                 )
-
-            self.logger.debug(
-                "[Inner Loop Exit] Iteration %d: Loss=%.6e",
-                ith_iteration,
-                res_norm_next_it,
-            )
-            if flag == 1:
-                # Adjust step size
-                self.logger.debug(
-                    "[Step Size Adjustment] Decreasing step size after Inner Loop at Iteration %d.",
-                    ith_iteration,
-                )
-                self.smoothness_parameter *= self.rho_decrease
-
-            # Update variables for the next iteration
-            W_k = W_k_next
-            step_size = (1 + self.symmetry_parameter) / self.smoothness_parameter
-            
-            training_loss = res_norm_next_it / nb_elements
-            testing_loss = self.calculate_rmse()
-            loss.append(training_loss)
-            rmse.append(testing_loss)
-
-            # Log iteration metrics
-            self.logger.debug(
-                "[Metrics Log] Iteration %d: RMSE=%.6f, Normalized Mean Loss=%.6f",
-                ith_iteration,
-                rmse[-1],
-                loss[-1],
-            )
-
             # Break if loss becomes NaN
             if np.isnan(res_norm_next_it):
                 self.logger.warning(
                     "[NaN Loss] Iteration %d: Loss is NaN, exiting loop.", ith_iteration
                 )
                 break
+            if flag == 1:
+                # Adjust step size
+                self.smoothness_parameter *= self.rho_decrease
+
+            # Update variables for the next iteration
+            W_k = W_k_next
+            step_size = (1 + self.symmetry_parameter) / self.smoothness_parameter
+
+            training_loss = res_norm_next_it / nb_elements
+            testing_loss = self.calculate_rmse()
+            loss.append(training_loss)
+            rmse.append(testing_loss)
             res_norm = res_norm_next_it
 
         # Compute runtime
@@ -535,7 +497,10 @@ class MatrixCompletionSession:
             "[Completion] Optimization finished in %.2f seconds.", runtime
         )
         if self.save_name is not None:
+            writer = self.writer
+            self.writer = None
             serialize(self, self.save_name)
+            self.writer = writer
         training_data = MatrixCompletionResult(
             completed_matrix=self.predict_all(),
             loss_history=loss,

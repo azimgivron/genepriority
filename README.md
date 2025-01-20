@@ -125,7 +125,7 @@ You can set up the environment using one of the following methods:
    ```
 
 4. **Run Scripts**:
-   Use the `nega.py` and `genehound.py` scripts as described in the [Scripts Usage](#scripts-usage) section.
+   Use the `nega` and `genehound` scripts as described in the [Scripts Usage](#scripts-usage) section.
 
 ### **Option 2: Using Docker for ARM64 Platform**
 
@@ -201,9 +201,9 @@ NEGradient_GenePriority/
 ├── preprocessing/
 │   └── # `DataLoader` class for preprocessing gene-disease association data
 ├── scripts/
-│   ├── genehound.py
+│   ├── genehound
 │   │   └── # Script for reproducing GeneHound results
-│   ├── nega.py
+│   ├── nega
 │       └── # Script for NEGA2 cross-validation and evaluation
 ├── trainer/
 │   └── # Facilitates training and evaluation of predictive models
@@ -219,7 +219,7 @@ NEGradient_GenePriority/
 
 ---
 
-Here’s how you can add a **Scripts Usage** section to your README file, providing detailed guidance on how to use the `nega.py` and `genehound.py` scripts:
+Here’s how you can add a **Scripts Usage** section to your README file, providing detailed guidance on how to use the `nega` and `genehound` scripts:
 
 ---
 
@@ -227,14 +227,29 @@ Here’s how you can add a **Scripts Usage** section to your README file, provid
 
 The `NEGradient_GenePriority` repository provides two main scripts for running experiments and reproducing results. Below is a guide to using these scripts:
 
-#### 1. **`nega.py`**: Non-Euclidean Gradient Algorithm (NEGA2)
+#### 1. **`nega`**: Non-Euclidean Gradient Algorithm (NEGA2)
 This script performs **cross-validation** for hyperparameter tuning or a **train-eval pipeline** for gene prioritization using the NEGA2 algorithm.
 
 **Usage**:
 ```bash
 nega --mode <cross-validation|train-eval> \
     [--input-path <path_to_input_data>] \
-    [--output-path <path_to_output_data>]
+    [--output-path <path_to_output_data>] \
+    [--log-filename <log_filename>] \
+    [--num-splits <number_of_splits>] \
+    [--rank <model_rank>] \
+    [--iterations <num_iterations>] \
+    [--threshold <threshold>] \
+    [--validation-size <validation_size>] \
+    [--train-size <train_size>] \
+    [--seed <random_seed>] \
+    [--regularization-parameter <regularization>] \
+    [--symmetry-parameter <symmetry>] \
+    [--smoothness-parameter <smoothness>] \
+    [--rho-increase <rho_increase>] \
+    [--rho-decrease <rho_decrease>] \
+    [--tensorboard-base-log-dir <tensorboard_dir>] \
+    [--n-trials <optuna_trials>]
 ```
 
 **Arguments**:
@@ -243,26 +258,44 @@ nega --mode <cross-validation|train-eval> \
   - `train-eval`: For training and testing the model on a predefined split.
 - `--input-path` (optional): Path to the input data directory. Defaults to `/home/TheGreatestCoder/code/data/postprocessed/`.
 - `--output-path` (optional): Path to the output directory. Defaults to `/home/TheGreatestCoder/code/neg/`.
+- `--log-filename` (optional): Name of the log file. Defaults to `pipeline.log`.
+- `--num-splits` (optional): Number of data splits for cross-validation or partitioning. Defaults to `1`.
+- `--rank` (optional): Rank of the model. Defaults to `50`.
+- `--iterations` (optional): Number of iterations for training. Defaults to `1000`.
+- `--threshold` (optional): Threshold parameter for data filtering. Defaults to `10`.
+- `--validation-size` (optional): Fraction of data to use for validation. Defaults to `0.1`.
+- `--train-size` (optional): Fraction of data to use for training. Defaults to `0.8`.
+- `--seed` (optional): Random seed for reproducibility. Defaults to `42`.
+- `--regularization-parameter` (optional, train-eval only): Regularization parameter. Defaults to `0.003`.
+- `--symmetry-parameter` (optional, train-eval only): Symmetry regularization weight. Defaults to `0.08`.
+- `--smoothness-parameter` (optional, train-eval only): Smoothness regularization weight. Defaults to `0.002`.
+- `--rho-increase` (optional, train-eval only): Rho increase factor. Defaults to `4.0`.
+- `--rho-decrease` (optional, train-eval only): Rho decrease factor. Defaults to `0.9`.
+- `--tensorboard-base-log-dir` (optional, train-eval only): Path to TensorBoard log directory. Defaults to `/home/TheGreatestCoder/code/logs`.
+- `--n-trials` (optional, cross-validation only): Number of trials for Optuna hyperparameter tuning. Defaults to `100`.
 
 **Example**:
 ```bash
 nega --mode cross-validation \
     --input-path /path/to/input/data \
-    --output-path /path/to/output/data
+    --output-path /path/to/output/data \
+    --n-trials 50
 ```
 
-#### 2. **`genehound.py`**: Reproduce GeneHound Results
+#### 2. **`genehound`**: Reproduce GeneHound Results
 This script reproduces the GeneHound pipeline using the MACAU-based approach. It trains multiple models, evaluates their performance, and generates visualizations and metrics.
 
 **Usage**:
 ```bash
 genehound [--input-path <path_to_input_data>] \
-    [--output-path <path_to_output_data>]
+    [--output-path <path_to_output_data>] \
+    [--log-filename <log_filename>]
 ```
 
 **Arguments**:
 - `--input-path` (optional): Path to the directory containing input data, including `gene-disease.csv`. Defaults to `/home/TheGreatestCoder/code/data/postprocessed/`.
 - `--output-path` (optional): Path to the directory where output results will be saved. Defaults to `/home/TheGreatestCoder/code/genehounds/`.
+- `--log-filename` (optional): Name of the log file. Defaults to `pipeline.log`.
 
 **Example**:
 ```bash
