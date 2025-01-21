@@ -18,8 +18,6 @@ from typing import Any, Dict, Iterator, List, Tuple, Union
 import numpy as np
 import scipy.sparse as sp
 import smurff
-from tqdm import tqdm
-
 from NEGradient_GenePriority.evaluation.evaluation import Evaluation
 from NEGradient_GenePriority.evaluation.results import Results
 from NEGradient_GenePriority.preprocessing.dataloader import DataLoader
@@ -27,6 +25,7 @@ from NEGradient_GenePriority.preprocessing.side_information_loader import (
     SideInformationLoader,
 )
 from NEGradient_GenePriority.utils import serialize
+from tqdm import tqdm
 
 
 class BaseTrainer(metaclass=ABCMeta):

@@ -15,7 +15,6 @@ import traceback
 from pathlib import Path
 
 import pint
-
 from NEGradient_GenePriority.preprocessing import DataLoader
 from NEGradient_GenePriority.trainer import NEGTrainer
 from NEGradient_GenePriority.utils import serialize
@@ -43,7 +42,7 @@ def load_data(
     validation_size: float,
     input_path: Path,
     seed: int,
-    zero_sampling_factor: int
+    zero_sampling_factor: int,
 ) -> DataLoader:
     """
     Loads and preprocesses gene-disease association data.
@@ -73,7 +72,7 @@ def load_data(
         min_associations=min_associations,
         validation_size=validation_size,
         num_folds=None,
-        zero_sampling_factor=zero_sampling_factor
+        zero_sampling_factor=zero_sampling_factor,
     )
     gene_disease = dataloader.load_data()
     dataloader.load_omim1(gene_disease)
@@ -214,8 +213,10 @@ def get_args() -> argparse.Namespace:
             "--input-path",
             type=str,
             default="/home/TheGreatestCoder/code/data/postprocessed/",
-            help=("Path to input data directory containing "
-                  "'gene-disease.csv' (default: %(default)s)."),
+            help=(
+                "Path to input data directory containing "
+                "'gene-disease.csv' (default: %(default)s)."
+            ),
         )
         subparser.add_argument(
             "--output-path",
@@ -244,7 +245,7 @@ def get_args() -> argparse.Namespace:
         subparser.add_argument(
             "--iterations",
             type=int,
-            default=1000,
+            default=700,
             help="Number of iterations (default: %(default)s).",
         )
         subparser.add_argument(
@@ -273,10 +274,10 @@ def get_args() -> argparse.Namespace:
             type=int,
             default=None,
             help=(
-                    "Factor to determine the number of zeros to sample, calculated as the "
-                    "specified factor multiplied by the number of ones (default: %(default)s)."
-                )
-            )
+                "Factor to determine the number of zeros to sample, calculated as the "
+                "specified factor multiplied by the number of ones (default: %(default)s)."
+            ),
+        )
 
     eval_parser.add_argument(
         "--tensorboard-base-log-dir",
@@ -335,18 +336,8 @@ def main():
 
     input_path = Path(args.input_path).absolute()
     output_path = Path(args.output_path).absolute()
-    tensorboard_base_log_dir = Path(args.tensorboard_base_log_dir).absolute()
 
     os.makedirs(output_path, exist_ok=True)
-
-    dataloader = load_data(
-        num_splits=args.num_splits,
-        train_size=args.train_size,
-        validation_size=args.validation_size,
-        input_path=input_path,
-        seed=args.seed,
-        zero_sampling_factor=args.zero_sampling_factor
-    )
 
     log_file = output_path / args.log_filename
     setup_logger(log_file)
@@ -355,6 +346,15 @@ def main():
     if not input_path.exists():
         logger.error("Input path does not exist: %s", input_path)
         raise FileNotFoundError(f"Input path does not exist: {input_path}")
+
+    dataloader = load_data(
+        num_splits=args.num_splits,
+        train_size=args.train_size,
+        validation_size=args.validation_size,
+        input_path=input_path,
+        seed=args.seed,
+        zero_sampling_factor=args.zero_sampling_factor,
+    )
 
     if args.mode == "cross-validation":
         logger.info("Starting cross-validation mode.")
@@ -370,6 +370,7 @@ def main():
         )
     elif args.mode == "train-eval":
         logger.info("Starting train-eval mode.")
+        tensorboard_base_log_dir = Path(args.tensorboard_base_log_dir).absolute()
         train_eval(
             logger=logger,
             output_path=output_path,

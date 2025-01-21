@@ -14,9 +14,8 @@ from typing import Iterator, Tuple
 
 import numpy as np
 import scipy.sparse as sp
-from sklearn.model_selection import train_test_split
-
 from NEGradient_GenePriority.preprocessing.train_test_masks import TrainTestMasks
+from sklearn.model_selection import train_test_split
 
 
 class TrainValTestMasks(TrainTestMasks):

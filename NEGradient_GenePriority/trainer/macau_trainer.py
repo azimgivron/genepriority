@@ -11,12 +11,16 @@ and model snapshots can be saved for reproducibility.
 
 import logging
 from pathlib import Path
-from typing import Dict, List, Literal, Union
+from typing import Dict, Literal, Union
 
 import numpy as np
+import pandas as pd
 import scipy.sparse as sp
-import smurff
-
+import tensorflow as tf
+from NEGradient_GenePriority.compute_models.macau import MacauSession
+from NEGradient_GenePriority.compute_models.matrix_completion_result import (
+    MatrixCompletionResult,
+)
 from NEGradient_GenePriority.preprocessing.dataloader import DataLoader
 from NEGradient_GenePriority.preprocessing.side_information_loader import (
     SideInformationLoader,
@@ -48,6 +52,9 @@ class MACAUTrainer(BaseTrainer):
         verbose (Literal[0, 1, 2]): Verbosity level of the algorithm
             (0: Silent, 1: Minimal, 2: Detailed).
         logger (logging.Logger): Logger instance for debug and info messages.
+        tensorboard_base_log_dir (Path): The base directory path where
+            TensorBoard log files are saved.
+        writer (tf.summary.SummaryWriter): A tensorflow log writer.
     """
 
     def __init__(
@@ -63,6 +70,7 @@ class MACAUTrainer(BaseTrainer):
         verbose: Literal[0, 1, 2],
         side_info_loader: SideInformationLoader = None,
         logger: logging.Logger = None,
+        tensorboard_base_log_dir: Path = None,
     ):
         """
         Initialize the MACAUTrainer class with the given configuration.
@@ -83,6 +91,9 @@ class MACAUTrainer(BaseTrainer):
                 side information.
             logger (logging.Logger, optional): Logger instance for debug messages.
                 If None, a default logger is created.
+            tensorboard_base_log_dir (Path, optional): The base directory path where
+                TensorBoard log files are saved. If None, TensorBoard logging is
+                disabled. Defaults to None.
         """
         super().__init__(
             dataloader=dataloader,
@@ -97,6 +108,8 @@ class MACAUTrainer(BaseTrainer):
         self.univariate = univariate
         self.save_freq = save_freq
         self.verbose = verbose
+        self.tensorboard_base_log_dir = tensorboard_base_log_dir
+        self.writer = None
 
     @property
     def macau_session_kwargs(self) -> Dict[str, any]:
@@ -121,13 +134,13 @@ class MACAUTrainer(BaseTrainer):
 
     def predict(
         self,
-        session: smurff.MacauSession,
+        session: MacauSession,
     ) -> np.ndarray:
         """
         Extract predictions from the trained model.
 
         Args:
-            session (smurff.MacauSession): The trained SMURFF session.
+            session (MacauSession): The trained session.
 
         Returns:
             (np.ndarray): The predictions.
@@ -136,12 +149,12 @@ class MACAUTrainer(BaseTrainer):
         y_pred = np.mean(predict_session.predict_all(), axis=0)
         return y_pred
 
-    def add_side_info(self, session: smurff.MacauSession):
+    def add_side_info(self, session: MacauSession):
         """
-        Add side information to the SMURFF Macau session.
+        Add side information to the Macau session.
 
         Args:
-            session (smurff.MacauSession): The SMURFF Macau session to which
+            session (MacauSession): The  Macau session to which
                 the side information will be added.
         """
         for disease_side_info in self.side_info_loader.disease_side_info:
@@ -159,7 +172,7 @@ class MACAUTrainer(BaseTrainer):
         test_mask: sp.csr_matrix,
         num_latent: int,
         save_name: Union[str, Path],
-    ) -> smurff.MacauSession:
+    ) -> MacauSession:
         """
         Create a session for model training and evaluation.
 
@@ -172,14 +185,14 @@ class MACAUTrainer(BaseTrainer):
             save_name (Union[str, Path]): Filename or path for saving model snapshots.
 
         Returns:
-            smurff.MacauSession: A configured session object for model training and evaluation.
+            MacauSession: A configured session object for model training and evaluation.
         """
         training_data = mask_sparse_containing_0s(matrix, train_mask)
         self.log_data("training", training_data)
 
         testing_data = mask_sparse_containing_0s(matrix, test_mask)
         self.log_data("testing", testing_data)
-        return smurff.MacauSession(
+        return MacauSession(
             **self.macau_session_kwargs,
             num_latent=num_latent,
             Ytrain=training_data,
@@ -192,29 +205,63 @@ class MACAUTrainer(BaseTrainer):
 
     def pre_training_callback(
         self,
-        session: smurff.MacauSession,
+        session: MacauSession,
         run_name: str,
     ):
         """
         Pre training callback used for monitoring and debugging purposes.
 
         Args:
-            session (smurff.MacauSession): Model session to train.
+            session (MacauSession): Model session to train.
             run_name (str): Custom run name for this training session.
         """
+        if self.tensorboard_base_log_dir is not None:
+            run_log_dir = self.tensorboard_base_log_dir / run_name
+            run_log_dir.mkdir(parents=True, exist_ok=True)
+            self.writer = tf.summary.create_file_writer(str(run_log_dir))
+            with self.writer.as_default():
+                hyperparameter_table = pd.DataFrame(
+                    [
+                        [
+                            session.num_latent,
+                            session.nsamples,
+                            session.burnin,
+                            session.direct,
+                            session.univariate,
+                        ]
+                    ],
+                    columns=[
+                        "Rank",
+                        "Number of samples to keep",
+                        "Number of burnin samples to discard",
+                        "Cholesky",
+                        "Univariate sampling",
+                    ],
+                    index=["Value"],
+                ).to_markdown()
+                tf.summary.text("hyperparameters", hyperparameter_table, step=0)
+                tf.summary.flush()
+            session.writer = self.writer
 
     def post_training_callback(
         self,
-        training_status: List[smurff.Prediction],
-        session: smurff.MacauSession,
+        training_status: MatrixCompletionResult,
+        session: MacauSession,
         run_name: str,
     ):
         """
         Post training callback used for monitoring and debugging purposes.
 
         Args:
-            training_status (List[smurff.Prediction]): The predictions on
+            training_status (MatrixCompletionResult): The predictions on
                 the test set during training.
-            session (smurff.MacauSession): Trained model session.
+            session (MacauSession): Trained model session.
             run_name (str): Custom run name for this training session.
         """
+        if self.tensorboard_base_log_dir is not None:
+            with self.writer.as_default():
+                # Log final runtime
+                tf.summary.text(
+                    name="Run Time", data=f"{training_status.runtime}s", step=0
+                )
+                tf.summary.flush()

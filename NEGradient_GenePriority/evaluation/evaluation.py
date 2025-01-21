@@ -9,11 +9,10 @@ such as ROC curve data, AUC loss, and BEDROC scores.
 from typing import Dict, List
 
 import numpy as np
-from scipy import interpolate
-from sklearn import metrics
-
 from NEGradient_GenePriority.evaluation.metrics import bedroc_score
 from NEGradient_GenePriority.evaluation.results import Results
+from scipy import interpolate
+from sklearn import metrics
 
 
 class Evaluation:

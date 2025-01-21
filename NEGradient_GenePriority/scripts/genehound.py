@@ -71,10 +71,17 @@ def main() -> None:
         default="/home/TheGreatestCoder/code/genehounds/",
         help="Path to the directory where output results will be saved (default: %(default)s).",
     )
+    parser.add_argument(
+        "--tensorboard-base-log-dir",
+        type=str,
+        default="/home/TheGreatestCoder/code/logs",
+        help="Path to the TensorBoard log directory (default: %(default)s).",
+    )
     args = parser.parse_args()
 
     input_path = Path(args.input_path).absolute()
     output_path = Path(args.output_path).absolute()
+    tensorboard_base_log_dir = Path(args.tensorboard_base_log_dir).absolute()
     os.makedirs(output_path, exist_ok=True)
 
     # Setup logger
@@ -146,6 +153,7 @@ def main() -> None:
             save_freq=100,
             verbose=0,
             logger=logger,
+            tensorboard_base_log_dir=tensorboard_base_log_dir,
         )
 
         omim1_results, omim2_results = trainer(

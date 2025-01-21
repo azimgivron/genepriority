@@ -18,7 +18,6 @@ import optuna
 import pandas as pd
 import scipy.sparse as sp
 import tensorflow as tf
-
 from NEGradient_GenePriority.compute_models.smc import (
     MatrixCompletionResult,
     MatrixCompletionSession,

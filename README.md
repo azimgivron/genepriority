@@ -303,7 +303,7 @@ options:
                         Number of data splits (default: 1).
   --rank RANK           Rank of the model (default: 50).
   --iterations ITERATIONS
-                        Number of iterations (default: 1000).
+                        Number of iterations (default: 700).
   --threshold THRESHOLD
                         Threshold parameter (default: 10).
   --validation-size VALIDATION_SIZE

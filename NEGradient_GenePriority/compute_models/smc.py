@@ -12,43 +12,16 @@ Features:
 """
 import logging
 import time
-from dataclasses import dataclass
 from pathlib import Path
-from typing import List
 
 import numpy as np
 import scipy.sparse as sp
 import tensorflow as tf
-from sklearn.metrics import mean_squared_error
-
+from NEGradient_GenePriority.compute_models.matrix_completion_result import (
+    MatrixCompletionResult,
+)
 from NEGradient_GenePriority.utils import serialize
-
-
-@dataclass
-class MatrixCompletionResult:
-    """
-    Stores the results of the matrix completion process.
-
-    Attributes:
-        completed_matrix (sp.csr_matrix):
-            The completed matrix after the optimization process, representing
-            the low-rank approximation of the input sparse matrix.
-        loss_history (List[float]):
-            A list of loss values recorded at each iteration of the training process.
-        rmse_history (List[float]):
-            A list of RMSE (Root Mean Squared Error) values recorded during each
-            iteration on the test set to monitor performance.
-        runtime (float):
-            The total runtime of the optimization process, measured in seconds.
-        iterations (int):
-            The total number of iterations performed during the optimization process.
-    """
-
-    completed_matrix: sp.csr_matrix
-    loss_history: List[float]
-    rmse_history: List[float]
-    runtime: float
-    iterations: int
+from sklearn.metrics import mean_squared_error
 
 
 class MatrixCompletionSession:
@@ -384,8 +357,10 @@ class MatrixCompletionSession:
             flag = 0
 
             self.logger.debug(
-                ("[Main Loop] Iteration %d, Inner Loop %d:"
-                 " RMSE=%.6e (testing), Mean Loss=%.6e (training)"),
+                (
+                    "[Main Loop] Iteration %d, Inner Loop %d:"
+                    " RMSE=%.6e (testing), Mean Loss=%.6e (training)"
+                ),
                 ith_iteration,
                 inner_loop_it,
                 rmse[-1],
@@ -503,7 +478,6 @@ class MatrixCompletionSession:
             serialize(self, self.save_name)
             self.writer = writer
         training_data = MatrixCompletionResult(
-            completed_matrix=self.predict_all(),
             loss_history=loss,
             iterations=iterations_count,
             rmse_history=rmse,
