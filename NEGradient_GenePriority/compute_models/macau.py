@@ -77,8 +77,6 @@ class MacauSession(smurff.MacauSession):
             MatrixCompletionResult: Contains the loss history, RMSE history,
                 total iterations, and runtime of the process.
         """
-        logger = logging.getLogger()
-
         start_time = time.time()
         self.init()
         rmse = []
@@ -86,8 +84,7 @@ class MacauSession(smurff.MacauSession):
         status_item = self.step()
         while status_item is not None:
             if (
-                logger.isEnabledFor(logging.DEBUG)
-                and self.writer is not None
+                self.writer is not None
                 and status_item.phase == "Sample"
             ):
                 with self.writer.as_default():

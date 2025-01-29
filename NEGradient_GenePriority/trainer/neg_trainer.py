@@ -340,9 +340,21 @@ class NEGTrainer(BaseTrainer):
                 "No validation set is available. Ensure `omim1_masks` "
                 "is an instance of `TrainValTestMasks`."
             )
+
+        storage = optuna.storages.JournalStorage(
+            optuna.storages.journal.JournalFileBackend(
+                self.path / "optuna_journal_storage.log"
+            ),
+        )
+        tensorboard_callback = optuna.integration.TensorBoardCallback(
+            self.tensorboard_base_log_dir / "optuna", metric_name="RMSE"
+        )
+
         study = optuna.create_study(
             study_name="SMC hyper-parameters optimization",
             direction="minimize",
+            storage=storage,
+            callbacks=[tensorboard_callback],
             **kwargs,
         )
         optuna.logging.enable_propagation()  # Propagate logs to the root logger.

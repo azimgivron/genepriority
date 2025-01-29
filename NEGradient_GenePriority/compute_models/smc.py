@@ -385,7 +385,7 @@ class MatrixCompletionSession:
                 res_norm_next_it
                 <= res_norm + linear_approx + self.smoothness_parameter * bregman
             )
-            if self.logger.isEnabledFor(logging.DEBUG) and self.writer is not None:
+            if self.writer is not None:
                 with self.writer.as_default():
                     tf.summary.scalar(
                         name="training_loss", data=training_loss, step=ith_iteration
