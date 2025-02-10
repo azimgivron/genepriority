@@ -18,6 +18,8 @@ from typing import Any, Dict, Iterator, List, Tuple, Union
 import numpy as np
 import scipy.sparse as sp
 import smurff
+from tqdm import tqdm
+
 from NEGradient_GenePriority.evaluation.evaluation import Evaluation
 from NEGradient_GenePriority.evaluation.results import Results
 from NEGradient_GenePriority.preprocessing.dataloader import DataLoader
@@ -25,7 +27,6 @@ from NEGradient_GenePriority.preprocessing.side_information_loader import (
     SideInformationLoader,
 )
 from NEGradient_GenePriority.utils import serialize
-from tqdm import tqdm
 
 
 class BaseTrainer(metaclass=ABCMeta):
@@ -53,7 +54,6 @@ class BaseTrainer(metaclass=ABCMeta):
         path: str,
         seed: int,
         side_info_loader: SideInformationLoader = None,
-        logger: logging.Logger = None,
     ):
         """
         Initialize the Trainer class with the given configuration.
@@ -65,24 +65,20 @@ class BaseTrainer(metaclass=ABCMeta):
             seed (int): The random seed for reproducibility.
             side_info_loader (SideInformationLoader, optional): The data loader for the
                 side information.
-            logger (logging.Logger, optional): Logger instance for debug messages.
-                If None, a default logger is created.
         """
         self.dataloader = dataloader
         self.side_info_loader = side_info_loader
         self.path = path
         self.seed = seed
 
-        if logger is None:
-            logger = logging.getLogger(__name__)
-        self.logger = logger
+        self.logger = logging.getLogger(self.__class__.__name__)
 
     def __call__(
         self,
         latent_dimensions: List[int],
         save_results: bool,
-        omim2_filename: str = "omim2_results.pickle",
-        omim1_filename: str = "omim1_results.pickle",
+        omim1_filename: str,
+        omim2_filename: str,
     ) -> Tuple[Dict[str, Evaluation], Dict[str, Evaluation]]:
         """
         Execute training for different latent dimensions and optionally save results.
@@ -90,10 +86,8 @@ class BaseTrainer(metaclass=ABCMeta):
         Args:
             latent_dimensions (List[int]): List of latent dimensions to evaluate.
             save_results (bool): Whether to save the results to file.
-            omim2_filename (str, optional): Filename for saving OMIM2 results.
-                Defaults to "omim2_results.pickle".
             omim1_filename (str, optional): Filename for saving OMIM1 results.
-                Defaults to "omim1_results.pickle".
+            omim2_filename (str, optional): Filename for saving OMIM2 results.
 
         Returns:
             Tuple[Dict[str, Evaluation], Dict[str, Evaluation]]: Evaluation results

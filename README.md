@@ -286,7 +286,7 @@ options:
 usage: nega train-eval [-h] [--input-path INPUT_PATH] [--output-path OUTPUT_PATH] [--log-filename LOG_FILENAME]
                        [--num-splits NUM_SPLITS] [--rank RANK] [--iterations ITERATIONS] [--threshold THRESHOLD]
                        [--validation-size VALIDATION_SIZE] [--train-size TRAIN_SIZE] [--seed SEED]
-                       [--zero-sampling-factor ZERO_SAMPLING_FACTOR] [--tensorboard-base-log-dir TENSORBOARD_BASE_LOG_DIR]
+                       [--zero-sampling-factor ZERO_SAMPLING_FACTOR] [--tensorboard-base-log-dir tensorboard_dir]
                        [--regularization-parameter REGULARIZATION_PARAMETER] [--symmetry-parameter SYMMETRY_PARAMETER]
                        [--smoothness-parameter SMOOTHNESS_PARAMETER] [--rho-increase RHO_INCREASE] [--rho-decrease RHO_DECREASE]
 
@@ -314,7 +314,7 @@ options:
   --zero-sampling-factor ZERO_SAMPLING_FACTOR
                         Factor to determine the number of zeros to sample, calculated as the specified factor multiplied by the
                         number of ones (default: None).
-  --tensorboard-base-log-dir TENSORBOARD_BASE_LOG_DIR
+  --tensorboard-base-log-dir tensorboard_dir
                         Path to the TensorBoard log directory (default: /home/TheGreatestCoder/code/logs).
   --regularization-parameter REGULARIZATION_PARAMETER
                         Regularization parameter (default: 0.003).

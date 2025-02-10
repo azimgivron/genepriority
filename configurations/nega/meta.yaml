@@ -1,0 +1,29 @@
+# -----------------------------
+# NEGA Configuration File
+# -----------------------------
+#
+# This file is used by the NEGA pipeline.
+# It defines parameters for the evaluation command.
+#
+# For more details about NEGA see:
+# Ghaderi, S., Moreau, Y., & Ahookhosh, M. (2022).
+# Non-Euclidean Gradient Methods: Convergence, Complexity,
+# and Applications*. Journal of Machine Learning Research, 23(2022):1-44.
+#
+# Parameters:
+#   regularization_parameter: (float) Regularization parameter for
+#                             the optimization.
+#   symmetry_parameter: (float) Symmetry parameter for the gradient adjustment.
+#   smoothness_parameter: (float) Initial smoothness parameter.
+#   rho_increase: (float) Factor for increasing the step size dynamically.
+#   rho_decrease: (float) Factor for decreasing the step size dynamically.
+---
+regularization_parameter: 0.003
+---
+symmetry_parameter: 0.08
+---
+smoothness_parameter: 0.002
+---
+rho_increase: 4.0
+---
+rho_decrease: 0.9

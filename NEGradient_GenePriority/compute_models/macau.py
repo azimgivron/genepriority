@@ -7,12 +7,11 @@ This module provides an extension of the `smurff.MacauSession` class to include 
 logging capabilities for TensorBoard. The extension enables tracking training and testing
 losses during matrix completion.
 """
-
-import logging
 import time
 
 import smurff
 import tensorflow as tf
+
 from NEGradient_GenePriority.compute_models.matrix_completion_result import (
     MatrixCompletionResult,
 )
@@ -83,10 +82,7 @@ class MacauSession(smurff.MacauSession):
         loss = []
         status_item = self.step()
         while status_item is not None:
-            if (
-                self.writer is not None
-                and status_item.phase == "Sample"
-            ):
+            if self.writer is not None and status_item.phase == "Sample":
                 with self.writer.as_default():
                     tf.summary.scalar(
                         name="training_loss",

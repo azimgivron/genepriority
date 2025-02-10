@@ -17,11 +17,12 @@ from pathlib import Path
 import numpy as np
 import scipy.sparse as sp
 import tensorflow as tf
+from sklearn.metrics import mean_squared_error
+
 from NEGradient_GenePriority.compute_models.matrix_completion_result import (
     MatrixCompletionResult,
 )
 from NEGradient_GenePriority.utils import serialize
-from sklearn.metrics import mean_squared_error
 
 
 class MatrixCompletionSession:
@@ -66,7 +67,6 @@ class MatrixCompletionSession:
         rho_increase: float,
         rho_decrease: float,
         threshold: int,
-        logger: logging.Logger = None,
         writer: tf.summary.SummaryWriter = None,
         seed: int = 123,
         save_name: str = None,
@@ -89,8 +89,6 @@ class MatrixCompletionSession:
             rho_increase (float): Multiplicative factor to increase step size dynamically.
             rho_decrease (float): Multiplicative factor to decrease step size dynamically.
             threshold (int): Maximum number of iterations for the inner loop.
-            logger (logging.Logger, optional): Logger instance for tracking progress.
-                Default is `None`.
             writer (tf.summary.SummaryWriter, optional): Tensorflow summary writer.
                 Default is `None`.
             seed (int, optional): Seed for reproducible random initialization.
@@ -136,10 +134,7 @@ class MatrixCompletionSession:
         # Set random seed for reproducibility
         np.random.seed(seed)
 
-        # Initialize logger
-        if logger is None:
-            logger = logging.getLogger(__name__)
-        self.logger = logger
+        self.logger = logging.getLogger(self.__class__.__name__)
         self.writer = writer
 
         # Initialize factor matrices h1 and h2 with random values

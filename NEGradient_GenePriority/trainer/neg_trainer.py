@@ -18,6 +18,7 @@ import optuna
 import pandas as pd
 import scipy.sparse as sp
 import tensorflow as tf
+
 from NEGradient_GenePriority.compute_models.smc import (
     MatrixCompletionResult,
     MatrixCompletionSession,
@@ -53,7 +54,7 @@ class NEGTrainer(BaseTrainer):
         seed (int): Random seed for reproducibility.
         side_info_loader (SideInformationLoader): Loader for additional side information.
         logger (logging.Logger): Logger instance for tracking progress and debugging.
-        tensorboard_base_log_dir (Path): The base directory path where
+        tensorboard_dir (Path): The base directory path where
             TensorBoard log files are saved.
         writer (tf.summary.SummaryWriter): A tensorflow log writer.
     """
@@ -71,8 +72,7 @@ class NEGTrainer(BaseTrainer):
         rho_decrease: float = None,
         threshold: int = None,
         side_info_loader: SideInformationLoader = None,
-        logger: logging.Logger = None,
-        tensorboard_base_log_dir: Path = None,
+        tensorboard_dir: Path = None,
     ):
         """
         Initializes the NEGTrainer class with the provided configuration.
@@ -98,9 +98,7 @@ class NEGTrainer(BaseTrainer):
                 Defaults to None.
             side_info_loader (SideInformationLoader, optional): Loader for additional side
                 information. Defaults to None.
-            logger (logging.Logger, optional): Logger instance for tracking progress.
-                Defaults to None.
-            tensorboard_base_log_dir (Path, optional): The base directory path where
+            tensorboard_dir (Path, optional): The base directory path where
                 TensorBoard log files are saved. If None, TensorBoard logging is
                 disabled. Defaults to None.
         """
@@ -109,8 +107,8 @@ class NEGTrainer(BaseTrainer):
             path=path,
             seed=seed,
             side_info_loader=side_info_loader,
-            logger=logger,
         )
+        self.logger = logging.getLogger(self.__class__.__name__)
         self.regularization_parameter = regularization_parameter
         self.iterations = iterations
         self.symmetry_parameter = symmetry_parameter
@@ -118,7 +116,7 @@ class NEGTrainer(BaseTrainer):
         self.rho_increase = rho_increase
         self.rho_decrease = rho_decrease
         self.threshold = threshold
-        self.tensorboard_base_log_dir = tensorboard_base_log_dir
+        self.tensorboard_dir = tensorboard_dir
         self.writer = None
 
     @property
@@ -208,8 +206,8 @@ class NEGTrainer(BaseTrainer):
             session (smurff.MacauSession): Model session to train.
             run_name (str): Custom run name for this training session.
         """
-        if self.tensorboard_base_log_dir is not None:
-            run_log_dir = self.tensorboard_base_log_dir / run_name
+        if self.tensorboard_dir is not None:
+            run_log_dir = self.tensorboard_dir / run_name
             run_log_dir.mkdir(parents=True, exist_ok=True)
             self.writer = tf.summary.create_file_writer(str(run_log_dir))
             with self.writer.as_default():
@@ -257,7 +255,7 @@ class NEGTrainer(BaseTrainer):
                 rank, regularization parameter, etc.
             run_name (str): Custom run name for this training session.
         """
-        if self.tensorboard_base_log_dir is not None:
+        if self.tensorboard_dir is not None:
             with self.writer.as_default():
                 # Log final runtime
                 tf.summary.text(
@@ -347,7 +345,7 @@ class NEGTrainer(BaseTrainer):
             ),
         )
         tensorboard_callback = optuna.integration.TensorBoardCallback(
-            self.tensorboard_base_log_dir / "optuna", metric_name="RMSE"
+            self.tensorboard_dir / "optuna", metric_name="RMSE"
         )
 
         study = optuna.create_study(

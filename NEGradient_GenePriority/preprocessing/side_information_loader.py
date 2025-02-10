@@ -35,20 +35,19 @@ class SideInformationLoader:
 
     """
 
-    def __init__(self, logger: logging.Logger, nb_genes: int, nb_diseases: int):
+    def __init__(self, nb_genes: int, nb_diseases: int):
         """
         Initialize the SideInformationLoader class with a logger instance.
 
         Args:
-            logger (logging.Logger): Logger instance for logging messages.
             nb_genes (int): Number of genes to define the shape of gene-side matrices.
             nb_diseases (int): Number of diseases to define the shape of
                 disease-side matrices.
 
         """
-        self.logger = logger
         self.nb_genes = nb_genes
         self.nb_diseases = nb_diseases
+        self.logger = logging.getLogger(self.__class__.__name__)
 
         # Initialize attributes for processed data
         self.gene_side_info = None

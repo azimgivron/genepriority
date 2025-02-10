@@ -1,0 +1,27 @@
+# ----------------------------------------------
+# GeneHound Post Processing Configuration File
+# ----------------------------------------------
+#
+# This file is used by the GeneHound post processing.
+# It defines parameters for data for constructing the
+# results from the paper.
+#
+# For more details about GeneHound see:
+# Pooya Zakeri, Jaak Simm, Adam Arany, Sarah ElShal, Yves Moreau,
+# Gene prioritization using Bayesian matrix factorization with genomic
+# and phenotypic side information, Bioinformatics, Volume 34, Issue 13,
+# July 2018, Pages i447–i456, https://doi.org/10.1093/bioinformatics/bty289
+#
+# Parameters:
+#   alphas: (Dict[float, str]): The dictionary contains the alpha values used
+#                               for the Bedroc metric and the corresponding
+#                               percentage of elements accounted for
+#                               in the ranking evaluation.
+#
+---
+alphas:
+    228.5: "100"
+    160.9: "1%"
+    32.2: "5%"
+    16.1: "10%"
+    5.3: "30%"

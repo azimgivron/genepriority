@@ -1,0 +1,28 @@
+# -----------------------------
+# GeneHound Configuration File
+# -----------------------------
+#
+# This file is used by the GeneHound pipeline.
+# It defines parameters for data processing and simulation.
+#
+# For more details about GeneHound see:
+# Pooya Zakeri, Jaak Simm, Adam Arany, Sarah ElShal, Yves Moreau,
+# Gene prioritization using Bayesian matrix factorization with genomic
+# and phenotypic side information, Bioinformatics, Volume 34, Issue 13,
+# July 2018, Pages i447–i456, https://doi.org/10.1093/bioinformatics/bty289
+#
+# Parameters:
+#   num_splits: (int) Number of splits for OMIM2 cross-validation.
+#   num_folds: (int) Number of folds for OMIM1 training.
+#   zero_sampling_factor: (int) Factor for zero-sampling.
+#   train_size: (float) Proportion of data used for training.
+---
+num_splits: 6
+---
+num_folds: 5
+---
+zero_sampling_factor: 5
+---
+seed: 42
+---
+train_size: 0.9

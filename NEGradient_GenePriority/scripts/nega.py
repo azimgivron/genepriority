@@ -10,14 +10,24 @@ search (cross-validation) or a single train/test cycle (train-eval).
 """
 import argparse
 import logging
-import os
 import traceback
 from pathlib import Path
 
 import pint
+import yaml
+
 from NEGradient_GenePriority.preprocessing import DataLoader
+from NEGradient_GenePriority.scripts.utils import load_omim_meta
 from NEGradient_GenePriority.trainer import NEGTrainer
 from NEGradient_GenePriority.utils import serialize
+
+CONFIG_KEYS = [
+    "regularization_parameter",
+    "symmetry_parameter",
+    "smoothness_parameter",
+    "rho_increase",
+    "rho_decrease",
+]
 
 
 def setup_logger(log_file: Path):
@@ -36,13 +46,14 @@ def setup_logger(log_file: Path):
     )
 
 
-def load_data(
+def pre_processing(
     num_splits: int,
     train_size: float,
     validation_size: float,
     input_path: Path,
     seed: int,
     zero_sampling_factor: int,
+    omim_meta_path: Path,
 ) -> DataLoader:
     """
     Loads and preprocesses gene-disease association data.
@@ -54,13 +65,12 @@ def load_data(
         input_path (Path): Path to the input data directory.
         seed (int): Random seed for reproducibility.
         zero_sampling_factor (int): Multiplier for generating negative associations.
+        omim_meta_path (Path): Path to OMIM meta data.
 
     Returns:
         DataLoader: A DataLoader instance with the loaded data.
     """
-    nb_genes = 14_195
-    nb_diseases = 314
-    min_associations = 10
+    nb_genes, nb_diseases, min_associations = load_omim_meta(omim_meta_path)
 
     dataloader = DataLoader(
         nb_genes=nb_genes,
@@ -107,7 +117,6 @@ def cross_validation(
             dataloader=dataloader,
             path=output_path,
             seed=seed,
-            logger=logger,
             iterations=iterations,
             threshold=threshold,
         )
@@ -142,7 +151,7 @@ def train_eval(
     smoothness_parameter: float,
     rho_increase: float,
     rho_decrease: float,
-    tensorboard_base_log_dir: Path,
+    tensorboard_dir: Path,
 ):
     """
     Trains a model on the training set and evaluates it on the test set.
@@ -160,14 +169,13 @@ def train_eval(
         smoothness_parameter (float): Smoothness parameter.
         rho_increase (float): Rho increase value.
         rho_decrease (float): Rho decrease value.
-        tensorboard_base_log_dir (Path): Path to the TensorBoard log directory.
+        tensorboard_dir (Path): Path to the TensorBoard log directory.
     """
     try:
         trainer = NEGTrainer(
             dataloader=dataloader,
             path=output_path,
             seed=seed,
-            logger=logger,
             iterations=iterations,
             threshold=threshold,
             regularization_parameter=regularization_parameter,
@@ -175,7 +183,7 @@ def train_eval(
             smoothness_parameter=smoothness_parameter,
             rho_increase=rho_increase,
             rho_decrease=rho_decrease,
-            tensorboard_base_log_dir=tensorboard_base_log_dir,
+            tensorboard_dir=tensorboard_dir,
         )
         evaluation_results = trainer.train_test_splits(rank, "trained_model.pickle")
         evaluation_file = output_path / "evaluation.pickle"
@@ -188,7 +196,7 @@ def train_eval(
         raise
 
 
-def get_args() -> argparse.Namespace:
+def parse() -> argparse.Namespace:
     """
     Parses and retrieves command-line arguments.
 
@@ -219,6 +227,18 @@ def get_args() -> argparse.Namespace:
             ),
         )
         subparser.add_argument(
+            "--omim-meta-path",
+            type=str,
+            default=(
+                "/home/TheGreatestCoder/code/NEGradient-GenePriority"
+                "/configurations/omim.yaml"
+            ),
+            help=(
+                "Path to the OMIM file which contains the meta data about "
+                "the OMIM association matrix. (default: %(default)s)"
+            ),
+        )
+        subparser.add_argument(
             "--output-path",
             type=str,
             default="/home/TheGreatestCoder/code/neg/",
@@ -239,13 +259,13 @@ def get_args() -> argparse.Namespace:
         subparser.add_argument(
             "--rank",
             type=int,
-            default=50,
+            default=40,
             help="Rank of the model (default: %(default)s).",
         )
         subparser.add_argument(
             "--iterations",
             type=int,
-            default=700,
+            default=200,
             help="Number of iterations (default: %(default)s).",
         )
         subparser.add_argument(
@@ -286,34 +306,17 @@ def get_args() -> argparse.Namespace:
         help="Path to the TensorBoard log directory (default: %(default)s).",
     )
     eval_parser.add_argument(
-        "--regularization-parameter",
-        type=float,
-        default=0.003,
-        help="Regularization parameter (default: %(default)s).",
-    )
-    eval_parser.add_argument(
-        "--symmetry-parameter",
-        type=float,
-        default=0.08,
-        help="Symmetry parameter (default: %(default)s).",
-    )
-    eval_parser.add_argument(
-        "--smoothness-parameter",
-        type=float,
-        default=0.002,
-        help="Smoothness parameter (default: %(default)s).",
-    )
-    eval_parser.add_argument(
-        "--rho-increase",
-        type=float,
-        default=4.0,
-        help="Rho increase value (default: %(default)s).",
-    )
-    eval_parser.add_argument(
-        "--rho-decrease",
-        type=float,
-        default=0.9,
-        help="Rho decrease value (default: %(default)s).",
+        "--config-path",
+        type=str,
+        default=(
+            "/home/TheGreatestCoder/code/NEGradient-GenePriority"
+            "/configurations/nega/meta.yaml"
+        ),
+        help=(
+            "Path to the YAML configuration file that contains parameters for simulation."
+            "simulation. The file should define keys such as 'num_splits', "
+            "'regularization_parameter', 'symmetry_parameter', etc. (default: %(default)s)"
+        ),
     )
     cv_parser.add_argument(
         "--n-trials",
@@ -332,28 +335,29 @@ def main():
     data loading, and triggers either cross-validation or train-evaluation based
     on the selected mode.
     """
-    args = get_args()
+    args = parse()
 
     input_path = Path(args.input_path).absolute()
     output_path = Path(args.output_path).absolute()
 
-    os.makedirs(output_path, exist_ok=True)
+    output_path.mkdir(exist_ok=True)
 
     log_file = output_path / args.log_filename
     setup_logger(log_file)
-    logger = logging.getLogger(__name__)
+    logger = logging.getLogger("NEGA")
 
     if not input_path.exists():
         logger.error("Input path does not exist: %s", input_path)
         raise FileNotFoundError(f"Input path does not exist: {input_path}")
 
-    dataloader = load_data(
+    dataloader = pre_processing(
         num_splits=args.num_splits,
         train_size=args.train_size,
         validation_size=args.validation_size,
         input_path=input_path,
         seed=args.seed,
         zero_sampling_factor=args.zero_sampling_factor,
+        omim_meta_path=args.omim_meta_path,
     )
 
     if args.mode == "cross-validation":
@@ -369,8 +373,31 @@ def main():
             n_trials=args.n_trials,
         )
     elif args.mode == "train-eval":
+        config_path = Path(args.config_path).absolute()
+        if not config_path.exists():
+            raise FileNotFoundError(
+                f"The configuration path does not exist: {config_path}"
+            )
+
+        logger.debug("Loading configuration file: %s", config_path)
+        with config_path.open("r", encoding="utf-8") as stream:
+            config = yaml.safe_load(stream)
+
+        for key in CONFIG_KEYS:
+            if key not in config:
+                raise KeyError(
+                    f"{key} not found in configuration file. "
+                    "Make sure it is set before running the script again."
+                )
+
+        regularization_parameter = config["regularization_parameter"]
+        symmetry_parameter = config["symmetry_parameter"]
+        smoothness_parameter = config["smoothness_parameter"]
+        rho_increase = config["rho_increase"]
+        rho_decrease = config["rho_decrease"]
+
         logger.info("Starting train-eval mode.")
-        tensorboard_base_log_dir = Path(args.tensorboard_base_log_dir).absolute()
+        tensorboard_dir = Path(args.tensorboard_dir).absolute()
         train_eval(
             logger=logger,
             output_path=output_path,
@@ -379,12 +406,12 @@ def main():
             iterations=args.iterations,
             threshold=args.threshold,
             seed=args.seed,
-            regularization_parameter=args.regularization_parameter,
-            symmetry_parameter=args.symmetry_parameter,
-            smoothness_parameter=args.smoothness_parameter,
-            rho_increase=args.rho_increase,
-            rho_decrease=args.rho_decrease,
-            tensorboard_base_log_dir=tensorboard_base_log_dir,
+            regularization_parameter=regularization_parameter,
+            symmetry_parameter=symmetry_parameter,
+            smoothness_parameter=smoothness_parameter,
+            rho_increase=rho_increase,
+            rho_decrease=rho_decrease,
+            tensorboard_dir=tensorboard_dir,
         )
 
 

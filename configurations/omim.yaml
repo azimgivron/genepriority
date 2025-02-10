@@ -1,0 +1,15 @@
+# -----------------------------
+# OMIM Configuration File
+# -----------------------------
+#
+# Parameters:
+#   nb_genes: (int) Number of genes in OMIM.
+#   nb_diseases: (int) Number of diseases in OMIM.
+#   min_associations: (int) Minimum number of associations
+#                     required for a disease to be kept in OMIM2.
+---
+nb_genes: 14_195
+---
+nb_diseases: 314
+---
+min_associations: 10

@@ -23,6 +23,7 @@ from typing import Union
 import numpy as np
 import pandas as pd
 import scipy.sparse as sp
+
 from NEGradient_GenePriority.preprocessing.preprocessing import (
     compute_statistics,
     convert_dataframe_to_sparse_matrix,
@@ -77,7 +78,6 @@ class DataLoader:
         min_associations: int,
         validation_size: float = None,
         zero_sampling_factor: int = None,
-        logger: logging.Logger = None,
     ):
         """
         Initialize the DataLoader with configuration settings for data processing.
@@ -94,7 +94,6 @@ class DataLoader:
                 splits.
             min_associations (int): Minimum number of associations required for filtering in OMIM2.
             zero_sampling_factor (int, optional): Multiplier for generating negative associations.
-            logger (logging.Logger, optional): Logger for debugging. Defaults to a standard logger.
         """
         self.nb_genes = nb_genes
         self.nb_diseases = nb_diseases
@@ -116,11 +115,7 @@ class DataLoader:
         self.train_size = train_size
         self.validation_size = validation_size
         self.min_associations = min_associations
-
-        if logger is None:
-            logger = logging.getLogger(__name__)
-
-        self.logger = logger
+        self.logger = logging.getLogger(self.__class__.__name__)
 
     @property
     def iter_over_validation(self) -> bool:

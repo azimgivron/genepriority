@@ -17,6 +17,7 @@ import numpy as np
 import pandas as pd
 import scipy.sparse as sp
 import tensorflow as tf
+
 from NEGradient_GenePriority.compute_models.macau import MacauSession
 from NEGradient_GenePriority.compute_models.matrix_completion_result import (
     MatrixCompletionResult,
@@ -52,7 +53,7 @@ class MACAUTrainer(BaseTrainer):
         verbose (Literal[0, 1, 2]): Verbosity level of the algorithm
             (0: Silent, 1: Minimal, 2: Detailed).
         logger (logging.Logger): Logger instance for debug and info messages.
-        tensorboard_base_log_dir (Path): The base directory path where
+        tensorboard_dir (Path): The base directory path where
             TensorBoard log files are saved.
         writer (tf.summary.SummaryWriter): A tensorflow log writer.
     """
@@ -69,8 +70,7 @@ class MACAUTrainer(BaseTrainer):
         save_freq: int,
         verbose: Literal[0, 1, 2],
         side_info_loader: SideInformationLoader = None,
-        logger: logging.Logger = None,
-        tensorboard_base_log_dir: Path = None,
+        tensorboard_dir: Path = None,
     ):
         """
         Initialize the MACAUTrainer class with the given configuration.
@@ -89,9 +89,7 @@ class MACAUTrainer(BaseTrainer):
             verbose (Literal[0, 1, 2]): The verbosity level of the algorithm.
             side_info_loader (SideInformationLoader, optional): The data loader for the
                 side information.
-            logger (logging.Logger, optional): Logger instance for debug messages.
-                If None, a default logger is created.
-            tensorboard_base_log_dir (Path, optional): The base directory path where
+            tensorboard_dir (Path, optional): The base directory path where
                 TensorBoard log files are saved. If None, TensorBoard logging is
                 disabled. Defaults to None.
         """
@@ -100,15 +98,15 @@ class MACAUTrainer(BaseTrainer):
             path=path,
             seed=seed,
             side_info_loader=side_info_loader,
-            logger=logger,
         )
+        self.logger = logging.getLogger(self.__class__.__name__)
         self.num_samples = num_samples
         self.burnin_period = burnin_period
         self.direct = direct
         self.univariate = univariate
         self.save_freq = save_freq
         self.verbose = verbose
-        self.tensorboard_base_log_dir = tensorboard_base_log_dir
+        self.tensorboard_dir = tensorboard_dir
         self.writer = None
 
     @property
@@ -215,8 +213,8 @@ class MACAUTrainer(BaseTrainer):
             session (MacauSession): Model session to train.
             run_name (str): Custom run name for this training session.
         """
-        if self.tensorboard_base_log_dir is not None:
-            run_log_dir = self.tensorboard_base_log_dir / run_name
+        if self.tensorboard_dir is not None:
+            run_log_dir = self.tensorboard_dir / run_name
             run_log_dir.mkdir(parents=True, exist_ok=True)
             self.writer = tf.summary.create_file_writer(str(run_log_dir))
             with self.writer.as_default():
@@ -258,7 +256,7 @@ class MACAUTrainer(BaseTrainer):
             session (MacauSession): Trained model session.
             run_name (str): Custom run name for this training session.
         """
-        if self.tensorboard_base_log_dir is not None:
+        if self.tensorboard_dir is not None:
             with self.writer.as_default():
                 # Log final runtime
                 tf.summary.text(
