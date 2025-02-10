@@ -70,11 +70,12 @@ def post_processing(
     logger.debug("Loading configuration file: %s", post_config_path)
     with post_config_path.open("r", encoding="utf-8") as stream:
         config = yaml.safe_load(stream)
-
-    if "alphas" not in config:
+        
+    key = "alphas"
+    if key not in config:
         raise KeyError("Alpha values not found in post-processing configuration.")
 
-    alpha_map = config["alpha"]
+    alpha_map = config[key]
     logger.debug("Starting figures and tables creation.")
     Evaluation.alphas = list(alpha_map.keys())
     Evaluation.alpha_map = alpha_map
@@ -214,6 +215,8 @@ def run(
     latent_dimensions: List[int],
     omim1_filename: str,
     omim2_filename: str,
+    num_samples: int,
+    burnin_period: int
 ) -> None:
     """
     Configures and runs the MACAU training session.
@@ -230,6 +233,8 @@ def run(
         latent_dimensions (List[int]): List of latent dimensions for model training.
         omim1_filename (str): Filename for saving OMIM1 results.
         omim2_filename (str): Filename for saving OMIM2 results.
+        num_samples (int): Number of active samples.
+        burnin_period (int): Number of samples for the burnin period.
     """
     logger = logging.getLogger("run")
     logger.debug("Configuring MACAU session")
@@ -237,8 +242,8 @@ def run(
         dataloader=dataloader,
         side_info_loader=side_info_loader,
         path=output_path,
-        num_samples=3_500,
-        burnin_period=500,
+        num_samples=num_samples,
+        burnin_period=burnin_period,
         direct=False,
         univariate=True,
         seed=seed,
@@ -312,8 +317,8 @@ def parse() -> argparse.Namespace:
     parser.add_argument(
         "--side-info",
         type=bool,
-        required=True,
         action=argparse.BooleanOptionalAction,
+        default=True,
         help=(
             "Flag indicating whether to add side information for the simulation. "
             "If enabled, the script will add both row and column side information "
@@ -430,6 +435,26 @@ def parse() -> argparse.Namespace:
             "(default: %(default)s)"
         ),
     )
+    parser.add_argument(
+        "--burnin_period",
+        type=int,
+        default=500,
+        help=(
+            "Number of initial samples to discard as burn-in. "
+            "This period allows the sampler to reach convergence before "
+            "collecting samples for training (default: %(default)s)."
+        ),
+    )
+    parser.add_argument(
+        "--num_samples",
+        type=int,
+        default=1_000,
+        help=(
+            "Number of samples to collect after the burn-in period, "
+            "during the active period. (default: %(default)s)."
+        ),
+    )
+
 
     args = parser.parse_args()
     return args
@@ -502,6 +527,8 @@ def main() -> None:
                 latent_dimensions=latent_dimensions,
                 omim1_filename=args.omim1_filename,
                 omim2_filename=args.omim2_filename,
+                burnin_period=args.burnin_period,
+                num_samples=args.num_samples
             )
 
         if args.post:

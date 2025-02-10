@@ -54,7 +54,7 @@ class NEGTrainer(BaseTrainer):
         seed (int): Random seed for reproducibility.
         side_info_loader (SideInformationLoader): Loader for additional side information.
         logger (logging.Logger): Logger instance for tracking progress and debugging.
-        tensorboard_dir (Path): The base directory path where
+       tensorboard_dirr (Path): The base directory path where
             TensorBoard log files are saved.
         writer (tf.summary.SummaryWriter): A tensorflow log writer.
     """
@@ -72,7 +72,7 @@ class NEGTrainer(BaseTrainer):
         rho_decrease: float = None,
         threshold: int = None,
         side_info_loader: SideInformationLoader = None,
-        tensorboard_dir: Path = None,
+        tensorboard_dirr: Path = None,
     ):
         """
         Initializes the NEGTrainer class with the provided configuration.
@@ -98,7 +98,7 @@ class NEGTrainer(BaseTrainer):
                 Defaults to None.
             side_info_loader (SideInformationLoader, optional): Loader for additional side
                 information. Defaults to None.
-            tensorboard_dir (Path, optional): The base directory path where
+           tensorboard_dirr (Path, optional): The base directory path where
                 TensorBoard log files are saved. If None, TensorBoard logging is
                 disabled. Defaults to None.
         """
@@ -116,7 +116,7 @@ class NEGTrainer(BaseTrainer):
         self.rho_increase = rho_increase
         self.rho_decrease = rho_decrease
         self.threshold = threshold
-        self.tensorboard_dir = tensorboard_dir
+        selftensorboard_dirr = tensorboard_dirr
         self.writer = None
 
     @property
@@ -206,8 +206,8 @@ class NEGTrainer(BaseTrainer):
             session (smurff.MacauSession): Model session to train.
             run_name (str): Custom run name for this training session.
         """
-        if self.tensorboard_dir is not None:
-            run_log_dir = self.tensorboard_dir / run_name
+        if selftensorboard_dirr is not None:
+            run_log_dir = selftensorboard_dirr / run_name
             run_log_dir.mkdir(parents=True, exist_ok=True)
             self.writer = tf.summary.create_file_writer(str(run_log_dir))
             with self.writer.as_default():
@@ -255,7 +255,7 @@ class NEGTrainer(BaseTrainer):
                 rank, regularization parameter, etc.
             run_name (str): Custom run name for this training session.
         """
-        if self.tensorboard_dir is not None:
+        if selftensorboard_dirr is not None:
             with self.writer.as_default():
                 # Log final runtime
                 tf.summary.text(
@@ -345,7 +345,7 @@ class NEGTrainer(BaseTrainer):
             ),
         )
         tensorboard_callback = optuna.integration.TensorBoardCallback(
-            self.tensorboard_dir / "optuna", metric_name="RMSE"
+            selftensorboard_dirr / "optuna", metric_name="RMSE"
         )
 
         study = optuna.create_study(

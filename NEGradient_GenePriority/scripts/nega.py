@@ -185,7 +185,9 @@ def train_eval(
             rho_decrease=rho_decrease,
             tensorboard_dir=tensorboard_dir,
         )
-        evaluation_results = trainer.train_test_splits(rank, "trained_model.pickle")
+        evaluation_results = trainer.train_test_splits(
+            rank, "nega_trained_model.pickle"
+        )
         evaluation_file = output_path / "evaluation.pickle"
         serialize(evaluation_results, evaluation_file)
         logger.info("Train-eval completed. Results saved at %s", evaluation_file)

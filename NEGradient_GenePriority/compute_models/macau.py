@@ -9,6 +9,7 @@ losses during matrix completion.
 """
 import time
 
+import scipy.sparse as sp
 import smurff
 import tensorflow as tf
 
@@ -34,7 +35,10 @@ class MacauSession(smurff.MacauSession):
         burnin: int,
         direct: bool,
         univariate: bool,
+        Ytrain: sp.csr_matrix,
+        Ytest: sp.csr_matrix,
         writer: tf.summary.SummaryWriter = None,
+        center: bool = False,
         **kwargs,
     ):
         """
@@ -47,17 +51,27 @@ class MacauSession(smurff.MacauSession):
                 posterior samples.
             direct (bool): Whether to use a Cholesky or CG solver.
             univariate (bool): Whether to use univariate or multivariate sampling.
+            Ytrain (sp.csr_matrix): Train matrix.
+            Ytest (sp.csr_matrix): Test matrix.
             writer (tf.summary.SummaryWriter, optional): TensorBoard SummaryWriter
                 instance. Defaults to None.
+            center (bool): Whether to center the data.
             **kwargs: Additional arguments to be passed to the
                 `smurff.MacauSession` constructor.
         """
+        if center:
+            Ytrain, global_mean, _ = smurff.center_and_scale(
+                Ytrain, "global", with_mean=True, with_std=False
+            )
+            Ytest.data -= global_mean
         super().__init__(
             num_latent=num_latent,
             nsamples=nsamples,
             burnin=burnin,
             direct=direct,
             univariate=univariate,
+            Ytrain=Ytrain,
+            Ytest=Ytest,
             **kwargs,
         )
         self.num_latent = num_latent
