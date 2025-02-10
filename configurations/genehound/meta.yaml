@@ -12,13 +12,17 @@
 # July 2018, Pages i447–i456, https://doi.org/10.1093/bioinformatics/bty289
 #
 # Parameters:
-#   num_splits: (int) Number of splits for OMIM2 cross-validation.
-#   num_folds: (int) Number of folds for OMIM1 training.
-#   zero_sampling_factor: (int) Factor for zero-sampling.
-#   train_size: (float) Proportion of data used for training.
+#   direct: (bool) Whether to use a Cholesky or conjugate gradient (CG) solver.
+#   univariate: (bool) Whether to use univariate or multivariate sampling.
+#   save_freq: (int) Frequency at which model state is saved (e.g., every N samples).
+#   burnin_period: (int) Number of initial samples to discard as burn-in.
+#                  This period allows the sampler to reach convergence
+#                  before collecting samples for training.
+#   num_samples: (int) Number of samples to collect after the burn-in period,
+#                 during the active period. (default: 1000).
 ---
-num_splits: 6
-num_folds: 5
-zero_sampling_factor: 5
-seed: 42
-train_size: 0.9
+direct: False
+univariate: True
+save_freq: 100
+num_samples: 1_000
+burnin_period: 500

@@ -35,12 +35,10 @@ from NEGradient_GenePriority import (
 from NEGradient_GenePriority.scripts.utils import load_omim_meta
 
 CONFIG_KEYS = [
-    "num_splits",
-    "num_folds",
-    "zero_sampling_factor",
-    "train_size",
+    "direct",
+    "univariate",
+    "univariate",
 ]
-
 
 def post_processing(
     omim1_results: Path,
@@ -131,10 +129,13 @@ def post_processing(
 
 def pre_processing(
     input_path: Path,
-    config_path: Path,
     seed: int,
     omim_meta_path: Path,
     side_info: bool,
+    num_splits: int,
+    zero_sampling_factor: int,
+    num_folds: int,
+    train_size: float
 ) -> Tuple[DataLoader, SideInformationLoader]:
     """
     Loads configuration parameters, gene–disease association data, and side information.
@@ -146,32 +147,22 @@ def pre_processing(
 
     Args:
         input_path (Path): Directory containing the input CSV files.
-        config_path (Path): Path to the YAML configuration file.
         seed (int): Seed for reproducibility in sampling.
         omim_meta_path (Path): Path to OMIM meta data.
         side_info (bool): Whether to load side information.
-
+        num_splits (int): The number of splits in OMIM1.
+        zero_sampling_factor (int): The factor by which to multiply
+            the number of 1s to get the number fo 0s to sample.
+        num_folds (int): The number folds in OMIM2.
+        train_size (float): The fraction of data for the training set.
+    
     Returns:
         Tuple[DataLoader, SideInformationLoader]: The data loader and side information
             loader objects.
     """
     logger = logging.getLogger("pre_processing")
-    logger.debug("Loading configuration file: %s", config_path)
-    with config_path.open("r", encoding="utf-8") as stream:
-        config = yaml.safe_load(stream)
-
-    for key in CONFIG_KEYS:
-        if key not in config:
-            raise KeyError(
-                f"{key} not found in configuration file. "
-                "Make sure it is set before running the script again."
-            )
-
+    logger.debug("Loading OMIM meta data.")
     nb_genes, nb_diseases, min_associations = load_omim_meta(omim_meta_path)
-    num_splits = config["num_splits"]
-    zero_sampling_factor = config["zero_sampling_factor"]
-    num_folds = config["num_folds"]
-    train_size = config["train_size"]
 
     # Load gene–disease data.
     dataloader = DataLoader(
@@ -215,8 +206,7 @@ def run(
     latent_dimensions: List[int],
     omim1_filename: str,
     omim2_filename: str,
-    num_samples: int,
-    burnin_period: int
+    config_path: Path,
 ) -> None:
     """
     Configures and runs the MACAU training session.
@@ -233,10 +223,26 @@ def run(
         latent_dimensions (List[int]): List of latent dimensions for model training.
         omim1_filename (str): Filename for saving OMIM1 results.
         omim2_filename (str): Filename for saving OMIM2 results.
-        num_samples (int): Number of active samples.
-        burnin_period (int): Number of samples for the burnin period.
+        config_path (Path): Path to the YAML configuration file.
     """
     logger = logging.getLogger("run")
+    logger.debug("Loading configuration file: %s", config_path)
+    with config_path.open("r", encoding="utf-8") as stream:
+        config = yaml.safe_load(stream)
+
+    for key in CONFIG_KEYS:
+        if key not in config:
+            raise KeyError(
+                f"{key} not found in configuration file. "
+                "Make sure it is set before running the script again."
+            )
+
+    direct = config["direct"]
+    univariate = config["univariate"]
+    save_freq = config["save_freq"]
+    num_samples = config["num_samples"]
+    burnin_period = config["burnin_period"]
+    
     logger.debug("Configuring MACAU session")
     trainer = MACAUTrainer(
         dataloader=dataloader,
@@ -244,10 +250,10 @@ def run(
         path=output_path,
         num_samples=num_samples,
         burnin_period=burnin_period,
-        direct=False,
-        univariate=True,
+        direct=direct,
+        univariate=univariate,
         seed=seed,
-        save_freq=100,
+        save_freq=save_freq,
         verbose=0,
         tensorboard_dir=tensorboard_dir,
     )
@@ -292,167 +298,128 @@ def parse() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Reproduce GeneHound results using a MACAU-based approach."
     )
+
     parser.add_argument(
         "--run",
         type=bool,
         required=True,
         action=argparse.BooleanOptionalAction,
-        help=(
-            "Flag indicating whether to execute the training simulation. "
-            "If set, the script will run the MACAU model training using the "
-            "provided data and configuration. (default: %(default)s)"
-        ),
+        help="Run MACAU model training."
     )
+
     parser.add_argument(
         "--post",
         type=bool,
         required=True,
         action=argparse.BooleanOptionalAction,
-        help=(
-            "Flag indicating whether to perform post-processing on the simulation results. "
-            "If enabled, the script will generate evaluation plots and tables such as ROC "
-            "curves, AUC/loss tables, and BEDROC scores. (default: %(default)s)"
-        ),
+        help="Perform post-processing (generate evaluation plots/tables)."
     )
+
     parser.add_argument(
         "--side-info",
         type=bool,
         action=argparse.BooleanOptionalAction,
         default=True,
-        help=(
-            "Flag indicating whether to add side information for the simulation. "
-            "If enabled, the script will add both row and column side information "
-            "(default: %(default)s)"
-        ),
+        help="Use side information (row & column). (default: %(default)s)"
     )
+
     parser.add_argument(
         "--input-path",
         type=str,
         default="/home/TheGreatestCoder/code/data/postprocessed/",
-        help=(
-            "Path to the directory containing input data files required for the simulation. "
-            "This directory must include the 'gene-disease.csv' file with gene–disease "
-            "associations and may include additional files for side information. "
-            "(default: %(default)s)"
-        ),
+        help="Path to input data directory. (default: %(default)s)"
     )
+
     parser.add_argument(
         "--omim-meta-path",
         type=str,
-        default=(
-            "/home/TheGreatestCoder/code/NEGradient-GenePriority"
-            "/configurations/omim.yaml"
-        ),
-        help=(
-            "Path to the OMIM file which contains the meta data about "
-            "the OMIM association matrix. (default: %(default)s)"
-        ),
+        default="/home/TheGreatestCoder/code/NEGradient-GenePriority/configurations/omim.yaml",
+        help="Path to OMIM metadata file. (default: %(default)s)"
     )
+
     parser.add_argument(
         "--config-path",
         type=str,
-        default=(
-            "/home/TheGreatestCoder/code/NEGradient-GenePriority"
-            "/configurations/genehound/meta.yaml"
-        ),
-        help=(
-            "Path to the YAML configuration file that contains parameters for data processing and "
-            "simulation. The file should define keys such as 'num_splits', 'num_folds', "
-            "'nb_genes', etc. (default: %(default)s)"
-        ),
+        default="/home/TheGreatestCoder/code/NEGradient-GenePriority/configurations/genehound/meta.yaml",
+        help="Path to YAML configuration file. (default: %(default)s)"
     )
+
     parser.add_argument(
         "--post-config-path",
         type=str,
-        default=(
-            "/home/TheGreatestCoder/code/NEGradient-GenePriority"
-            "/configurations/genehound/post.yaml"
-        ),
-        help=(
-            "Path to the YAML configuration file for post-processing. "
-            "This file should contain settings like the alpha values used to compute "
-            "evaluation metrics (e.g., BEDROC scores) during post-processing. "
-            "(default: %(default)s)"
-        ),
+        default="/home/TheGreatestCoder/code/NEGradient-GenePriority/configurations/genehound/post.yaml",
+        help="Path to post-processing config file. (default: %(default)s)"
     )
+
     parser.add_argument(
         "--output-path",
         type=str,
         default="/home/TheGreatestCoder/code/genehounds/",
-        help=(
-            "Path to the directory where output results will be saved. "
-            "This includes training logs, plots (e.g., ROC curves and BEDROC boxplots), "
-            "and CSV tables with evaluation metrics. (default: %(default)s)"
-        ),
+        help="Path to save output results. (default: %(default)s)"
     )
+
     parser.add_argument(
         "--tensorboard-base-log-dir",
         type=str,
         default="/home/TheGreatestCoder/code/logs",
-        help=(
-            "Path to the base directory for TensorBoard logs. Training progress and other "
-            "metrics will be logged here for visualization using TensorBoard. "
-            "(default: %(default)s)"
-        ),
+        help="Path for TensorBoard logs. (default: %(default)s)"
     )
-    parser.add_argument(
-        "--seed",
-        type=int,
-        default=42,
-        help=(
-            "Random seed used for reproducibility of data splits and sampling. "
-            "Setting this seed ensures that the simulation results remain consistent "
-            "between runs. (default: %(default)s)"
-        ),
-    )
+
     parser.add_argument(
         "--omim1-filename",
         type=str,
         default="omim1_results.pickle",
-        help=(
-            "Filename for saving the results corresponding to the first dataset (OMIM1). "
-            "The file will be stored in the specified output directory. (default: %(default)s)"
-        ),
+        help="Filename for OMIM1 results. (default: %(default)s)"
     )
+
     parser.add_argument(
         "--omim2-filename",
         type=str,
         default="omim2_results.pickle",
-        help=(
-            "Filename for saving the results corresponding to the second dataset (OMIM2). "
-            "The file will be stored in the specified output directory. (default: %(default)s)"
-        ),
+        help="Filename for OMIM2 results. (default: %(default)s)"
     )
+
     parser.add_argument(
         "--latent-dimensions",
         type=int,
         nargs="+",
         default=[25, 30, 40],
-        help=(
-            "Space-separated list of latent dimensions to be used for training the MACAU models. "
-            "For example, '--latent_dimensions 25 30 40' will run three models with latent "
-            "dimensions 25, 30, and 40, respectively. "
-            "(default: %(default)s)"
-        ),
+        help="List of latent dimensions for MACAU. (default: %(default)s)"
     )
+
     parser.add_argument(
-        "--burnin_period",
+        "--zero-sampling-factor",
         type=int,
-        default=500,
-        help=(
-            "Number of initial samples to discard as burn-in. "
-            "This period allows the sampler to reach convergence before "
-            "collecting samples for training (default: %(default)s)."
-        ),
+        default=5,
+        help="Factor for zero sampling. (default: %(default)s)"
     )
+
     parser.add_argument(
-        "--num_samples",
+        "--train-size",
+        type=float,
+        default=0.8,
+        help="Training set size. (default: %(default)s)"
+    )
+
+    parser.add_argument(
+        "--num-splits",
         type=int,
-        default=1_000,
-        help=(
-            "Number of samples to collect after the burn-in period, "
-            "during the active period. (default: %(default)s)."
-        ),
+        default=6,
+        help="Number of data splits. (default: %(default)s)"
+    )
+
+    parser.add_argument(
+        "--num-folds",
+        type=int,
+        default=5,
+        help="Number of folds for cross-validation. (default: %(default)s)"
+    )
+
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=42,
+        help="Random seed. (default: %(default)s)"
     )
 
 
@@ -513,10 +480,13 @@ def main() -> None:
 
             dataloader, side_info_loader = pre_processing(
                 input_path=input_path,
-                config_path=config_path,
                 seed=seed,
                 omim_meta_path=omim_meta_path,
                 side_info=args.side_info,
+                num_splits=args.num_splits,
+                zero_sampling_factor=args.zero_sampling_factor,
+                num_folds=args.num_folds,
+                train_size=args.train_size
             )
             run(
                 dataloader=dataloader,
@@ -527,8 +497,7 @@ def main() -> None:
                 latent_dimensions=latent_dimensions,
                 omim1_filename=args.omim1_filename,
                 omim2_filename=args.omim2_filename,
-                burnin_period=args.burnin_period,
-                num_samples=args.num_samples
+                config_path=config_path,
             )
 
         if args.post:

@@ -381,62 +381,50 @@ This script reproduces the GeneHound pipeline using the MACAU-based approach. It
 ```bash
 usage: genehound [-h] --run | --no-run --post | --no-post [--side-info | --no-side-info] [--input-path INPUT_PATH]
                  [--omim-meta-path OMIM_META_PATH] [--config-path CONFIG_PATH] [--post-config-path POST_CONFIG_PATH]
-                 [--output-path OUTPUT_PATH] [--tensorboard-base-log-dir TENSORBOARD_BASE_LOG_DIR] [--seed SEED]
+                 [--output-path OUTPUT_PATH] [--tensorboard-base-log-dir TENSORBOARD_BASE_LOG_DIR]
                  [--omim1-filename OMIM1_FILENAME] [--omim2-filename OMIM2_FILENAME]
-                 [--latent-dimensions LATENT_DIMENSIONS [LATENT_DIMENSIONS ...]] [--burnin_period BURNIN_PERIOD]
-                 [--num_samples NUM_SAMPLES]
+                 [--latent-dimensions LATENT_DIMENSIONS [LATENT_DIMENSIONS ...]]
+                 [--zero-sampling-factor ZERO_SAMPLING_FACTOR] [--train-size TRAIN_SIZE] [--num-splits NUM_SPLITS]
+                 [--num-folds NUM_FOLDS] [--seed SEED]
 
 Reproduce GeneHound results using a MACAU-based approach.
 
 options:
   -h, --help            show this help message and exit
-  --run, --no-run       Flag indicating whether to execute the training simulation. If set, the script will run the MACAU
-                        model training using the provided data and configuration. (default: None)
-  --post, --no-post     Flag indicating whether to perform post-processing on the simulation results. If enabled, the script
-                        will generate evaluation plots and tables such as ROC curves, AUC/loss tables, and BEDROC scores.
-                        (default: None)
+  --run, --no-run       Run MACAU model training.
+  --post, --no-post     Perform post-processing (generate evaluation plots/tables).
   --side-info, --no-side-info
-                        Flag indicating whether to add side information for the simulation. If enabled, the script will add
-                        both row and column side information (default: True)
+                        Use side information (row & column). (default: True)
   --input-path INPUT_PATH
-                        Path to the directory containing input data files required for the simulation. This directory must
-                        include the 'gene-disease.csv' file with gene–disease associations and may include additional files
-                        for side information. (default: /home/TheGreatestCoder/code/data/postprocessed/)
+                        Path to input data directory. (default: /home/TheGreatestCoder/code/data/postprocessed/)
   --omim-meta-path OMIM_META_PATH
-                        Path to the OMIM file which contains the meta data about the OMIM association matrix. (default:
-                        /home/TheGreatestCoder/code/NEGradient-GenePriority/configurations/omim.yaml)
+                        Path to OMIM metadata file. (default: /home/TheGreatestCoder/code/NEGradient-
+                        GenePriority/configurations/omim.yaml)
   --config-path CONFIG_PATH
-                        Path to the YAML configuration file that contains parameters for data processing and simulation. The
-                        file should define keys such as 'num_splits', 'num_folds', 'nb_genes', etc. (default:
-                        /home/TheGreatestCoder/code/NEGradient-GenePriority/configurations/genehound/meta.yaml)
+                        Path to YAML configuration file. (default: /home/TheGreatestCoder/code/NEGradient-
+                        GenePriority/configurations/genehound/meta.yaml)
   --post-config-path POST_CONFIG_PATH
-                        Path to the YAML configuration file for post-processing. This file should contain settings like the
-                        alpha values used to compute evaluation metrics (e.g., BEDROC scores) during post-processing.
-                        (default: /home/TheGreatestCoder/code/NEGradient-GenePriority/configurations/genehound/post.yaml)
+                        Path to post-processing config file. (default: /home/TheGreatestCoder/code/NEGradient-
+                        GenePriority/configurations/genehound/post.yaml)
   --output-path OUTPUT_PATH
-                        Path to the directory where output results will be saved. This includes training logs, plots (e.g.,
-                        ROC curves and BEDROC boxplots), and CSV tables with evaluation metrics. (default:
-                        /home/TheGreatestCoder/code/genehounds/)
+                        Path to save output results. (default: /home/TheGreatestCoder/code/genehounds/)
   --tensorboard-base-log-dir TENSORBOARD_BASE_LOG_DIR
-                        Path to the base directory for TensorBoard logs. Training progress and other metrics will be logged
-                        here for visualization using TensorBoard. (default: /home/TheGreatestCoder/code/logs)
-  --seed SEED           Random seed used for reproducibility of data splits and sampling. Setting this seed ensures that the
-                        simulation results remain consistent between runs. (default: 42)
+                        Path for TensorBoard logs. (default: /home/TheGreatestCoder/code/logs)
   --omim1-filename OMIM1_FILENAME
-                        Filename for saving the results corresponding to the first dataset (OMIM1). The file will be stored
-                        in the specified output directory. (default: omim1_results.pickle)
+                        Filename for OMIM1 results. (default: omim1_results.pickle)
   --omim2-filename OMIM2_FILENAME
-                        Filename for saving the results corresponding to the second dataset (OMIM2). The file will be stored
-                        in the specified output directory. (default: omim2_results.pickle)
+                        Filename for OMIM2 results. (default: omim2_results.pickle)
   --latent-dimensions LATENT_DIMENSIONS [LATENT_DIMENSIONS ...]
-                        Space-separated list of latent dimensions to be used for training the MACAU models. For example, '--
-                        latent_dimensions 25 30 40' will run three models with latent dimensions 25, 30, and 40,
-                        respectively. (default: [25, 30, 40])
-  --burnin_period BURNIN_PERIOD
-                        Number of initial samples to discard as burn-in. This period allows the sampler to reach convergence
-                        before collecting samples for training (default: 500).
-  --num_samples NUM_SAMPLES
-                        Number of samples to collect after the burn-in period, during the active period. (default: 1000).
+                        List of latent dimensions for MACAU. (default: [25, 30, 40])
+  --zero-sampling-factor ZERO_SAMPLING_FACTOR
+                        Factor for zero sampling. (default: 5)
+  --train-size TRAIN_SIZE
+                        Training set size. (default: 0.8)
+  --num-splits NUM_SPLITS
+                        Number of data splits. (default: 6)
+  --num-folds NUM_FOLDS
+                        Number of folds for cross-validation. (default: 5)
+  --seed SEED           Random seed. (default: 42)
 ```
 
 **Outputs when Post is Enabled**:
