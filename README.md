@@ -379,14 +379,18 @@ This script reproduces the GeneHound pipeline using the MACAU-based approach. It
 
 **Usage**:
 ```bash
-usage: genehound [-h] [--input-path INPUT_PATH] [--omim-meta-path OMIM_META_PATH] [--config-path CONFIG_PATH] [--post-config-path POST_CONFIG_PATH]
-                 [--output-path OUTPUT_PATH] [--tensorboard-base-log-dir TENSORBOARD_BASE_LOG_DIR] [--seed SEED] --run | --no-run --post | --no-post
+usage: genehound [-h] --run | --no-run --post | --no-post [--input-path INPUT_PATH] [--omim-meta-path OMIM_META_PATH] [--config-path CONFIG_PATH]
+                 [--post-config-path POST_CONFIG_PATH] [--output-path OUTPUT_PATH] [--tensorboard-base-log-dir TENSORBOARD_BASE_LOG_DIR] [--seed SEED]
                  [--omim1_filename OMIM1_FILENAME] [--omim2_filename OMIM2_FILENAME] [--latent_dimensions LATENT_DIMENSIONS [LATENT_DIMENSIONS ...]]
 
 Reproduce GeneHound results using a MACAU-based approach.
 
 options:
   -h, --help            show this help message and exit
+  --run, --no-run       Flag indicating whether to execute the training simulation. If set, the script will run the MACAU model training using the
+                        provided data and configuration. (default: None)
+  --post, --no-post     Flag indicating whether to perform post-processing on the simulation results. If enabled, the script will generate evaluation
+                        plots and tables such as ROC curves, AUC/loss tables, and BEDROC scores. (default: None)
   --input-path INPUT_PATH
                         Path to the directory containing input data files required for the simulation. This directory must include the 'gene-
                         disease.csv' file with gene–disease associations and may include additional files for side information. (default:
@@ -410,10 +414,6 @@ options:
                         using TensorBoard. (default: /home/TheGreatestCoder/code/logs)
   --seed SEED           Random seed used for reproducibility of data splits and sampling. Setting this seed ensures that the simulation results remain
                         consistent between runs. (default: 42)
-  --run, --no-run       Flag indicating whether to execute the training simulation. If set, the script will run the MACAU model training using the
-                        provided data and configuration. (default: None)
-  --post, --no-post     Flag indicating whether to perform post-processing on the simulation results. If enabled, the script will generate evaluation
-                        plots and tables such as ROC curves, AUC/loss tables, and BEDROC scores. (default: None)
   --omim1_filename OMIM1_FILENAME
                         Filename for saving the results corresponding to the first dataset (OMIM1). The file will be stored in the specified output
                         directory. (default: omim1_results.pickle)

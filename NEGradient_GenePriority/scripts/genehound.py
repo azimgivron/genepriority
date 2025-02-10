@@ -278,6 +278,28 @@ def parse() -> argparse.Namespace:
         description="Reproduce GeneHound results using a MACAU-based approach."
     )
     parser.add_argument(
+        "--run",
+        type=bool,
+        required=True,
+        action=argparse.BooleanOptionalAction,
+        help=(
+            "Flag indicating whether to execute the training simulation. "
+            "If set, the script will run the MACAU model training using the "
+            "provided data and configuration. (default: %(default)s)"
+        ),
+    )
+    parser.add_argument(
+        "--post",
+        type=bool,
+        required=True,
+        action=argparse.BooleanOptionalAction,
+        help=(
+            "Flag indicating whether to perform post-processing on the simulation results. "
+            "If enabled, the script will generate evaluation plots and tables such as ROC "
+            "curves, AUC/loss tables, and BEDROC scores. (default: %(default)s)"
+        ),
+    )
+    parser.add_argument(
         "--input-path",
         type=str,
         default="/home/TheGreatestCoder/code/data/postprocessed/",
@@ -355,28 +377,6 @@ def parse() -> argparse.Namespace:
             "Random seed used for reproducibility of data splits and sampling. "
             "Setting this seed ensures that the simulation results remain consistent "
             "between runs. (default: %(default)s)"
-        ),
-    )
-    parser.add_argument(
-        "--run",
-        type=bool,
-        required=True,
-        action=argparse.BooleanOptionalAction,
-        help=(
-            "Flag indicating whether to execute the training simulation. "
-            "If set, the script will run the MACAU model training using the "
-            "provided data and configuration. (default: %(default)s)"
-        ),
-    )
-    parser.add_argument(
-        "--post",
-        type=bool,
-        required=True,
-        action=argparse.BooleanOptionalAction,
-        help=(
-            "Flag indicating whether to perform post-processing on the simulation results. "
-            "If enabled, the script will generate evaluation plots and tables such as ROC "
-            "curves, AUC/loss tables, and BEDROC scores. (default: %(default)s)"
         ),
     )
     parser.add_argument(
