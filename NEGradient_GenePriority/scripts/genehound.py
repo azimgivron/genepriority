@@ -129,7 +129,11 @@ def post_processing(
 
 
 def pre_processing(
-    input_path: Path, config_path: Path, seed: int, omim_meta_path: Path
+    input_path: Path,
+    config_path: Path,
+    seed: int,
+    omim_meta_path: Path,
+    side_info: bool,
 ) -> Tuple[DataLoader, SideInformationLoader]:
     """
     Loads configuration parameters, gene–disease association data, and side information.
@@ -144,6 +148,7 @@ def pre_processing(
         config_path (Path): Path to the YAML configuration file.
         seed (int): Seed for reproducibility in sampling.
         omim_meta_path (Path): Path to OMIM meta data.
+        side_info (bool): Whether to load side information.
 
     Returns:
         Tuple[DataLoader, SideInformationLoader]: The data loader and side information
@@ -182,16 +187,21 @@ def pre_processing(
     dataloader(filter_column="Disease ID")
 
     # Load side information.
-    side_info_loader = SideInformationLoader(nb_genes=nb_genes, nb_diseases=nb_diseases)
-    side_info_loader.process_side_info(
-        gene_side_info_paths=[
-            input_path / "interpro.csv",
-            input_path / "uniprot.csv",
-            input_path / "go.csv",
-        ],
-        disease_side_info_paths=[input_path / "phenotype.csv"],
-        names=["interpro", "uniprot", "GO", "phenotype"],
-    )
+    if side_info:
+        side_info_loader = SideInformationLoader(
+            nb_genes=nb_genes, nb_diseases=nb_diseases
+        )
+        side_info_loader.process_side_info(
+            gene_side_info_paths=[
+                input_path / "interpro.csv",
+                input_path / "uniprot.csv",
+                input_path / "go.csv",
+            ],
+            disease_side_info_paths=[input_path / "phenotype.csv"],
+            names=["interpro", "uniprot", "GO", "phenotype"],
+        )
+    else:
+        side_info_loader = None
     return dataloader, side_info_loader
 
 
@@ -223,7 +233,7 @@ def run(
     """
     logger = logging.getLogger("run")
     logger.debug("Configuring MACAU session")
-    trainer: MACAUTrainer = MACAUTrainer(
+    trainer = MACAUTrainer(
         dataloader=dataloader,
         side_info_loader=side_info_loader,
         path=output_path,
@@ -297,6 +307,17 @@ def parse() -> argparse.Namespace:
             "Flag indicating whether to perform post-processing on the simulation results. "
             "If enabled, the script will generate evaluation plots and tables such as ROC "
             "curves, AUC/loss tables, and BEDROC scores. (default: %(default)s)"
+        ),
+    )
+    parser.add_argument(
+        "--side-info",
+        type=bool,
+        required=True,
+        action=argparse.BooleanOptionalAction,
+        help=(
+            "Flag indicating whether to add side information for the simulation. "
+            "If enabled, the script will add both row and column side information "
+            "(default: %(default)s)"
         ),
     )
     parser.add_argument(
@@ -380,7 +401,7 @@ def parse() -> argparse.Namespace:
         ),
     )
     parser.add_argument(
-        "--omim1_filename",
+        "--omim1-filename",
         type=str,
         default="omim1_results.pickle",
         help=(
@@ -389,7 +410,7 @@ def parse() -> argparse.Namespace:
         ),
     )
     parser.add_argument(
-        "--omim2_filename",
+        "--omim2-filename",
         type=str,
         default="omim2_results.pickle",
         help=(
@@ -398,7 +419,7 @@ def parse() -> argparse.Namespace:
         ),
     )
     parser.add_argument(
-        "--latent_dimensions",
+        "--latent-dimensions",
         type=int,
         nargs="+",
         default=[25, 30, 40],
@@ -470,6 +491,7 @@ def main() -> None:
                 config_path=config_path,
                 seed=seed,
                 omim_meta_path=omim_meta_path,
+                side_info=args.side_info,
             )
             run(
                 dataloader=dataloader,

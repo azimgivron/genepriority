@@ -147,21 +147,6 @@ class MACAUTrainer(BaseTrainer):
         y_pred = np.mean(predict_session.predict_all(), axis=0)
         return y_pred
 
-    def add_side_info(self, session: MacauSession):
-        """
-        Add side information to the Macau session.
-
-        Args:
-            session (MacauSession): The  Macau session to which
-                the side information will be added.
-        """
-        for disease_side_info in self.side_info_loader.disease_side_info:
-            # The direct method is only feasible for a small (< 100K) number of
-            # features.
-            session.addSideInfo(mode=1, Y=disease_side_info, direct=False)
-        for gene_side_info in self.side_info_loader.gene_side_info:
-            session.addSideInfo(mode=0, Y=gene_side_info, direct=False)
-
     def create_session(
         self,
         iteration: int,

@@ -9,7 +9,5 @@
 #                     required for a disease to be kept in OMIM2.
 ---
 nb_genes: 14_195
----
 nb_diseases: 314
----
 min_associations: 10
