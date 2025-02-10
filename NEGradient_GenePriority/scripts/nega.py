@@ -338,6 +338,7 @@ def main():
     args = parse()
 
     input_path = Path(args.input_path).absolute()
+    omim_meta_path = Path(args.omim_meta_path).absolute()
     output_path = Path(args.output_path).absolute()
 
     output_path.mkdir(exist_ok=True)
@@ -350,6 +351,10 @@ def main():
         logger.error("Input path does not exist: %s", input_path)
         raise FileNotFoundError(f"Input path does not exist: {input_path}")
 
+    if not omim_meta_path.exists():
+        logger.error("OMIM meta data path does not exist: %s", omim_meta_path)
+        raise FileNotFoundError(f"OMIM meta data path does not exist: {omim_meta_path}")
+
     dataloader = pre_processing(
         num_splits=args.num_splits,
         train_size=args.train_size,
@@ -357,7 +362,7 @@ def main():
         input_path=input_path,
         seed=args.seed,
         zero_sampling_factor=args.zero_sampling_factor,
-        omim_meta_path=args.omim_meta_path,
+        omim_meta_path=omim_meta_path,
     )
 
     if args.mode == "cross-validation":

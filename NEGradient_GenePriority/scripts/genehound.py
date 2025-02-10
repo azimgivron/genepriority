@@ -458,11 +458,18 @@ def main() -> None:
                     f"The configuration path does not exist: {config_path}"
                 )
 
+            omim_meta_path = Path(args.omim_meta_path).absolute()
+            if not omim_meta_path.exists():
+                logger.error("OMIM meta data path does not exist: %s", omim_meta_path)
+                raise FileNotFoundError(
+                    f"OMIM meta data path does not exist: {omim_meta_path}"
+                )
+
             dataloader, side_info_loader = pre_processing(
                 input_path=input_path,
                 config_path=config_path,
                 seed=seed,
-                omim_meta_path=args.omim_meta_path,
+                omim_meta_path=omim_meta_path,
             )
             run(
                 dataloader=dataloader,

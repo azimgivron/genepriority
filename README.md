@@ -248,25 +248,27 @@ options:
 1. `cross-validation`:
 
 ```bash
-usage: nega cross-validation [-h] [--input-path INPUT_PATH] [--output-path OUTPUT_PATH] [--log-filename LOG_FILENAME]
-                             [--num-splits NUM_SPLITS] [--rank RANK] [--iterations ITERATIONS] [--threshold THRESHOLD]
-                             [--validation-size VALIDATION_SIZE] [--train-size TRAIN_SIZE] [--seed SEED]
-                             [--zero-sampling-factor ZERO_SAMPLING_FACTOR] [--n-trials N_TRIALS]
+usage: nega train-eval [-h] [--input-path INPUT_PATH] [--omim-meta-path OMIM_META_PATH] [--output-path OUTPUT_PATH] [--log-filename LOG_FILENAME]
+                       [--num-splits NUM_SPLITS] [--rank RANK] [--iterations ITERATIONS] [--threshold THRESHOLD] [--validation-size VALIDATION_SIZE]
+                       [--train-size TRAIN_SIZE] [--seed SEED] [--zero-sampling-factor ZERO_SAMPLING_FACTOR]
+                       [--tensorboard-base-log-dir TENSORBOARD_BASE_LOG_DIR] [--config-path CONFIG_PATH]
 
 options:
   -h, --help            show this help message and exit
   --input-path INPUT_PATH
-                        Path to input data directory containing 'gene-disease.csv' (default:
-                        /home/TheGreatestCoder/code/data/postprocessed/).
+                        Path to input data directory containing 'gene-disease.csv' (default: /home/TheGreatestCoder/code/data/postprocessed/).
+  --omim-meta-path OMIM_META_PATH
+                        Path to the OMIM file which contains the meta data about the OMIM association matrix. (default:
+                        /home/TheGreatestCoder/code/NEGradient-GenePriority/configurations/omim.yaml)
   --output-path OUTPUT_PATH
                         Path to output directory (logs, models, etc.) (default: /home/TheGreatestCoder/code/neg/).
   --log-filename LOG_FILENAME
                         Filename of the logs. (default: pipeline.log).
   --num-splits NUM_SPLITS
                         Number of data splits (default: 1).
-  --rank RANK           Rank of the model (default: 50).
+  --rank RANK           Rank of the model (default: 40).
   --iterations ITERATIONS
-                        Number of iterations (default: 1000).
+                        Number of iterations (default: 200).
   --threshold THRESHOLD
                         Threshold parameter (default: 10).
   --validation-size VALIDATION_SIZE
@@ -275,35 +277,85 @@ options:
                         Training set size (default: 0.8).
   --seed SEED           Random seed (default: 42).
   --zero-sampling-factor ZERO_SAMPLING_FACTOR
-                        Factor to determine the number of zeros to sample, calculated as the specified factor multiplied by the
-                        number of ones (default: None).
+                        Factor to determine the number of zeros to sample, calculated as the specified factor multiplied by the number of ones
+                        (default: None).
+  --tensorboard-base-log-dir TENSORBOARD_BASE_LOG_DIR
+                        Path to the TensorBoard log directory (default: /home/TheGreatestCoder/code/logs).
+  --config-path CONFIG_PATH
+                        Path to the YAML configuration file that contains parameters for simulation.simulation. The file should define keys such as
+                        'num_splits', 'regularization_parameter', 'symmetry_parameter', etc. (default: /home/TheGreatestCoder/code/NEGradient-
+                        GenePriority/configurations/nega/meta.yaml)
+(nega_venv) ➜  NEGradient-GenePriority git:(main) ✗ nega -h           
+usage: nega [-h] {cross-validation,train-eval} ...
+
+Run Non-Euclidean Gradient-based method for gene prioritization.
+
+positional arguments:
+  {cross-validation,train-eval}
+    cross-validation    Perform cross-validation for hyperparameter tuning.
+    train-eval          Train and evaluate the model.
+
+options:
+  -h, --help            show this help message and exit
+(nega_venv) ➜  NEGradient-GenePriority git:(main) ✗ nega cross-validation -h
+usage: nega cross-validation [-h] [--input-path INPUT_PATH] [--omim-meta-path OMIM_META_PATH] [--output-path OUTPUT_PATH]
+                             [--log-filename LOG_FILENAME] [--num-splits NUM_SPLITS] [--rank RANK] [--iterations ITERATIONS] [--threshold THRESHOLD]
+                             [--validation-size VALIDATION_SIZE] [--train-size TRAIN_SIZE] [--seed SEED] [--zero-sampling-factor ZERO_SAMPLING_FACTOR]
+                             [--n-trials N_TRIALS]
+
+options:
+  -h, --help            show this help message and exit
+  --input-path INPUT_PATH
+                        Path to input data directory containing 'gene-disease.csv' (default: /home/TheGreatestCoder/code/data/postprocessed/).
+  --omim-meta-path OMIM_META_PATH
+                        Path to the OMIM file which contains the meta data about the OMIM association matrix. (default:
+                        /home/TheGreatestCoder/code/NEGradient-GenePriority/configurations/omim.yaml)
+  --output-path OUTPUT_PATH
+                        Path to output directory (logs, models, etc.) (default: /home/TheGreatestCoder/code/neg/).
+  --log-filename LOG_FILENAME
+                        Filename of the logs. (default: pipeline.log).
+  --num-splits NUM_SPLITS
+                        Number of data splits (default: 1).
+  --rank RANK           Rank of the model (default: 40).
+  --iterations ITERATIONS
+                        Number of iterations (default: 200).
+  --threshold THRESHOLD
+                        Threshold parameter (default: 10).
+  --validation-size VALIDATION_SIZE
+                        Validation set size (default: 0.1).
+  --train-size TRAIN_SIZE
+                        Training set size (default: 0.8).
+  --seed SEED           Random seed (default: 42).
+  --zero-sampling-factor ZERO_SAMPLING_FACTOR
+                        Factor to determine the number of zeros to sample, calculated as the specified factor multiplied by the number of ones
+                        (default: None).
   --n-trials N_TRIALS   Number of trials for hyperparameter tuning (default: 100).
 ```
 
 2. `train-eval`:
 
 ```bash
-usage: nega train-eval [-h] [--input-path INPUT_PATH] [--output-path OUTPUT_PATH] [--log-filename LOG_FILENAME]
-                       [--num-splits NUM_SPLITS] [--rank RANK] [--iterations ITERATIONS] [--threshold THRESHOLD]
-                       [--validation-size VALIDATION_SIZE] [--train-size TRAIN_SIZE] [--seed SEED]
-                       [--zero-sampling-factor ZERO_SAMPLING_FACTOR] [--tensorboard-base-log-dir tensorboard_dir]
-                       [--regularization-parameter REGULARIZATION_PARAMETER] [--symmetry-parameter SYMMETRY_PARAMETER]
-                       [--smoothness-parameter SMOOTHNESS_PARAMETER] [--rho-increase RHO_INCREASE] [--rho-decrease RHO_DECREASE]
+usage: nega train-eval [-h] [--input-path INPUT_PATH] [--omim-meta-path OMIM_META_PATH] [--output-path OUTPUT_PATH] [--log-filename LOG_FILENAME]
+                       [--num-splits NUM_SPLITS] [--rank RANK] [--iterations ITERATIONS] [--threshold THRESHOLD] [--validation-size VALIDATION_SIZE]
+                       [--train-size TRAIN_SIZE] [--seed SEED] [--zero-sampling-factor ZERO_SAMPLING_FACTOR]
+                       [--tensorboard-base-log-dir TENSORBOARD_BASE_LOG_DIR] [--config-path CONFIG_PATH]
 
 options:
   -h, --help            show this help message and exit
   --input-path INPUT_PATH
-                        Path to input data directory containing 'gene-disease.csv' (default:
-                        /home/TheGreatestCoder/code/data/postprocessed/).
+                        Path to input data directory containing 'gene-disease.csv' (default: /home/TheGreatestCoder/code/data/postprocessed/).
+  --omim-meta-path OMIM_META_PATH
+                        Path to the OMIM file which contains the meta data about the OMIM association matrix. (default:
+                        /home/TheGreatestCoder/code/NEGradient-GenePriority/configurations/omim.yaml)
   --output-path OUTPUT_PATH
                         Path to output directory (logs, models, etc.) (default: /home/TheGreatestCoder/code/neg/).
   --log-filename LOG_FILENAME
                         Filename of the logs. (default: pipeline.log).
   --num-splits NUM_SPLITS
                         Number of data splits (default: 1).
-  --rank RANK           Rank of the model (default: 50).
+  --rank RANK           Rank of the model (default: 40).
   --iterations ITERATIONS
-                        Number of iterations (default: 700).
+                        Number of iterations (default: 200).
   --threshold THRESHOLD
                         Threshold parameter (default: 10).
   --validation-size VALIDATION_SIZE
@@ -312,20 +364,14 @@ options:
                         Training set size (default: 0.8).
   --seed SEED           Random seed (default: 42).
   --zero-sampling-factor ZERO_SAMPLING_FACTOR
-                        Factor to determine the number of zeros to sample, calculated as the specified factor multiplied by the
-                        number of ones (default: None).
-  --tensorboard-base-log-dir tensorboard_dir
+                        Factor to determine the number of zeros to sample, calculated as the specified factor multiplied by the number of ones
+                        (default: None).
+  --tensorboard-base-log-dir TENSORBOARD_BASE_LOG_DIR
                         Path to the TensorBoard log directory (default: /home/TheGreatestCoder/code/logs).
-  --regularization-parameter REGULARIZATION_PARAMETER
-                        Regularization parameter (default: 0.003).
-  --symmetry-parameter SYMMETRY_PARAMETER
-                        Symmetry parameter (default: 0.08).
-  --smoothness-parameter SMOOTHNESS_PARAMETER
-                        Smoothness parameter (default: 0.002).
-  --rho-increase RHO_INCREASE
-                        Rho increase value (default: 4.0).
-  --rho-decrease RHO_DECREASE
-                        Rho decrease value (default: 0.9).
+  --config-path CONFIG_PATH
+                        Path to the YAML configuration file that contains parameters for simulation.simulation. The file should define keys such as
+                        'num_splits', 'regularization_parameter', 'symmetry_parameter', etc. (default: /home/TheGreatestCoder/code/NEGradient-
+                        GenePriority/configurations/nega/meta.yaml)
 ```
 
 #### 2. **`genehound`**: Reproduce GeneHound Results
@@ -333,21 +379,53 @@ This script reproduces the GeneHound pipeline using the MACAU-based approach. It
 
 **Usage**:
 ```bash
-usage: genehound [-h] [--input-path INPUT_PATH] [--output-path OUTPUT_PATH]
+usage: genehound [-h] [--input-path INPUT_PATH] [--omim-meta-path OMIM_META_PATH] [--config-path CONFIG_PATH] [--post-config-path POST_CONFIG_PATH]
+                 [--output-path OUTPUT_PATH] [--tensorboard-base-log-dir TENSORBOARD_BASE_LOG_DIR] [--seed SEED] --run | --no-run --post | --no-post
+                 [--omim1_filename OMIM1_FILENAME] [--omim2_filename OMIM2_FILENAME] [--latent_dimensions LATENT_DIMENSIONS [LATENT_DIMENSIONS ...]]
 
-Reproduce GeneHound results using MACAU-based approach.
+Reproduce GeneHound results using a MACAU-based approach.
 
 options:
   -h, --help            show this help message and exit
   --input-path INPUT_PATH
-                        Path to the directory containing input data, including 'gene-disease.csv' (default:
-                        /home/TheGreatestCoder/code/data/postprocessed/).
+                        Path to the directory containing input data files required for the simulation. This directory must include the 'gene-
+                        disease.csv' file with gene–disease associations and may include additional files for side information. (default:
+                        /home/TheGreatestCoder/code/data/postprocessed/)
+  --omim-meta-path OMIM_META_PATH
+                        Path to the OMIM file which contains the meta data about the OMIM association matrix. (default:
+                        /home/TheGreatestCoder/code/NEGradient-GenePriority/configurations/omim.yaml)
+  --config-path CONFIG_PATH
+                        Path to the YAML configuration file that contains parameters for data processing and simulation. The file should define keys
+                        such as 'num_splits', 'num_folds', 'nb_genes', etc. (default: /home/TheGreatestCoder/code/NEGradient-
+                        GenePriority/configurations/genehound/meta.yaml)
+  --post-config-path POST_CONFIG_PATH
+                        Path to the YAML configuration file for post-processing. This file should contain settings like the alpha values used to
+                        compute evaluation metrics (e.g., BEDROC scores) during post-processing. (default: /home/TheGreatestCoder/code/NEGradient-
+                        GenePriority/configurations/genehound/post.yaml)
   --output-path OUTPUT_PATH
-                        Path to the directory where output results will be saved (default:
-                        /home/TheGreatestCoder/code/genehounds/).
+                        Path to the directory where output results will be saved. This includes training logs, plots (e.g., ROC curves and BEDROC
+                        boxplots), and CSV tables with evaluation metrics. (default: /home/TheGreatestCoder/code/genehounds/)
+  --tensorboard-base-log-dir TENSORBOARD_BASE_LOG_DIR
+                        Path to the base directory for TensorBoard logs. Training progress and other metrics will be logged here for visualization
+                        using TensorBoard. (default: /home/TheGreatestCoder/code/logs)
+  --seed SEED           Random seed used for reproducibility of data splits and sampling. Setting this seed ensures that the simulation results remain
+                        consistent between runs. (default: 42)
+  --run, --no-run       Flag indicating whether to execute the training simulation. If set, the script will run the MACAU model training using the
+                        provided data and configuration. (default: None)
+  --post, --no-post     Flag indicating whether to perform post-processing on the simulation results. If enabled, the script will generate evaluation
+                        plots and tables such as ROC curves, AUC/loss tables, and BEDROC scores. (default: None)
+  --omim1_filename OMIM1_FILENAME
+                        Filename for saving the results corresponding to the first dataset (OMIM1). The file will be stored in the specified output
+                        directory. (default: omim1_results.pickle)
+  --omim2_filename OMIM2_FILENAME
+                        Filename for saving the results corresponding to the second dataset (OMIM2). The file will be stored in the specified output
+                        directory. (default: omim2_results.pickle)
+  --latent_dimensions LATENT_DIMENSIONS [LATENT_DIMENSIONS ...]
+                        Space-separated list of latent dimensions to be used for training the MACAU models. For example, '--latent_dimensions 25 30
+                        40' will run three models with latent dimensions 25, 30, and 40, respectively. (default: [25, 30, 40])
 ```
 
-**Outputs**:
+**Outputs when Post is Enabled**:
 - ROC Curves: Visualizations of model performance.
 - AUC and BEDROC tables: Tabular metrics evaluating the ranking quality.
 - Boxplots: Visual comparison of BEDROC scores for multiple models.
