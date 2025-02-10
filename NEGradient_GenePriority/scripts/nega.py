@@ -302,7 +302,7 @@ def parse() -> argparse.Namespace:
         )
 
     eval_parser.add_argument(
-        "--tensorboard-base-log-dir",
+        "--tensorboard-dir",
         type=str,
         default="/home/TheGreatestCoder/code/logs",
         help="Path to the TensorBoard log directory (default: %(default)s).",

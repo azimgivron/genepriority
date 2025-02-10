@@ -135,7 +135,8 @@ def pre_processing(
     num_splits: int,
     zero_sampling_factor: int,
     num_folds: int,
-    train_size: float
+    train_size: float,
+    validation_size: float
 ) -> Tuple[DataLoader, SideInformationLoader]:
     """
     Loads configuration parameters, gene–disease association data, and side information.
@@ -155,6 +156,8 @@ def pre_processing(
             the number of 1s to get the number fo 0s to sample.
         num_folds (int): The number folds in OMIM2.
         train_size (float): The fraction of data for the training set.
+        validation_size (float): Validation set size
+            (unused data, meant for comaprison with NEGA).
     
     Returns:
         Tuple[DataLoader, SideInformationLoader]: The data loader and side information
@@ -175,6 +178,7 @@ def pre_processing(
         num_folds=num_folds,
         train_size=train_size,
         min_associations=min_associations,
+        validation_size=validation_size
     )
     dataloader(filter_column="Disease ID")
 
@@ -359,7 +363,7 @@ def parse() -> argparse.Namespace:
     )
 
     parser.add_argument(
-        "--tensorboard-base-log-dir",
+        "--tensorboard-dir",
         type=str,
         default="/home/TheGreatestCoder/code/logs",
         help="Path for TensorBoard logs. (default: %(default)s)"
@@ -400,6 +404,13 @@ def parse() -> argparse.Namespace:
         default=0.8,
         help="Training set size. (default: %(default)s)"
     )
+    
+    parser.add_argument(
+        "--validation-size",
+        type=float,
+        default=None,
+        help="Validation set size (unused data, meant for comaprison with NEGA) (default: %(default)s).",
+    )
 
     parser.add_argument(
         "--num-splits",
@@ -421,7 +432,6 @@ def parse() -> argparse.Namespace:
         default=42,
         help="Random seed. (default: %(default)s)"
     )
-
 
     args = parser.parse_args()
     return args
@@ -452,7 +462,7 @@ def main() -> None:
 
     try:
         if args.run:
-            tensorboard_dir: Path = Path(args.tensorboard_base_log_dir).absolute()
+            tensorboard_dir: Path = Path(args.tensorboard_dir).absolute()
             tensorboard_dir.mkdir(parents=True, exist_ok=True)
 
             # Setup logger
@@ -486,7 +496,8 @@ def main() -> None:
                 num_splits=args.num_splits,
                 zero_sampling_factor=args.zero_sampling_factor,
                 num_folds=args.num_folds,
-                train_size=args.train_size
+                train_size=args.train_size,
+                validation_size=args.validation_size,
             )
             run(
                 dataloader=dataloader,

@@ -251,7 +251,7 @@ options:
 usage: nega train-eval [-h] [--input-path INPUT_PATH] [--omim-meta-path OMIM_META_PATH] [--output-path OUTPUT_PATH] [--log-filename LOG_FILENAME]
                        [--num-splits NUM_SPLITS] [--rank RANK] [--iterations ITERATIONS] [--threshold THRESHOLD] [--validation-size VALIDATION_SIZE]
                        [--train-size TRAIN_SIZE] [--seed SEED] [--zero-sampling-factor ZERO_SAMPLING_FACTOR]
-                       [--tensorboard-base-log-dir TENSORBOARD_BASE_LOG_DIR] [--config-path CONFIG_PATH]
+                       [--tensorboard-dir tensorboard_dir] [--config-path CONFIG_PATH]
 
 options:
   -h, --help            show this help message and exit
@@ -279,7 +279,7 @@ options:
   --zero-sampling-factor ZERO_SAMPLING_FACTOR
                         Factor to determine the number of zeros to sample, calculated as the specified factor multiplied by the number of ones
                         (default: None).
-  --tensorboard-base-log-dir TENSORBOARD_BASE_LOG_DIR
+  --tensorboard-dir tensorboard_dir
                         Path to the TensorBoard log directory (default: /home/TheGreatestCoder/code/logs).
   --config-path CONFIG_PATH
                         Path to the YAML configuration file that contains parameters for simulation.simulation. The file should define keys such as
@@ -338,7 +338,7 @@ options:
 usage: nega train-eval [-h] [--input-path INPUT_PATH] [--omim-meta-path OMIM_META_PATH] [--output-path OUTPUT_PATH] [--log-filename LOG_FILENAME]
                        [--num-splits NUM_SPLITS] [--rank RANK] [--iterations ITERATIONS] [--threshold THRESHOLD] [--validation-size VALIDATION_SIZE]
                        [--train-size TRAIN_SIZE] [--seed SEED] [--zero-sampling-factor ZERO_SAMPLING_FACTOR]
-                       [--tensorboard-base-log-dir TENSORBOARD_BASE_LOG_DIR] [--config-path CONFIG_PATH]
+                       [--tensorboard-dir tensorboard_dir] [--config-path CONFIG_PATH]
 
 options:
   -h, --help            show this help message and exit
@@ -366,7 +366,7 @@ options:
   --zero-sampling-factor ZERO_SAMPLING_FACTOR
                         Factor to determine the number of zeros to sample, calculated as the specified factor multiplied by the number of ones
                         (default: None).
-  --tensorboard-base-log-dir TENSORBOARD_BASE_LOG_DIR
+  --tensorboard-dir tensorboard_dir
                         Path to the TensorBoard log directory (default: /home/TheGreatestCoder/code/logs).
   --config-path CONFIG_PATH
                         Path to the YAML configuration file that contains parameters for simulation.simulation. The file should define keys such as
@@ -381,7 +381,7 @@ This script reproduces the GeneHound pipeline using the MACAU-based approach. It
 ```bash
 usage: genehound [-h] --run | --no-run --post | --no-post [--side-info | --no-side-info] [--input-path INPUT_PATH]
                  [--omim-meta-path OMIM_META_PATH] [--config-path CONFIG_PATH] [--post-config-path POST_CONFIG_PATH]
-                 [--output-path OUTPUT_PATH] [--tensorboard-base-log-dir TENSORBOARD_BASE_LOG_DIR]
+                 [--output-path OUTPUT_PATH] [--tensorboard-dir tensorboard_dir]
                  [--omim1-filename OMIM1_FILENAME] [--omim2-filename OMIM2_FILENAME]
                  [--latent-dimensions LATENT_DIMENSIONS [LATENT_DIMENSIONS ...]]
                  [--zero-sampling-factor ZERO_SAMPLING_FACTOR] [--train-size TRAIN_SIZE] [--num-splits NUM_SPLITS]
@@ -408,7 +408,7 @@ options:
                         GenePriority/configurations/genehound/post.yaml)
   --output-path OUTPUT_PATH
                         Path to save output results. (default: /home/TheGreatestCoder/code/genehounds/)
-  --tensorboard-base-log-dir TENSORBOARD_BASE_LOG_DIR
+  --tensorboard-dir tensorboard_dir
                         Path for TensorBoard logs. (default: /home/TheGreatestCoder/code/logs)
   --omim1-filename OMIM1_FILENAME
                         Filename for OMIM1 results. (default: omim1_results.pickle)
