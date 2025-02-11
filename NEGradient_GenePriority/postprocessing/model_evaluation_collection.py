@@ -99,7 +99,7 @@ class ModelEvaluationCollection:
             [eval_res.compute_avg_auc_loss() for eval_res in self.evaluations]
         )
         avg_auc_loss = np.hstack((np.mean(auc_loss, axis=1), np.std(auc_loss, axis=1)))
-        return avg_auc_loss.reshape((len(self.evaluations), 2))
+        return avg_auc_loss.reshape((2, len(self.evaluations))).T
 
     def compute_bedroc_scores(self) -> np.ndarray:
         """

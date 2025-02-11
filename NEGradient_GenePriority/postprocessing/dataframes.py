@@ -69,19 +69,24 @@ def generate_bedroc_table(
     if len(alpha_map) != bedroc.shape[0]:
         raise ValueError
 
-    bedroc = np.hstack((bedroc.mean(axis=1), bedroc.std(axis=1))).reshape(
-        (-1, len(alpha_map) * 2)
-    )  # shape = (model, alphas*2)
+    mean = bedroc.mean(axis=1).reshape(
+        (len(model_names), len(alpha_map))
+    )  # shape = (model, alphas)
+    std = bedroc.std(axis=1).reshape(
+        (len(model_names), len(alpha_map))
+    )  # shape = (model, alphas)
+    bedroc = np.hstack((mean, std)) # shape = (model, 2*alphas)
 
     column_names = np.array(
         [
-            (
-                f"{avg_bedroc_score_name} (top {alpha})",
-                f"{std_bedroc_score_name} (top {alpha})",
-            )
+            f"{avg_bedroc_score_name} (top {alpha})"
+            for alpha in alpha_map.values()
+        ] + 
+        [
+            f"{std_bedroc_score_name} (top {alpha})"
             for alpha in alpha_map.values()
         ]
-    ).flatten()
+    )
 
     dataframe = pd.DataFrame(bedroc, columns=column_names, index=model_names).map(
         lambda x: f"{x:.2e}"

@@ -358,7 +358,7 @@ def parse() -> argparse.Namespace:
     parser.add_argument(
         "--output-path",
         type=str,
-        default="/home/TheGreatestCoder/code/genehounds/",
+        default="/home/TheGreatestCoder/code/genehound/",
         help="Path to save output results. (default: %(default)s)"
     )
 

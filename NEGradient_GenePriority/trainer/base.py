@@ -237,6 +237,11 @@ class BaseTrainer(metaclass=ABCMeta):
             )
 
             run_name = f"{desc}{i+1}-latent{num_latent}"
+            if self.side_info_loader is None:
+                run_name += "-no-side-info"
+            if not self.dataloader.with_0s:
+                run_name += "-no-0s"
+            run_name += f"-{self.__class__.__name__}"
             self.pre_training_callback(session, run_name)
 
             training_status = session.run()

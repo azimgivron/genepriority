@@ -9,7 +9,6 @@ such as ROC curve data, AUC loss, and BEDROC scores.
 from typing import Dict, List
 
 import numpy as np
-from scipy import interpolate
 from sklearn import metrics
 
 from NEGradient_GenePriority.evaluation.metrics import bedroc_score
@@ -63,83 +62,54 @@ class Evaluation:
         scores for the given alpha values.
 
         Returns:
-            np.ndarray: A 2D array of BEDROC scores with shape `(disease, alphas)`,
-            where each row corresponds to a disease and each column corresponds
+            np.ndarray: A 2D array of BEDROC scores with shape `(fold, alphas)`,
+            where each row corresponds to a fold and each column corresponds
             to a specific alpha value.
         """
         bedroc = []
-        for disease_result in self.avg_results:
-            y_true, y_pred = disease_result
-            bedroc_per_disease = [
+        for fold_res in self.results:
+            y_true = fold_res.y_true.toarray().flatten()
+            y_pred = fold_res.y_pred.flatten()
+            bedroc_per_fold = [
                 bedroc_score(y_true, y_pred, decreasing=True, alpha=alpha)
                 for alpha in self.alphas
             ]
-            bedroc.append(bedroc_per_disease)
-        bedroc = np.array(bedroc)  # shape=(disease, alpha)
+            bedroc.append(bedroc_per_fold)
+        bedroc = np.array(bedroc)  # shape=(fold, alpha)
         return bedroc
 
     def compute_avg_auc_loss(self) -> float:
         """
         Computes the average AUC loss, which is defined as `1 - AUC`
-        for each disease, indicating the model's inability to achieve perfect separation.
+        for each fold, indicating the model's inability to achieve perfect separation.
 
         Returns:
             np.ndarray: A 1D array where each element represents the AUC loss
-            for a specific disease.
+            for a fold.
         """
         auc_loss = []
-        for disease_result in self.avg_results:
-            y_true, y_pred = disease_result
-            auc_loss.append(1 - metrics.roc_auc_score(y_true, y_pred))
-        auc_loss = np.array(auc_loss)  # shape (disease)
+        for fold_res in self.results:
+            y_true = fold_res.y_true.toarray().flatten()
+            y_pred = fold_res.y_pred.flatten()
+            auc_loss.append(1-metrics.roc_auc_score(y_true, y_pred))
+        auc_loss = np.array(auc_loss)
         return auc_loss
 
     def compute_roc_curve(self) -> np.ndarray:
         """
         Computes the Receiver Operating Characteristic (ROC) curve metrics,
-        including False Positive Rates (FPR) and True Positive Rates (TPR),
-        interpolated over a common set of thresholds for all diseases.
+        including False Positive Rates (FPR) and True Positive Rates (TPR)
+        for all diseases.
 
         Returns:
-            np.ndarray: A 3D array with the following structure:
-                - Shape: (diseases, 2, common thresholds)
-                - The first dimension corresponds to the number of diseases.
-                - The second dimension contains FPR and TPR values respectively.
-                - The third dimension represents the common thresholds.
+            np.ndarray: A 2D array with the following structure:
+                - Shape: (2, number of thresholds)
+                - The first dimension contains FPR values.
+                - The second dimension contains TPR values.
         """
-        fpr_tpr_interp = []
-        thr = set()  # Collect unique thresholds as a flat set
-
-        for disease_result in self.avg_results:
-            y_true, y_pred = disease_result
-            fpr_per_disease, tpr_per_disease, thr_per_disease = metrics.roc_curve(
-                y_true, y_pred, pos_label=1, drop_intermediate=True
-            )
-            thr.update(thr_per_disease)  # Add elements to the set, avoiding nested sets
-            fpr_tpr_interp.append(
-                (
-                    interpolate.interp1d(
-                        thr_per_disease,
-                        fpr_per_disease,
-                        bounds_error=False,
-                        kind="nearest",
-                        fill_value="extrapolate",
-                    ),
-                    interpolate.interp1d(
-                        thr_per_disease,
-                        tpr_per_disease,
-                        bounds_error=False,
-                        kind="nearest",
-                        fill_value="extrapolate",
-                    ),
-                )
-            )
-
-        # Sort thresholds
-        thr = sorted(thr)
-        fpr_tpr = []
-        # Compute interpolated FPR and TPR for all diseases
-        for fpr_interp, tpr_interp in fpr_tpr_interp:
-            fpr_tpr.append((fpr_interp(thr), tpr_interp(thr)))
-
-        return np.array(fpr_tpr)
+        y_true = self.avg_results.y_true.toarray().flatten()
+        y_pred = self.avg_results.y_pred.flatten()
+        fpr_per_disease, tpr_per_disease, _ = metrics.roc_curve(
+            y_true, y_pred, pos_label=1, drop_intermediate=True
+        )
+        return np.vstack((fpr_per_disease, tpr_per_disease))

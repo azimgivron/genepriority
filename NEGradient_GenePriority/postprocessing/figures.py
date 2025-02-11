@@ -40,7 +40,7 @@ def plot_roc_curves(
     colors = plt.get_cmap(cmap).colors
     fig = plt.figure(figsize=figsize)
     for i, (name, evaluation) in enumerate(evaluation_collection.items()):
-        fpr_tpr_avg = evaluation.compute_roc_curve().mean(axis=0)
+        fpr_tpr_avg = evaluation.compute_roc_curve()
         fpr, tpr = fpr_tpr_avg
         plt.plot(
             fpr,
@@ -54,7 +54,7 @@ def plot_roc_curves(
     plt.ylabel("Average TPR")
     plt.legend()
     plt.grid(alpha=0.3)
-    fig.suptitle("Average ROC Curve across all Diseases.", fontsize=14)
+    fig.suptitle("Average ROC Curve across all Folds.", fontsize=14)
     plt.tight_layout()
     fig.subplots_adjust(hspace=0.3, wspace=0.4, top=0.9)
     plt.savefig(output_file, dpi=300)
@@ -69,11 +69,12 @@ def plot_bedroc_boxplots(
     figsize: Tuple[int, int] = (10, 8),
 ):
     """
-    Plots boxplots of BEDROC scores for multiple alpha values and latent dimensions.
+    Plots boxplots of BEDROC scores for multiple alpha values and latent dimensions
+    without plotting outliers.
 
     Args:
-        bedroc (np.ndarray): BEDROC scores array of shape (alphas, diseases, models).
-            Each entry represents the BEDROC score for a specific alpha value, disease,
+        bedroc (np.ndarray): BEDROC scores array of shape (alphas, folds, models).
+            Each entry represents the BEDROC score for a specific alpha value, fold,
             and model.
         model_names (List[str]): Names of the models being compared.
         output_file (str): File path where the BEDROC boxplot figure will be saved.
@@ -86,18 +87,23 @@ def plot_bedroc_boxplots(
     fig, axs = plt.subplots(*subplots_config, figsize=figsize)
     axs = axs.flatten()
     for i, alpha in enumerate(Evaluation.alphas):
-        sns.boxplot(data=bedroc[i], ax=axs[i], palette=cmap)
+        sns.boxplot(
+            data=bedroc[i],
+            ax=axs[i],
+            palette=cmap,
+            showfliers=False  # Do not plot outliers
+        )
         axs[i].set_xticks(range(bedroc.shape[2]))  # Set fixed positions for ticks
-        axs[i].set_xticklabels(model_names, rotation=0, ha="center", fontsize=10)
+        axs[i].set_xticklabels(model_names, rotation=45, ha="center", fontsize=10)
         axs[i].set_title(
             f"{float(alpha):.1f}\nTop {Evaluation.alpha_map[alpha]}", fontsize=12
         )
         axs[i].grid(axis="y", alpha=0.3)
 
-    # Disable unused subplots
+    # Disable unused subplots if necessary
     if len(Evaluation.alphas) % 2 == 1:
         axs[-1].axis("off")
     fig.subplots_adjust(hspace=0.3, wspace=0.4, top=0.9)
-    fig.suptitle("Averaged BEDROC", fontsize=14)
+    fig.suptitle("BEDROC Scores", fontsize=14)
     plt.savefig(output_file, dpi=300)
     plt.close()

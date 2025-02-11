@@ -116,6 +116,15 @@ class DataLoader:
         self.validation_size = validation_size
         self.min_associations = min_associations
         self.logger = logging.getLogger(self.__class__.__name__)
+        
+    @property
+    def with_0s(self) -> bool:
+        """Whether there 0s in the data.
+        
+        Returns:
+            (bool): True if data contains zeros.
+        """
+        return self.zero_sampling_factor is not None and self.zero_sampling_factor > 0
 
     @property
     def iter_over_validation(self) -> bool:
@@ -185,7 +194,7 @@ class DataLoader:
             gene_disease, shape=(self.nb_genes + 1, self.nb_diseases + 1)
         )
 
-        if self.zero_sampling_factor is not None and self.zero_sampling_factor > 0:
+        if self.with_0s:
             self.omim1 = sample_zeros(
                 self.omim1, self.zero_sampling_factor, seed=self.seed
             )
@@ -252,7 +261,7 @@ class DataLoader:
             filtered_gene_disease, shape=(self.nb_genes + 1, self.nb_diseases + 1)
         )
 
-        if self.zero_sampling_factor is not None and self.zero_sampling_factor > 0:
+        if self.with_0s:
             self.omim2 = sample_zeros(
                 self.omim2, self.zero_sampling_factor, seed=self.seed
             )

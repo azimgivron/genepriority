@@ -407,7 +407,7 @@ options:
                         Path to post-processing config file. (default: /home/TheGreatestCoder/code/NEGradient-
                         GenePriority/configurations/genehound/post.yaml)
   --output-path OUTPUT_PATH
-                        Path to save output results. (default: /home/TheGreatestCoder/code/genehounds/)
+                        Path to save output results. (default: /home/TheGreatestCoder/code/genehound/)
   --tensorboard-dir tensorboard_dir
                         Path for TensorBoard logs. (default: /home/TheGreatestCoder/code/logs)
   --omim1-filename OMIM1_FILENAME
