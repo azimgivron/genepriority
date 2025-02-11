@@ -45,9 +45,9 @@ This repository focuses on producing results using the **NEGA2 algorithm**, as d
    - Aggregate the six matrices using a mean operation to produce $\bar{O}$ (averaged matrix).
 
 6. **Model Testing and Ranking**:  
-   - Rank genes for each disease (columns of $\bar{O}$) based on the predicted scores.  
+   - Flatten the matrix and rank genes based on the predicted scores.  
    - Assume missing values are zeros for ranking purposes.  
-   - Use only positive associations from the test set for evaluation. For each disease, highly ranked genes in $\bar{O}$ should correspond to true positive associations.
+   - Use only positive associations from the test set for evaluation. Highly ranked genes in $\bar{O}$ should correspond to true positive associations.
 
 7. **Evaluation and Metrics**:  
    - Compute ranking metrics to assess the quality of predictions, focusing on the ability of the model to rank true positive associations higher.  
