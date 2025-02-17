@@ -163,12 +163,13 @@ def train_eval(
         rho_decrease=rho_decrease,
         tensorboard_dir=tensorboard_dir,
     )
+    results_path = output_path / str(rank)
+    results_path.mkdir(parents=True, exist_ok=True)
+    trainer.path = results_path
     result = trainer.train_test_splits(
         rank,
         save_name=f"latent={rank}:model-omim1.pickle",
     )
-    results_path = output_path / str(rank)
-    results_path.mkdir(parents=True, exist_ok=True)
     serialize(result, results_path / results_filename)
     logger.debug("Serialized results for latent dimension %s saved successfully.", rank)
 

@@ -6,9 +6,11 @@
     <img width="40%" src=".images/genepriority-logo.png" >
 </p>
 
-The repository **genepriority** (short for "Non-Euclidean Gradient Methods for Matrix Completion in Gene Prioritization") is designed to implement and evaluate algorithms on the *Online Mendelian Inheritance in Man* (OMIM) dataset for gene prioritization. The goal is to identify disease-associated genes by leveraging genomic and phenotypic side information. 
+The repository **genepriority** is designed to implement and evaluate matrix completion algorithms on the *Online Mendelian Inheritance in Man* (OMIM) dataset for the task of gene prioritization. The goal is to identify disease-associated genes. Additional genomic and phenotypic side information can optionally be leveraged to increase accuracy. 
 
-This repository focuses on producing results using the **NEGA2 algorithm**, as described in the paper *"Non-Euclidean Gradient Methods: Convergence, Complexity, and Applications"*. The results will be compared with the outcomes from the method presented in *"Gene prioritization using Bayesian matrix factorization with genomic and phenotypic side information"* ([Zakeri et al., 2018](https://pubmed.ncbi.nlm.nih.gov/29949967/)). To ensure coherence in algorithm implementation and evaluation, results from the GeneHound method were reproduced as a baseline.
+Two algorithms are used/implemented:
+1. Non-Euclidean Gradient Algorithm, NEGA, more specifically **NEGA2 algorithm**, as described in the paper *"Non-Euclidean Gradient Methods: Convergence, Complexity, and Applications"*.
+2. Genehound from *"Gene prioritization using Bayesian matrix factorization with genomic and phenotypic side information"* ([Zakeri et al., 2018](https://pubmed.ncbi.nlm.nih.gov/29949967/)). 
 
 **References**
 
@@ -104,28 +106,16 @@ The above procedure describes the general approach. However, the reference paper
 
 You can set up the environment using one of the following methods:
 
-### **Option 1: Using `pip` in a Virtual Environment**
+### **Option 1: Using `pip`**
 
-1. **Clone the Repository**:
-   ```bash
-   git clone https://github.com/azimgivron/genepriority.git
-   cd genepriority
-   ```
+```bash
+pip install genepriority git+https://github.com/azimgivron/genepriority.git@main
+```
 
-2. **Set Up a Virtual Environment**:
-   ```bash
-   python3 -m venv venv
-   source venv/bin/activate
-   ```
-
-3. **Install Dependencies**:
-   ```bash
-   pip install --upgrade pip
-   pip install -r requirements.txt
-   ```
+**Requirements**: SMURFF[https://smurff.readthedocs.io/en/release-0.17/INSTALL.html]
 
 4. **Run Scripts**:
-   Use the `nega` and `genehound` scripts as described in the [Scripts Usage](#scripts-usage) section.
+   Use the `genepriority` scripts as described in the [Scripts Usage](#scripts-usage) section.
 
 ### **Option 2: Using Docker for ARM64 Platform**
 
@@ -185,10 +175,7 @@ Using Docker, two containers are launched: one for the working environment (`neg
 - **`.gitignore`**: Specifies files to ignore in the repository.
 - **`LICENSE`**: Project license.
 
-### Module
-# Folder Structure
-
-# Folder Structure
+### Folder Structure
 
 ```bash
 genepriority/
@@ -204,7 +191,9 @@ genepriority/
 │   ├── genehound
 │   │   └── # Script for reproducing GeneHound results
 │   ├── nega
-│       └── # Script for NEGA2 cross-validation and evaluation
+│   │   └── # Script for NEGA2 cross-validation and evaluation
+│   ├── post
+│       └── # Script for post processing
 ├── trainer/
 │   └── # Facilitates training and evaluation of predictive models
 ├── utils/
@@ -219,220 +208,36 @@ genepriority/
 
 ---
 
-Here’s how you can add a **Scripts Usage** section to your README file, providing detailed guidance on how to use the `nega` and `genehound` scripts:
+Here’s how you can add a **Scripts Usage** section to your README file, providing detailed guidance on how to use the `genepriority` script:
 
 ---
 
 ### Scripts Usage
-
-The `genepriority` repository provides two main scripts for running experiments and reproducing results. Below is a guide to using these scripts:
-
-#### 1. **`nega`**: Non-Euclidean Gradient Algorithm (NEGA2)
-This script performs **cross-validation** for hyperparameter tuning or a **train-eval pipeline** for gene prioritization using the NEGA2 algorithm.
-
+#### `genepriority`
 **Usage**:
 ```bash
-usage: nega [-h] {cross-validation,train-eval} ...
+usage: genepriority [-h] {genehound-omim1,genehound-omim2,nega-cv,nega,post} ...
 
-Run Non-Euclidean Gradient-based method for gene prioritization.
+Gene Prioritization Tool
 
-positional arguments:
-  {cross-validation,train-eval}
-    cross-validation    Perform cross-validation for hyperparameter tuning.
-    train-eval          Train and evaluate the model.
+This tool implements matrix completion algorithms for gene prioritization on the OMIM gene-disease matrix. It supports integration of side information, such as gene features and disease phenotypes, to improve prediction accuracy.
 
-options:
-  -h, --help            show this help message and exit
-```
-
-1. `cross-validation`:
-
-```bash
-usage: nega train-eval [-h] [--input-path INPUT_PATH] [--omim-meta-path OMIM_META_PATH] [--output-path OUTPUT_PATH] [--log-filename LOG_FILENAME]
-                       [--num-splits NUM_SPLITS] [--rank RANK] [--iterations ITERATIONS] [--threshold THRESHOLD] [--validation-size VALIDATION_SIZE]
-                       [--train-size TRAIN_SIZE] [--seed SEED] [--zero-sampling-factor ZERO_SAMPLING_FACTOR]
-                       [--tensorboard-dir tensorboard_dir] [--config-path CONFIG_PATH]
-
-options:
-  -h, --help            show this help message and exit
-  --input-path INPUT_PATH
-                        Path to input data directory containing 'gene-disease.csv' (default: /home/TheGreatestCoder/code/data/postprocessed/).
-  --omim-meta-path OMIM_META_PATH
-                        Path to the OMIM file which contains the meta data about the OMIM association matrix. (default:
-                        /home/TheGreatestCoder/code/genepriority/configurations/omim.yaml)
-  --output-path OUTPUT_PATH
-                        Path to output directory (logs, models, etc.) (default: /home/TheGreatestCoder/code/neg/).
-  --log-filename LOG_FILENAME
-                        Filename of the logs. (default: pipeline.log).
-  --num-splits NUM_SPLITS
-                        Number of data splits (default: 1).
-  --rank RANK           Rank of the model (default: 40).
-  --iterations ITERATIONS
-                        Number of iterations (default: 200).
-  --threshold THRESHOLD
-                        Threshold parameter (default: 10).
-  --validation-size VALIDATION_SIZE
-                        Validation set size (default: 0.1).
-  --train-size TRAIN_SIZE
-                        Training set size (default: 0.8).
-  --seed SEED           Random seed (default: 42).
-  --zero-sampling-factor ZERO_SAMPLING_FACTOR
-                        Factor to determine the number of zeros to sample, calculated as the specified factor multiplied by the number of ones
-                        (default: None).
-  --tensorboard-dir tensorboard_dir
-                        Path to the TensorBoard log directory (default: /home/TheGreatestCoder/code/logs).
-  --config-path CONFIG_PATH
-                        Path to the YAML configuration file that contains parameters for simulation.simulation. The file should define keys such as
-                        'num_splits', 'regularization_parameter', 'symmetry_parameter', etc. (default: /home/TheGreatestCoder/code/NEGradient-
-                        GenePriority/configurations/nega/meta.yaml)
-(nega_venv) ➜  genepriority git:(main) ✗ nega -h           
-usage: nega [-h] {cross-validation,train-eval} ...
-
-Run Non-Euclidean Gradient-based method for gene prioritization.
+Implemented subcommands:
+  1. GeneHound (based on MACAU)
+  2. Non-Euclidean Gradient Algorithm (NEGA)
+  3. Post-processing of evaluation results
 
 positional arguments:
-  {cross-validation,train-eval}
-    cross-validation    Perform cross-validation for hyperparameter tuning.
-    train-eval          Train and evaluate the model.
+  {genehound-omim1,genehound-omim2,nega-cv,nega,post}
+    genehound-omim1     Run GeneHound with the OMIM1 dataset (multiple splits).
+    genehound-omim2     Run GeneHound with the filtered OMIM2 dataset (cross-validation).
+    nega-cv             Perform cross-validation for hyperparameter tuning of NEGA.
+    nega                Train and evaluate the NEGA model.
+    post                Perform post-processing of evaluation results.
 
 options:
   -h, --help            show this help message and exit
-(nega_venv) ➜  genepriority git:(main) ✗ nega cross-validation -h
-usage: nega cross-validation [-h] [--input-path INPUT_PATH] [--omim-meta-path OMIM_META_PATH] [--output-path OUTPUT_PATH]
-                             [--log-filename LOG_FILENAME] [--num-splits NUM_SPLITS] [--rank RANK] [--iterations ITERATIONS] [--threshold THRESHOLD]
-                             [--validation-size VALIDATION_SIZE] [--train-size TRAIN_SIZE] [--seed SEED] [--zero-sampling-factor ZERO_SAMPLING_FACTOR]
-                             [--n-trials N_TRIALS]
-
-options:
-  -h, --help            show this help message and exit
-  --input-path INPUT_PATH
-                        Path to input data directory containing 'gene-disease.csv' (default: /home/TheGreatestCoder/code/data/postprocessed/).
-  --omim-meta-path OMIM_META_PATH
-                        Path to the OMIM file which contains the meta data about the OMIM association matrix. (default:
-                        /home/TheGreatestCoder/code/genepriority/configurations/omim.yaml)
-  --output-path OUTPUT_PATH
-                        Path to output directory (logs, models, etc.) (default: /home/TheGreatestCoder/code/neg/).
-  --log-filename LOG_FILENAME
-                        Filename of the logs. (default: pipeline.log).
-  --num-splits NUM_SPLITS
-                        Number of data splits (default: 1).
-  --rank RANK           Rank of the model (default: 40).
-  --iterations ITERATIONS
-                        Number of iterations (default: 200).
-  --threshold THRESHOLD
-                        Threshold parameter (default: 10).
-  --validation-size VALIDATION_SIZE
-                        Validation set size (default: 0.1).
-  --train-size TRAIN_SIZE
-                        Training set size (default: 0.8).
-  --seed SEED           Random seed (default: 42).
-  --zero-sampling-factor ZERO_SAMPLING_FACTOR
-                        Factor to determine the number of zeros to sample, calculated as the specified factor multiplied by the number of ones
-                        (default: None).
-  --n-trials N_TRIALS   Number of trials for hyperparameter tuning (default: 100).
 ```
-
-2. `train-eval`:
-
-```bash
-usage: nega train-eval [-h] [--input-path INPUT_PATH] [--omim-meta-path OMIM_META_PATH] [--output-path OUTPUT_PATH] [--log-filename LOG_FILENAME]
-                       [--num-splits NUM_SPLITS] [--rank RANK] [--iterations ITERATIONS] [--threshold THRESHOLD] [--validation-size VALIDATION_SIZE]
-                       [--train-size TRAIN_SIZE] [--seed SEED] [--zero-sampling-factor ZERO_SAMPLING_FACTOR]
-                       [--tensorboard-dir tensorboard_dir] [--config-path CONFIG_PATH]
-
-options:
-  -h, --help            show this help message and exit
-  --input-path INPUT_PATH
-                        Path to input data directory containing 'gene-disease.csv' (default: /home/TheGreatestCoder/code/data/postprocessed/).
-  --omim-meta-path OMIM_META_PATH
-                        Path to the OMIM file which contains the meta data about the OMIM association matrix. (default:
-                        /home/TheGreatestCoder/code/genepriority/configurations/omim.yaml)
-  --output-path OUTPUT_PATH
-                        Path to output directory (logs, models, etc.) (default: /home/TheGreatestCoder/code/neg/).
-  --log-filename LOG_FILENAME
-                        Filename of the logs. (default: pipeline.log).
-  --num-splits NUM_SPLITS
-                        Number of data splits (default: 1).
-  --rank RANK           Rank of the model (default: 40).
-  --iterations ITERATIONS
-                        Number of iterations (default: 200).
-  --threshold THRESHOLD
-                        Threshold parameter (default: 10).
-  --validation-size VALIDATION_SIZE
-                        Validation set size (default: 0.1).
-  --train-size TRAIN_SIZE
-                        Training set size (default: 0.8).
-  --seed SEED           Random seed (default: 42).
-  --zero-sampling-factor ZERO_SAMPLING_FACTOR
-                        Factor to determine the number of zeros to sample, calculated as the specified factor multiplied by the number of ones
-                        (default: None).
-  --tensorboard-dir tensorboard_dir
-                        Path to the TensorBoard log directory (default: /home/TheGreatestCoder/code/logs).
-  --config-path CONFIG_PATH
-                        Path to the YAML configuration file that contains parameters for simulation.simulation. The file should define keys such as
-                        'num_splits', 'regularization_parameter', 'symmetry_parameter', etc. (default: /home/TheGreatestCoder/code/NEGradient-
-                        GenePriority/configurations/nega/meta.yaml)
-```
-
-#### 2. **`genehound`**: Reproduce GeneHound Results
-This script reproduces the GeneHound pipeline using the MACAU-based approach. It trains multiple models, evaluates their performance, and generates visualizations and metrics.
-
-**Usage**:
-```bash
-usage: genehound [-h] --run | --no-run --post | --no-post [--side-info | --no-side-info] [--input-path INPUT_PATH]
-                 [--omim-meta-path OMIM_META_PATH] [--config-path CONFIG_PATH] [--post-config-path POST_CONFIG_PATH]
-                 [--output-path OUTPUT_PATH] [--tensorboard-dir tensorboard_dir]
-                 [--omim1-filename OMIM1_FILENAME] [--omim2-filename OMIM2_FILENAME]
-                 [--latent-dimensions LATENT_DIMENSIONS [LATENT_DIMENSIONS ...]]
-                 [--zero-sampling-factor ZERO_SAMPLING_FACTOR] [--train-size TRAIN_SIZE] [--num-splits NUM_SPLITS]
-                 [--num-folds NUM_FOLDS] [--seed SEED]
-
-Reproduce GeneHound results using a MACAU-based approach.
-
-options:
-  -h, --help            show this help message and exit
-  --run, --no-run       Run MACAU model training.
-  --post, --no-post     Perform post-processing (generate evaluation plots/tables).
-  --side-info, --no-side-info
-                        Use side information (row & column). (default: True)
-  --input-path INPUT_PATH
-                        Path to input data directory. (default: /home/TheGreatestCoder/code/data/postprocessed/)
-  --omim-meta-path OMIM_META_PATH
-                        Path to OMIM metadata file. (default: /home/TheGreatestCoder/code/NEGradient-
-                        GenePriority/configurations/omim.yaml)
-  --config-path CONFIG_PATH
-                        Path to YAML configuration file. (default: /home/TheGreatestCoder/code/NEGradient-
-                        GenePriority/configurations/genehound/meta.yaml)
-  --post-config-path POST_CONFIG_PATH
-                        Path to post-processing config file. (default: /home/TheGreatestCoder/code/NEGradient-
-                        GenePriority/configurations/genehound/post.yaml)
-  --output-path OUTPUT_PATH
-                        Path to save output results. (default: /home/TheGreatestCoder/code/genehound/)
-  --tensorboard-dir tensorboard_dir
-                        Path for TensorBoard logs. (default: /home/TheGreatestCoder/code/logs)
-  --omim1-filename OMIM1_FILENAME
-                        Filename for OMIM1 results. (default: omim1_results.pickle)
-  --omim2-filename OMIM2_FILENAME
-                        Filename for OMIM2 results. (default: omim2_results.pickle)
-  --latent-dimensions LATENT_DIMENSIONS [LATENT_DIMENSIONS ...]
-                        List of latent dimensions for MACAU. (default: [25, 30, 40])
-  --zero-sampling-factor ZERO_SAMPLING_FACTOR
-                        Factor for zero sampling. (default: 5)
-  --train-size TRAIN_SIZE
-                        Training set size. (default: 0.8)
-  --num-splits NUM_SPLITS
-                        Number of data splits. (default: 6)
-  --num-folds NUM_FOLDS
-                        Number of folds for cross-validation. (default: 5)
-  --seed SEED           Random seed. (default: 42)
-```
-
-**Outputs when Post is Enabled**:
-- ROC Curves: Visualizations of model performance.
-- AUC and BEDROC tables: Tabular metrics evaluating the ranking quality.
-- Boxplots: Visual comparison of BEDROC scores for multiple models.
-
----
 
 ## License
 

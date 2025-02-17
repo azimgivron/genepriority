@@ -43,6 +43,12 @@ def parse_post(subparsers: Any) -> None:
         help="Perform post-processing of evaluation results.",
     )
     parser.add_argument(
+        "--output-path",
+        type=str,
+        required=True,
+        help="Directory where output results will be saved.",
+    )
+    parser.add_argument(
         "--evaluation-paths",
         type=str,
         nargs='+',
@@ -59,12 +65,6 @@ def parse_post(subparsers: Any) -> None:
         type=str,
         default="/home/TheGreatestCoder/code/genepriority/configurations/post.yaml",
         help="Path to the post-processing configuration file containing alpha values. (default: %(default)s)",
-    )
-    parser.add_argument(
-        "--output-path",
-        type=str,
-        default="/home/TheGreatestCoder/code/results",
-        help="Directory where output results will be saved. (default: %(default)s)",
     )
 
 
@@ -88,6 +88,9 @@ def post(args: argparse.Namespace) -> None:
     """
     post_config_path: Path = Path(args.post_config_path)
     output_path: Path = Path(args.output_path)
+    
+    output_path.mkdir(parents=True, exist_ok=True)
+    
     logger = logging.getLogger("post_processing")
     logger.debug("Loading configuration file: %s", post_config_path)
 
@@ -114,11 +117,11 @@ def post(args: argparse.Namespace) -> None:
     # Plot and save the ROC curves
     plot_roc_curves(
         evaluation_collection=results,
-        output_file=output_path / "roc_curve_omim1",
+        output_file=output_path / "roc_curve",
         figsize=(10, 8),
     )
 
-    auc_loss_csv_path: Path = output_path / "auc_loss_omim1.csv"
+    auc_loss_csv_path: Path = output_path / "auc_loss.csv"
     generate_auc_loss_table(
         results.compute_auc_losses(),
         model_names=args.model_names,
@@ -126,7 +129,7 @@ def post(args: argparse.Namespace) -> None:
     logger.info("AUC/Loss table saved: %s", auc_loss_csv_path)
 
     # Generate and save the BEDROC plots and tables
-    bedroc_plot_path: Path = output_path / "bedroc_omim1.png"
+    bedroc_plot_path: Path = output_path / "bedroc.png"
     plot_bedroc_boxplots(
         results.compute_bedroc_scores(),
         model_names=args.model_names,
@@ -135,7 +138,7 @@ def post(args: argparse.Namespace) -> None:
     )
     logger.info("BEDROC boxplots saved: %s", bedroc_plot_path)
 
-    bedroc_csv_path: Path = output_path / "bedroc_omim1.csv"
+    bedroc_csv_path: Path = output_path / "bedroc.csv"
     generate_bedroc_table(
         results.compute_bedroc_scores(),
         model_names=args.model_names,

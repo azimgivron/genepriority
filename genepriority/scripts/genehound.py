@@ -153,12 +153,13 @@ def run(
     train_method = trainer.train_test_splits if is_omim1 else trainer.train_test_cross_validation
 
     for latent in latent_dimensions:
+        results_path = output_path / str(latent)
+        results_path.mkdir(parents=True, exist_ok=True)
+        trainer.path = results_path
         result = train_method(
             num_latent=latent,
             save_name=f"latent={latent}:model-omim{int(not is_omim1) + 1}.hdf5",
         )
-        results_path = output_path / str(latent)
-        results_path.mkdir(parents=True, exist_ok=True)
         serialize(result, results_path / results_filename)
         logger.debug("Serialized results for latent dimension %s saved successfully.", latent)
 
