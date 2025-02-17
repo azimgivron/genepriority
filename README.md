@@ -112,7 +112,7 @@ You can set up the environment using one of the following methods:
 pip install genepriority git+https://github.com/azimgivron/genepriority.git@main
 ```
 
-**Requirements**: SMURFF[https://smurff.readthedocs.io/en/release-0.17/INSTALL.html]
+**Requirements**: [SMURFF](https://smurff.readthedocs.io/en/release-0.17/INSTALL.html)
 
 4. **Run Scripts**:
    Use the `genepriority` scripts as described in the [Scripts Usage](#scripts-usage) section.
