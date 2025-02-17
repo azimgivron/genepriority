@@ -13,7 +13,7 @@ from typing import Dict, Iterator, List, Tuple
 
 import numpy as np
 
-from NEGradient_GenePriority.evaluation.evaluation import Evaluation
+from genepriority.evaluation.evaluation import Evaluation
 
 
 class ModelEvaluationCollection:
@@ -68,6 +68,14 @@ class ModelEvaluationCollection:
         """
         return list(self.model_results.values())
 
+    def __len__(self) -> int:
+        """Compute the number of evaluation objects.
+
+        Returns:
+            int: The number of evaluations.
+        """
+        return len(self.model_names)
+
     def items(self) -> Iterator[Tuple[str, Evaluation]]:
         """
         Provides an iterator over the model names and their corresponding Evaluation objects.
@@ -103,14 +111,14 @@ class ModelEvaluationCollection:
 
     def compute_bedroc_scores(self) -> np.ndarray:
         """
-        Calculates the BEDROC scores for several alpah values per disease and
+        Calculates the BEDROC scores for several alpah values per fold and
         for each model.
 
         Returns:
-            np.ndarray: A 3D array containing the BEDROC scores for each disease,
-            across different alpha values, for each model. Shape: (alphas, diseases, models).
+            np.ndarray: A 3D array containing the BEDROC scores for each fold,
+            across different alpha values, for each model. Shape: (alphas, folds, models).
         """
         bedroc = np.array(
             [eval_res.compute_bedroc_scores() for eval_res in self.evaluations]
-        )  # shape = (models, diseases, alphas)
+        )  # shape = (models, folds, alphas)
         return bedroc.T

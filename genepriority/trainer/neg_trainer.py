@@ -19,17 +19,17 @@ import pandas as pd
 import scipy.sparse as sp
 import tensorflow as tf
 
-from NEGradient_GenePriority.compute_models.smc import (
+from genepriority.compute_models.smc import (
     MatrixCompletionResult,
     MatrixCompletionSession,
 )
-from NEGradient_GenePriority.preprocessing.dataloader import DataLoader
-from NEGradient_GenePriority.preprocessing.side_information_loader import (
+from genepriority.preprocessing.dataloader import DataLoader
+from genepriority.preprocessing.side_information_loader import (
     SideInformationLoader,
 )
-from NEGradient_GenePriority.preprocessing.train_val_test_mask import TrainValTestMasks
-from NEGradient_GenePriority.trainer.base import BaseTrainer
-from NEGradient_GenePriority.utils import mask_sparse_containing_0s
+from genepriority.preprocessing.train_val_test_mask import TrainValTestMasks
+from genepriority.trainer.base import BaseTrainer
+from genepriority.utils import mask_sparse_containing_0s
 
 
 class NEGTrainer(BaseTrainer):
@@ -183,7 +183,7 @@ class NEGTrainer(BaseTrainer):
         training_data = mask_sparse_containing_0s(matrix, train_mask)
         self.log_data("training", training_data)
 
-        testing_data = mask_sparse_containing_0s(matrix, test_mask)
+        testing_data = matrix.multiply(test_mask)
         self.log_data("testing", testing_data)
         return MatrixCompletionSession(
             **self.neg_session_kwargs,

@@ -11,8 +11,8 @@ from typing import Dict, List
 import numpy as np
 from sklearn import metrics
 
-from NEGradient_GenePriority.evaluation.metrics import bedroc_score
-from NEGradient_GenePriority.evaluation.results import Results
+from genepriority.evaluation.metrics import bedroc_score
+from genepriority.evaluation.results import Results
 
 
 class Evaluation:
@@ -91,7 +91,7 @@ class Evaluation:
         for fold_res in self.results:
             y_true = fold_res.y_true.toarray().flatten()
             y_pred = fold_res.y_pred.flatten()
-            auc_loss.append(1-metrics.roc_auc_score(y_true, y_pred))
+            auc_loss.append(1 - metrics.roc_auc_score(y_true, y_pred))
         auc_loss = np.array(auc_loss)
         return auc_loss
 

@@ -8,7 +8,9 @@ to assess the performance of gene prioritization models.
 import numpy as np
 
 
-def bedroc_score(y_true, y_pred, decreasing=True, alpha=20.0):
+def bedroc_score(
+    y_true: np.ndarray, y_pred: np.ndarray, decreasing: bool, alpha: float
+):
     """
     Calculate the BEDROC (Boltzmann Enhanced Discrimination of the
     Receiver Operator Characteristic) score.
@@ -25,8 +27,8 @@ def bedroc_score(y_true, y_pred, decreasing=True, alpha=20.0):
         `10.1021/ci600426e <http://dx.doi.org/10.1021/ci600426e>`_.
 
     Args:
-        y_true (array_like): Binary class labels (1 for positive class, 0 for negative class).
-        y_pred (array_like): Predicted values or scores.
+        y_true (np.ndarray): Binary class labels (1 for positive class, 0 for negative class).
+        y_pred (np.ndarray): Predicted values or scores.
         decreasing (bool): Whether higher `y_pred` values correspond to positive class.
         alpha (float): Early recognition parameter.
 

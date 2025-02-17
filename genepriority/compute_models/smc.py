@@ -19,10 +19,10 @@ import scipy.sparse as sp
 import tensorflow as tf
 from sklearn.metrics import mean_squared_error
 
-from NEGradient_GenePriority.compute_models.matrix_completion_result import (
+from genepriority.compute_models.matrix_completion_result import (
     MatrixCompletionResult,
 )
-from NEGradient_GenePriority.utils import serialize
+from genepriority.utils import mask_sparse_containing_0s, serialize
 
 
 class MatrixCompletionSession:
@@ -178,7 +178,9 @@ class MatrixCompletionSession:
         Returns:
             float: The computed loss value.
         """
-        residual = (self.matrix - self.predict_all()).multiply(self.train_mask)
+        residual = mask_sparse_containing_0s(
+            (self.matrix - self.predict_all()), self.train_mask
+        )
         return 0.5 * sp.linalg.norm(residual, ord="fro") ** 2
 
     def calculate_rmse(self) -> float:
@@ -363,7 +365,9 @@ class MatrixCompletionSession:
             )
             # Compute gradients for h1 and h2
             residual = (
-                self.train_mask.multiply(self.h1 @ self.h2) - self.matrix
+                mask_sparse_containing_0s(
+                    (self.predict_all() - self.matrix), self.train_mask
+                )
             ).toarray()
 
             grad_u = residual @ self.h2.T + self.regularization_parameter * self.h1
@@ -381,31 +385,36 @@ class MatrixCompletionSession:
                 <= res_norm + linear_approx + self.smoothness_parameter * bregman
             )
             if self.writer is not None:
-                with self.writer.as_default():
-                    tf.summary.scalar(
-                        name="training_loss", data=training_loss, step=ith_iteration
-                    )
-                    tf.summary.scalar(
-                        name="testing_loss", data=testing_loss, step=ith_iteration
-                    )
-                    tf.summary.scalar(
-                        name="non_euclidean_descent_lemma_cond",
-                        data=int(non_euclidean_descent_lemma_cond),
-                        step=ith_iteration,
-                    )
-                    tf.summary.scalar(
-                        name="res_norm", data=res_norm, step=ith_iteration
-                    )
-                    tf.summary.scalar(
-                        name="linear_approx", data=linear_approx, step=ith_iteration
-                    )
-                    tf.summary.scalar(
-                        name="smoothness_parameter",
-                        data=self.smoothness_parameter,
-                        step=ith_iteration,
-                    )
-                    tf.summary.scalar(name="bregman", data=bregman, step=ith_iteration)
-                    tf.summary.flush()
+                try:
+                    with self.writer.as_default():
+                        tf.summary.scalar(
+                            name="training_loss", data=training_loss, step=ith_iteration
+                        )
+                        tf.summary.scalar(
+                            name="testing_loss", data=testing_loss, step=ith_iteration
+                        )
+                        tf.summary.scalar(
+                            name="non_euclidean_descent_lemma_cond",
+                            data=int(non_euclidean_descent_lemma_cond),
+                            step=ith_iteration,
+                        )
+                        tf.summary.scalar(
+                            name="res_norm", data=res_norm, step=ith_iteration
+                        )
+                        tf.summary.scalar(
+                            name="linear_approx", data=linear_approx, step=ith_iteration
+                        )
+                        tf.summary.scalar(
+                            name="smoothness_parameter",
+                            data=self.smoothness_parameter,
+                            step=ith_iteration,
+                        )
+                        tf.summary.scalar(
+                            name="bregman", data=bregman, step=ith_iteration
+                        )
+                        tf.summary.flush()
+                except ValueError:
+                    pass
             while not non_euclidean_descent_lemma_cond:
                 flag = 1
                 inner_loop_it += 1

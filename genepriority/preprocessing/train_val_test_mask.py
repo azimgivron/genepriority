@@ -16,7 +16,7 @@ import numpy as np
 import scipy.sparse as sp
 from sklearn.model_selection import train_test_split
 
-from NEGradient_GenePriority.preprocessing.train_test_masks import TrainTestMasks
+from genepriority.preprocessing.train_test_masks import TrainTestMasks
 
 
 class TrainValTestMasks(TrainTestMasks):

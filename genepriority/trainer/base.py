@@ -13,20 +13,19 @@ import abc
 import logging
 from abc import ABCMeta
 from pathlib import Path
-from typing import Any, Dict, Iterator, List, Tuple, Union
+from typing import Any, Iterator, Tuple, Union
 
 import numpy as np
 import scipy.sparse as sp
 import smurff
 from tqdm import tqdm
 
-from NEGradient_GenePriority.evaluation.evaluation import Evaluation
-from NEGradient_GenePriority.evaluation.results import Results
-from NEGradient_GenePriority.preprocessing.dataloader import DataLoader
-from NEGradient_GenePriority.preprocessing.side_information_loader import (
+from genepriority.evaluation.evaluation import Evaluation
+from genepriority.evaluation.results import Results
+from genepriority.preprocessing.dataloader import DataLoader
+from genepriority.preprocessing.side_information_loader import (
     SideInformationLoader,
 )
-from NEGradient_GenePriority.utils import serialize
 
 
 class BaseTrainer(metaclass=ABCMeta):
@@ -72,52 +71,6 @@ class BaseTrainer(metaclass=ABCMeta):
         self.seed = seed
 
         self.logger = logging.getLogger(self.__class__.__name__)
-
-    def __call__(
-        self,
-        latent_dimensions: List[int],
-        save_results: bool,
-        omim1_filename: str,
-        omim2_filename: str,
-    ) -> Tuple[Dict[str, Evaluation], Dict[str, Evaluation]]:
-        """
-        Execute training for different latent dimensions and optionally save results.
-
-        Args:
-            latent_dimensions (List[int]): List of latent dimensions to evaluate.
-            save_results (bool): Whether to save the results to file.
-            omim1_filename (str, optional): Filename for saving OMIM1 results.
-            omim2_filename (str, optional): Filename for saving OMIM2 results.
-
-        Returns:
-            Tuple[Dict[str, Evaluation], Dict[str, Evaluation]]: Evaluation results
-                for OMIM1 and OMIM2 datasets.
-        """
-        omim1_results = {}
-        omim2_results = {}
-        for num_latent in tqdm(latent_dimensions, desc="Latent dimensions"):
-            self.logger.debug(
-                "Running training and evaluation for model with %d latent dimensions",
-                num_latent,
-            )
-            omim1_results[f"latent dim={num_latent}"] = self.train_test_splits(
-                num_latent=num_latent,
-                save_name=f"latent={num_latent}:model-omim1.hdf5",
-            )
-            omim2_results[
-                f"latent dim={num_latent}"
-            ] = self.train_test_cross_validation(
-                num_latent=num_latent,
-                save_name=f"latent={num_latent}:model-omim2.hdf5",
-            )
-        self.logger.debug("Model trainings and evaluations completed successfully")
-        if save_results:
-            omim2_results_path = self.path / omim2_filename
-            omim1_results_path = self.path / omim1_filename
-            serialize(omim2_results, omim2_results_path)
-            serialize(omim1_results, omim1_results_path)
-            self.logger.debug("Results serialization completed successfully")
-        return omim1_results, omim2_results
 
     @abc.abstractmethod
     def predict(

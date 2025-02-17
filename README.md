@@ -1,12 +1,12 @@
-# NEGradient_GenePriority
+# genepriority
 
-[![codecov](https://codecov.io/gh/azimgivron/NEGradient_GenePriority/branch/main/graph/badge.svg?token=QSAKYRC4EH)](https://codecov.io/gh/azimgivron/NEGradient_GenePriority)
+[![codecov](https://codecov.io/gh/azimgivron/genepriority/branch/main/graph/badge.svg?token=QSAKYRC4EH)](https://codecov.io/gh/azimgivron/genepriority)
 
 <p align="center" width="100%">
-    <img width="40%" src=".images/NEGradient_GenePriority-logo.png" >
+    <img width="40%" src=".images/genepriority-logo.png" >
 </p>
 
-The repository **NEGradient_GenePriority** (short for "Non-Euclidean Gradient Methods for Matrix Completion in Gene Prioritization") is designed to implement and evaluate algorithms on the *Online Mendelian Inheritance in Man* (OMIM) dataset for gene prioritization. The goal is to identify disease-associated genes by leveraging genomic and phenotypic side information. 
+The repository **genepriority** (short for "Non-Euclidean Gradient Methods for Matrix Completion in Gene Prioritization") is designed to implement and evaluate algorithms on the *Online Mendelian Inheritance in Man* (OMIM) dataset for gene prioritization. The goal is to identify disease-associated genes by leveraging genomic and phenotypic side information. 
 
 This repository focuses on producing results using the **NEGA2 algorithm**, as described in the paper *"Non-Euclidean Gradient Methods: Convergence, Complexity, and Applications"*. The results will be compared with the outcomes from the method presented in *"Gene prioritization using Bayesian matrix factorization with genomic and phenotypic side information"* ([Zakeri et al., 2018](https://pubmed.ncbi.nlm.nih.gov/29949967/)). To ensure coherence in algorithm implementation and evaluation, results from the GeneHound method were reproduced as a baseline.
 
@@ -108,8 +108,8 @@ You can set up the environment using one of the following methods:
 
 1. **Clone the Repository**:
    ```bash
-   git clone https://github.com/azimgivron/NEGradient_GenePriority.git
-   cd NEGradient_GenePriority
+   git clone https://github.com/azimgivron/genepriority.git
+   cd genepriority
    ```
 
 2. **Set Up a Virtual Environment**:
@@ -178,7 +178,7 @@ Using Docker, two containers are launched: one for the working environment (`neg
 
 ### Root Directory
 
-- **`NEGradient_GenePriority/`**: Main modules for preprocessing, matrix operations, and evaluation.
+- **`genepriority/`**: Main modules for preprocessing, matrix operations, and evaluation.
 - **`requirements.txt`**: List of dependencies for the project.
 - **`Dockerfile`**: Configuration for containerized deployment.
 - **`pyproject.toml`**: Project and dependency configuration for building and distribution.
@@ -191,7 +191,7 @@ Using Docker, two containers are launched: one for the working environment (`neg
 # Folder Structure
 
 ```bash
-NEGradient_GenePriority/
+genepriority/
 ├── compute_models/
 │   └── # NEGA2 algorithm implementation
 ├── evaluation/
@@ -225,7 +225,7 @@ Here’s how you can add a **Scripts Usage** section to your README file, provid
 
 ### Scripts Usage
 
-The `NEGradient_GenePriority` repository provides two main scripts for running experiments and reproducing results. Below is a guide to using these scripts:
+The `genepriority` repository provides two main scripts for running experiments and reproducing results. Below is a guide to using these scripts:
 
 #### 1. **`nega`**: Non-Euclidean Gradient Algorithm (NEGA2)
 This script performs **cross-validation** for hyperparameter tuning or a **train-eval pipeline** for gene prioritization using the NEGA2 algorithm.
@@ -259,7 +259,7 @@ options:
                         Path to input data directory containing 'gene-disease.csv' (default: /home/TheGreatestCoder/code/data/postprocessed/).
   --omim-meta-path OMIM_META_PATH
                         Path to the OMIM file which contains the meta data about the OMIM association matrix. (default:
-                        /home/TheGreatestCoder/code/NEGradient-GenePriority/configurations/omim.yaml)
+                        /home/TheGreatestCoder/code/genepriority/configurations/omim.yaml)
   --output-path OUTPUT_PATH
                         Path to output directory (logs, models, etc.) (default: /home/TheGreatestCoder/code/neg/).
   --log-filename LOG_FILENAME
@@ -285,7 +285,7 @@ options:
                         Path to the YAML configuration file that contains parameters for simulation.simulation. The file should define keys such as
                         'num_splits', 'regularization_parameter', 'symmetry_parameter', etc. (default: /home/TheGreatestCoder/code/NEGradient-
                         GenePriority/configurations/nega/meta.yaml)
-(nega_venv) ➜  NEGradient-GenePriority git:(main) ✗ nega -h           
+(nega_venv) ➜  genepriority git:(main) ✗ nega -h           
 usage: nega [-h] {cross-validation,train-eval} ...
 
 Run Non-Euclidean Gradient-based method for gene prioritization.
@@ -297,7 +297,7 @@ positional arguments:
 
 options:
   -h, --help            show this help message and exit
-(nega_venv) ➜  NEGradient-GenePriority git:(main) ✗ nega cross-validation -h
+(nega_venv) ➜  genepriority git:(main) ✗ nega cross-validation -h
 usage: nega cross-validation [-h] [--input-path INPUT_PATH] [--omim-meta-path OMIM_META_PATH] [--output-path OUTPUT_PATH]
                              [--log-filename LOG_FILENAME] [--num-splits NUM_SPLITS] [--rank RANK] [--iterations ITERATIONS] [--threshold THRESHOLD]
                              [--validation-size VALIDATION_SIZE] [--train-size TRAIN_SIZE] [--seed SEED] [--zero-sampling-factor ZERO_SAMPLING_FACTOR]
@@ -309,7 +309,7 @@ options:
                         Path to input data directory containing 'gene-disease.csv' (default: /home/TheGreatestCoder/code/data/postprocessed/).
   --omim-meta-path OMIM_META_PATH
                         Path to the OMIM file which contains the meta data about the OMIM association matrix. (default:
-                        /home/TheGreatestCoder/code/NEGradient-GenePriority/configurations/omim.yaml)
+                        /home/TheGreatestCoder/code/genepriority/configurations/omim.yaml)
   --output-path OUTPUT_PATH
                         Path to output directory (logs, models, etc.) (default: /home/TheGreatestCoder/code/neg/).
   --log-filename LOG_FILENAME
@@ -346,7 +346,7 @@ options:
                         Path to input data directory containing 'gene-disease.csv' (default: /home/TheGreatestCoder/code/data/postprocessed/).
   --omim-meta-path OMIM_META_PATH
                         Path to the OMIM file which contains the meta data about the OMIM association matrix. (default:
-                        /home/TheGreatestCoder/code/NEGradient-GenePriority/configurations/omim.yaml)
+                        /home/TheGreatestCoder/code/genepriority/configurations/omim.yaml)
   --output-path OUTPUT_PATH
                         Path to output directory (logs, models, etc.) (default: /home/TheGreatestCoder/code/neg/).
   --log-filename LOG_FILENAME

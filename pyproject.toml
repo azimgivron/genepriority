@@ -3,25 +3,24 @@ requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "NEGradient_GenePriority"
+name = "genepriority"
 readme = "README.md"
-description = "Non-Euclidean-Gradient-Methods-for-Matrix-Completion-in-Gene-Prioritization"
+description = "Implements matrix completion algorithms for gene prioritization on the OMIM gene-disease matrix"
 classifiers = ["Programming Language :: Python :: 3.11"]
 requires-python = ">=3.11"
 dynamic = ["version", "dependencies"]
 
 [project.scripts]
-genehound = "NEGradient_GenePriority.scripts.genehound:main"
-nega = "NEGradient_GenePriority.scripts.nega:main"
+genepriority = "genepriority.scripts.genepriority:main"
 
 [tool.setuptools]
 packages = [
-    "NEGradient_GenePriority",
-    "NEGradient_GenePriority.evaluation",
-    "NEGradient_GenePriority.postprocessing",
-    "NEGradient_GenePriority.preprocessing",
-    "NEGradient_GenePriority.trainer",
-    "NEGradient_GenePriority.compute_models"
+    "genepriority",
+    "genepriority.evaluation",
+    "genepriority.postprocessing",
+    "genepriority.preprocessing",
+    "genepriority.trainer",
+    "genepriority.compute_models"
 ]
 
 [tool.setuptools.dynamic]

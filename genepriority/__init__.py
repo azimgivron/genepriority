@@ -1,4 +1,4 @@
-# pylint: disable=C0114, C0103
+"""GenePriority Module"""
 from .evaluation import *
 from .postprocessing import *
 from .preprocessing import *

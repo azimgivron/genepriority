@@ -24,14 +24,14 @@ import numpy as np
 import pandas as pd
 import scipy.sparse as sp
 
-from NEGradient_GenePriority.preprocessing.preprocessing import (
+from genepriority.preprocessing.preprocessing import (
     compute_statistics,
     convert_dataframe_to_sparse_matrix,
     filter_by_number_of_association,
     sample_zeros,
 )
-from NEGradient_GenePriority.preprocessing.train_test_masks import TrainTestMasks
-from NEGradient_GenePriority.preprocessing.train_val_test_mask import TrainValTestMasks
+from genepriority.preprocessing.train_test_masks import TrainTestMasks
+from genepriority.preprocessing.train_val_test_mask import TrainValTestMasks
 
 
 class DataLoader:
@@ -116,11 +116,11 @@ class DataLoader:
         self.validation_size = validation_size
         self.min_associations = min_associations
         self.logger = logging.getLogger(self.__class__.__name__)
-        
+
     @property
     def with_0s(self) -> bool:
         """Whether there 0s in the data.
-        
+
         Returns:
             (bool): True if data contains zeros.
         """
@@ -164,7 +164,11 @@ class DataLoader:
             pd.DataFrame: The loaded gene-disease data as a Pandas DataFrame.
         """
         self.logger.debug("Loading gene-disease data from %s", self.path)
-        return pd.read_csv(self.path)
+        dataframe = pd.read_csv(self.path)
+        self.logger.debug(
+            "Loaded gene-disease data with %d rows and %d columns", *dataframe.shape
+        )
+        return dataframe
 
     def __call__(self, filter_column: str):
         """
@@ -175,21 +179,18 @@ class DataLoader:
             filter_column (str): Column name in the dataset to use for filtering associations
                 for the OMIM2 dataset.
         """
-        gene_disease = self.load_data()
-        self.logger.debug(
-            "Loaded gene-disease data with %d rows and %d columns", *gene_disease.shape
-        )
-        self.load_omim1(gene_disease)
-        self.load_omim2(gene_disease, filter_column=filter_column)
+        self.load_omim1()
+        self.load_omim2(filter_column=filter_column)
 
-    def load_omim1(self, gene_disease: pd.DataFrame):
+    def load_omim1(self):
         """
         Process and prepare the OMIM1 dataset by creating a sparse matrix, optionally
         sampling negative associations, and generating random splits for training and testing.
-
-        Args:
-            gene_disease (pd.DataFrame): DataFrame containing the gene-disease associations.
         """
+        if self.num_splits is None:
+            return
+        gene_disease = self.load_data()
+
         self.omim1 = convert_dataframe_to_sparse_matrix(
             gene_disease, shape=(self.nb_genes + 1, self.nb_diseases + 1)
         )
@@ -238,16 +239,19 @@ class DataLoader:
         counts = compute_statistics(self.omim1, self.omim1_masks)
         self.logger.debug("Disease count statistics:\n%s", counts)
 
-    def load_omim2(self, gene_disease: pd.DataFrame, filter_column: str):
+    def load_omim2(self, filter_column: str):
         """
         Process and prepare the OMIM2 dataset by filtering based on association count,
         creating a sparse matrix, sampling negative associations, and generating
         cross-validation folds.
 
         Args:
-            gene_disease (pd.DataFrame): DataFrame containing the gene-disease associations.
             filter_column (str): Column name used to filter associations based on a threshold.
         """
+        if self.num_folds is None:
+            return
+        gene_disease = self.load_data()
+
         self.logger.debug("Filtering gene-disease data by association threshold")
         filtered_gene_disease = filter_by_number_of_association(
             gene_disease, threshold=self.min_associations, col_name=filter_column

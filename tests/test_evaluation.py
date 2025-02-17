@@ -3,7 +3,7 @@ from typing import List
 import numpy as np
 import pytest
 import scipy.sparse as sp
-from NEGradient_GenePriority import Evaluation, Results
+from genepriority import Evaluation, Results
 
 
 @pytest.fixture(name="diseases")
@@ -46,27 +46,27 @@ def test_evaluation_init_invalid():
         Evaluation(["invalid", 123])
 
 
-def test_compute_bedroc_scores(results, diseases):
+def test_compute_bedroc_scores(results):
     """Test the compute_bedroc_scores method."""
     alpha_values = [0.1, 0.5, 1.0]
     Evaluation.alphas = alpha_values
     Evaluation.alpha_map = {alpha: f"alpha_{alpha}" for alpha in alpha_values}
     evaluation = Evaluation(results)
     scores = evaluation.compute_bedroc_scores()
-    assert scores.shape == (diseases, len(alpha_values))
+    assert scores.shape == (len(evaluation.results), len(alpha_values))
 
 
-def test_compute_avg_auc_loss(results, diseases):
+def test_compute_avg_auc_loss(results):
     """Test the compute_avg_auc_loss method."""
     evaluation = Evaluation(results)
     loss = evaluation.compute_avg_auc_loss()
     assert isinstance(loss, np.ndarray)
-    assert loss.shape == (diseases,)
+    assert loss.shape == (len(evaluation.results),)
 
 
-def test_compute_roc_curve(results, diseases):
+def test_compute_roc_curve(results):
     """Test the compute_roc_curve method."""
     evaluation = Evaluation(results)
     fpr_tpr_per_disease = evaluation.compute_roc_curve()
     assert isinstance(fpr_tpr_per_disease, np.ndarray)
-    assert fpr_tpr_per_disease.shape[:-1] == (diseases, 2)
+    assert fpr_tpr_per_disease.shape[0] == 2

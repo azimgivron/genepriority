@@ -3,7 +3,7 @@ from typing import List
 import numpy as np
 import pytest
 import scipy.sparse as sp
-from NEGradient_GenePriority import Evaluation, ModelEvaluationCollection, Results
+from genepriority import Evaluation, ModelEvaluationCollection, Results
 
 
 @pytest.fixture(name="alphas", autouse=True)
@@ -100,12 +100,12 @@ def test_auc_loss(model_evaluation_collection):
     assert loss.shape == (len(model_evaluation_collection.evaluations), 2)
 
 
-def test_bedroc(model_evaluation_collection, diseases, alphas):
+def test_bedroc(model_evaluation_collection, evaluation, alphas):
     """Test: Verifies the computation of BEDROC scores."""
     bedroc = model_evaluation_collection.compute_bedroc_scores()
     assert isinstance(bedroc, np.ndarray)
     assert bedroc.shape == (
         len(alphas),
-        diseases,
+        len(evaluation.results),
         len(model_evaluation_collection.evaluations),
     )

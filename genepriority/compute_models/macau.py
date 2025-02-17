@@ -13,7 +13,7 @@ import scipy.sparse as sp
 import smurff
 import tensorflow as tf
 
-from NEGradient_GenePriority.compute_models.matrix_completion_result import (
+from genepriority.compute_models.matrix_completion_result import (
     MatrixCompletionResult,
 )
 

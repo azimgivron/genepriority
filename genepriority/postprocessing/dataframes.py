@@ -75,17 +75,11 @@ def generate_bedroc_table(
     std = bedroc.std(axis=1).reshape(
         (len(model_names), len(alpha_map))
     )  # shape = (model, alphas)
-    bedroc = np.hstack((mean, std)) # shape = (model, 2*alphas)
+    bedroc = np.hstack((mean, std))  # shape = (model, 2*alphas)
 
     column_names = np.array(
-        [
-            f"{avg_bedroc_score_name} (top {alpha})"
-            for alpha in alpha_map.values()
-        ] + 
-        [
-            f"{std_bedroc_score_name} (top {alpha})"
-            for alpha in alpha_map.values()
-        ]
+        [f"{avg_bedroc_score_name} (top {alpha})" for alpha in alpha_map.values()]
+        + [f"{std_bedroc_score_name} (top {alpha})" for alpha in alpha_map.values()]
     )
 
     dataframe = pd.DataFrame(bedroc, columns=column_names, index=model_names).map(
