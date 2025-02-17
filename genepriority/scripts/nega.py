@@ -167,9 +167,9 @@ def train_eval(
         rank,
         save_name=f"latent={rank}:model-omim1.pickle",
     )
-    results_path = output_path / str(rank) / results_filename
+    results_path = output_path / str(rank)
     results_path.mkdir(parents=True, exist_ok=True)
-    serialize(result, results_path)
+    serialize(result, results_path / results_filename)
     logger.debug("Serialized results for latent dimension %s saved successfully.", rank)
 
 def parse_nega(subparsers: argparse._SubParsersAction) -> None:

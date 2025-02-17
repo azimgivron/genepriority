@@ -157,9 +157,9 @@ def run(
             num_latent=latent,
             save_name=f"latent={latent}:model-omim{int(not is_omim1) + 1}.hdf5",
         )
-        results_path = output_path / str(latent) / results_filename
+        results_path = output_path / str(latent)
         results_path.mkdir(parents=True, exist_ok=True)
-        serialize(result, results_path)
+        serialize(result, results_path / results_filename)
         logger.debug("Serialized results for latent dimension %s saved successfully.", latent)
 
 
