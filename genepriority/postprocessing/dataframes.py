@@ -52,7 +52,7 @@ def generate_bedroc_table(
     Args:
         bedroc (np.ndarray): A 3D array containing BEDROC scores for each model,
             each disease, and different alpha values.
-            Shape: (alphas, diseases, models).
+            Shape: (alphas, folds, models).
         model_names (List[str]): Names of the models corresponding to the BEDROC scores.
         alpha_map (Dict[float, str]): A mapping of alpha values (e.g., 0.2, 0.5) to
             descriptive strings used for table column naming.
@@ -69,12 +69,8 @@ def generate_bedroc_table(
     if len(alpha_map) != bedroc.shape[0]:
         raise ValueError
 
-    mean = bedroc.mean(axis=1).reshape(
-        (len(model_names), len(alpha_map))
-    )  # shape = (model, alphas)
-    std = bedroc.std(axis=1).reshape(
-        (len(model_names), len(alpha_map))
-    )  # shape = (model, alphas)
+    mean = bedroc.mean(axis=1).T  # shape = (model, alphas)
+    std = bedroc.std(axis=1).T  # shape = (model, alphas)
     bedroc = np.hstack((mean, std))  # shape = (model, 2*alphas)
 
     column_names = np.array(

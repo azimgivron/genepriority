@@ -105,16 +105,13 @@ def post(args: argparse.Namespace) -> None:
     Evaluation.alphas = list(alpha_map.keys())
     Evaluation.alpha_map = alpha_map
 
-    # Load evaluation results from pickled objects
     results_data: Dict[str, Any] = {}
     for name, path_str in zip(args.model_names, args.evaluation_paths):
         with Path(path_str).open("rb") as stream:
             results_data[name] = pickle.load(stream)
 
-    # Create a ModelEvaluationCollection to hold all results
     results = ModelEvaluationCollection(results_data)
 
-    # Plot and save the ROC curves
     plot_roc_curves(
         evaluation_collection=results,
         output_file=output_path / "roc_curve",
@@ -124,15 +121,14 @@ def post(args: argparse.Namespace) -> None:
     auc_loss_csv_path: Path = output_path / "auc_loss.csv"
     generate_auc_loss_table(
         results.compute_auc_losses(),
-        model_names=args.model_names,
+        model_names=results.model_names,
     ).to_csv(auc_loss_csv_path)
     logger.info("AUC/Loss table saved: %s", auc_loss_csv_path)
 
-    # Generate and save the BEDROC plots and tables
     bedroc_plot_path: Path = output_path / "bedroc.png"
     plot_bedroc_boxplots(
         results.compute_bedroc_scores(),
-        model_names=args.model_names,
+        model_names=results.model_names,
         output_file=bedroc_plot_path,
         figsize=(24, 10),
     )
@@ -141,7 +137,7 @@ def post(args: argparse.Namespace) -> None:
     bedroc_csv_path: Path = output_path / "bedroc.csv"
     generate_bedroc_table(
         results.compute_bedroc_scores(),
-        model_names=args.model_names,
+        model_names=results.model_names,
         alpha_map=Evaluation.alpha_map,
     ).to_csv(bedroc_csv_path)
     logger.info("BEDROC table saved: %s", bedroc_csv_path)

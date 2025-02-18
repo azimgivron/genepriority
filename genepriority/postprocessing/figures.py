@@ -99,7 +99,6 @@ def plot_bedroc_boxplots(
         1,
         n_alphas,
         figsize=figsize,
-        sharey=True,
     )
 
     # If there's only one alpha, axs might not be a list; make it iterable
@@ -118,7 +117,8 @@ def plot_bedroc_boxplots(
         # Set x-axis ticks to model names
         axs[i].set_xticks(range(bedroc.shape[2]))  # bedroc.shape[2] = number of models
         axs[i].set_xticklabels(["" for _ in model_names])
-
+        axs[i].set_yticks(fontsize=14)
+        
         # Title showing alpha and top %
         axs[i].set_title(
             f"$\\alpha={float(alpha):.1f}$\nTop {Evaluation.alpha_map[alpha]}",

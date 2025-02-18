@@ -71,11 +71,11 @@ class Evaluation:
             y_true = fold_res.y_true.toarray().flatten()
             y_pred = fold_res.y_pred.flatten()
             bedroc_per_fold = [
-                bedroc_score(y_true, y_pred, decreasing=True, alpha=alpha)
+                bedroc_score(y_true=y_true, y_pred=y_pred, decreasing=True, alpha=alpha)
                 for alpha in self.alphas
             ]
             bedroc.append(bedroc_per_fold)
-        bedroc = np.array(bedroc)  # shape=(fold, alpha)
+        bedroc = np.array(bedroc)  # shape=(fold, alphas)
         return bedroc
 
     def compute_avg_auc_loss(self) -> float:

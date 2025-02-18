@@ -78,8 +78,9 @@ def pre_processing(
         min_associations=min_associations,
         validation_size=validation_size,
     )
-    dataloader(filter_column="Disease ID")
-
+    # dataloader(filter_column="Disease ID")
+    dataloader.load_omim1()
+    
     # Load side information if requested.
     side_info_loader: SideInformationLoader = None
     if side_info:

@@ -81,6 +81,7 @@ class MacauSession(smurff.MacauSession):
         self.univariate = univariate
         self.writer = writer
 
+
     def run(self) -> MatrixCompletionResult:
         """
         Executes the matrix completion process and logs
