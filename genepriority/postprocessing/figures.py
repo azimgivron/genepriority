@@ -36,8 +36,8 @@ def plot_roc_curves(
         figsize (Tuple[int, int]): Figure size in inches (width, height).
 
     """
-    colors = ["#0072B2", "#E69F00", "#009E73", "#D55E00"]
-    linestyles = ["solid", "dotted", "dashed", "dashdot"]
+    colors = ["#0072B2", "#E69F00", "#009E73", "#D55E00", "#CC79A7", "#F0E442"]
+    linestyles = ["solid", "dotted", "dashed", "dashdot", (0, (1, 1)), (0, (3, 10, 1, 10, 1, 10))]
 
     if len(evaluation_collection) > len(colors):
         raise ValueError("Not enough colors.")
@@ -87,7 +87,7 @@ def plot_bedroc_boxplots(
 
     """
     # Okabe-Ito color palette
-    colors = ["#0072B2", "#E69F00", "#009E73", "#D55E00"]
+    colors = ["#0072B2", "#E69F00", "#009E73", "#D55E00", "#CC79A7", "#F0E442"]
 
     if bedroc.shape[-1] > len(colors):
         raise ValueError("Not enough colors.")
@@ -112,12 +112,12 @@ def plot_bedroc_boxplots(
         box = sns.boxplot(
             data=bedroc[i],
             ax=axs[i],
-            palette=colors,
+            palette=colors[:bedroc.shape[-1]],
             showfliers=False,  # Do not plot outliers
         )
         # Set x-axis ticks to model names
         axs[i].set_xticks(range(bedroc.shape[2]))  # bedroc.shape[2] = number of models
-        axs[i].set_xticklabels(model_names, rotation=45, ha="center", fontsize=12)
+        axs[i].set_xticklabels(["" for _ in model_names])
 
         # Title showing alpha and top %
         axs[i].set_title(
@@ -132,7 +132,7 @@ def plot_bedroc_boxplots(
             box.legend_.remove()
 
     # Adjust the spacing so we have room on the right for the legend
-    fig.subplots_adjust(right=0.82, wspace=0.3)
+    fig.subplots_adjust(right=0.8, wspace=0.3)
 
     # Create a custom legend on the side
     # Each model gets one color, so we make patches for each color-model pair

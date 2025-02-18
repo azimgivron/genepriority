@@ -81,7 +81,7 @@ def pre_processing(
     dataloader(filter_column="Disease ID")
 
     # Load side information if requested.
-    side_info_loader: Optional[SideInformationLoader] = None
+    side_info_loader: SideInformationLoader = None
     if side_info:
         side_info_loader = SideInformationLoader(nb_genes=nb_genes, nb_diseases=nb_diseases)
         side_info_loader.process_side_info(

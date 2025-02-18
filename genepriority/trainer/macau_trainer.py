@@ -175,15 +175,14 @@ class MACAUTrainer(BaseTrainer):
 
         testing_data = matrix.multiply(test_mask)
         self.log_data("testing", testing_data)
+        side_info = self.side_info_loader.side_info if self.side_info_loader is not None else None
         return MacauSession(
             **self.macau_session_kwargs,
             num_latent=num_latent,
             Ytrain=training_data,
             Ytest=testing_data,
             save_name=str(self.path / f"{iteration}:{save_name}"),
-            side_info=self.side_info_loader.side_info
-            if self.side_info_loader
-            else None,
+            side_info=side_info,
         )
 
     def pre_training_callback(
