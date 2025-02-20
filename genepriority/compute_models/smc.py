@@ -266,6 +266,16 @@ class MatrixCompletionSession:
             step_size * grad_f_W_k
         )
         tau2 = (-2 * (tau**3) - 27 * (sp.linalg.norm(step, ord="fro") ** 2)) / 27
+        self.logger.debug("step norm: %.6e", sp.linalg.norm(step, ord="fro"))
+        self.logger.debug("tau2: %.6e", tau2)
+        self.logger.debug("(tau2 / 2) ** 2: %.6e", (tau2 / 2) ** 2)
+        self.logger.debug("(tau1 / 3) ** 3: %.6e", (tau1 / 3) ** 3)
+        self.logger.debug(
+            "(tau2 / 2) ** 2 > (tau1 / 3) ** 3: %.6e", (tau2 / 2) ** 2 > (tau1 / 3) ** 3
+        )
+        self.logger.debug(
+            "(tau2 / 2) ** 2 + (tau1 / 3) ** 3: %.6e", (tau2 / 2) ** 2 + (tau1 / 3) ** 3
+        )
         t_k = (
             (tau / 3)
             + np.cbrt(-tau2 + np.sqrt((tau2 / 2) ** 2 + (tau1 / 3) ** 3))

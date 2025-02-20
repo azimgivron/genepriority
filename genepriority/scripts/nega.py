@@ -17,56 +17,9 @@ import pint
 import yaml
 
 from genepriority.preprocessing.dataloader import DataLoader
-from genepriority.scripts.utils import load_omim_meta
+from genepriority.scripts.utils import pre_processing
 from genepriority.trainer.neg_trainer import NEGTrainer
 from genepriority.utils import serialize
-
-
-def pre_processing(
-    num_splits: int,
-    train_size: float,
-    validation_size: float,
-    input_path: Path,
-    seed: int,
-    zero_sampling_factor: int,
-    omim_meta_path: Path,
-) -> DataLoader:
-    """
-    Loads and preprocesses gene–disease association data.
-
-    This function loads OMIM metadata, then initializes a DataLoader to load the gene–disease
-    association data from the specified input directory. The DataLoader is also used to create
-    the OMIM1 splits.
-
-    Args:
-        num_splits (int): Number of data splits.
-        train_size (float): Proportion of data to use for training.
-        validation_size (float): Proportion of data to use for validation.
-        input_path (Path): Directory containing the input data files.
-        seed (int): Random seed for reproducibility.
-        zero_sampling_factor (int): Factor to multiply the number of positive samples
-            to determine the number of negatives.
-        omim_meta_path (Path): Path to the OMIM metadata file.
-
-    Returns:
-        DataLoader: An instance of DataLoader with the loaded data.
-    """
-    nb_genes, nb_diseases, min_associations = load_omim_meta(omim_meta_path)
-
-    dataloader = DataLoader(
-        nb_genes=nb_genes,
-        nb_diseases=nb_diseases,
-        path=input_path / "gene-disease.csv",
-        seed=seed,
-        num_splits=num_splits,
-        train_size=train_size,
-        min_associations=min_associations,
-        validation_size=validation_size,
-        num_folds=None,
-        zero_sampling_factor=zero_sampling_factor,
-    )
-    dataloader.load_omim1()
-    return dataloader
 
 
 def cross_validation(
@@ -108,7 +61,7 @@ def cross_validation(
         timeout=timeout_seconds,
         num_latent=rank,
     )
-    study_file = output_path / f"study-rank{rank}-it{iterations}.pickle"
+    study_file = output_path / f"nega-cv-rank{rank}-it{iterations}.pickle"
     serialize(optuna_study, study_file)
     logger.info("Cross-validation completed. Results saved at %s", study_file)
 
@@ -200,26 +153,29 @@ def parse_nega(subparsers: argparse._SubParsersAction) -> None:
             "--output-path",
             type=str,
             required=True,
-            help="Directory to save output results.",
+            help="Directory to save output result (default: %(default)s).",
         )
         subparser.add_argument(
             "--num-splits",
             type=int,
             required=True,
-            help="Number of data splits.",
+            help="Number of data splits (default: %(default)s).",
         )
         subparser.add_argument(
             "--zero-sampling-factor",
             type=int,
             required=True,
-            help="Factor for zero sampling (number of zeros = factor * number of ones).",
+            help=("Factor for zero sampling (number of zeros = factor * "
+                  "number of ones) (default: %(default)s). "
+            ),
         )
         subparser.add_argument(
             "--input-path",
             type=str,
             default="/home/TheGreatestCoder/code/data/postprocessed/",
-            help=("Path to the input data directory containing 'gene-disease.csv'"
-                  " (default: %(default)s)."
+            help=(
+                "Path to the input data directory containing 'gene-disease.csv'"
+                " (default: %(default)s)."
             ),
         )
         subparser.add_argument(
@@ -267,7 +223,7 @@ def parse_nega(subparsers: argparse._SubParsersAction) -> None:
         subparser.add_argument(
             "--seed",
             type=int,
-            default=0,
+            default=42,
             help="Random seed for reproducibility (default: %(default)s).",
         )
 
@@ -321,14 +277,16 @@ def nega(args: argparse.Namespace) -> None:
     if not omim_meta_path.exists():
         raise FileNotFoundError(f"OMIM metadata path does not exist: {omim_meta_path}")
 
-    dataloader: DataLoader = pre_processing(
-        num_splits=args.num_splits,
-        train_size=args.train_size,
-        validation_size=args.validation_size,
+    dataloader, _ = pre_processing(
         input_path=input_path,
         seed=args.seed,
-        zero_sampling_factor=args.zero_sampling_factor,
         omim_meta_path=omim_meta_path,
+        side_info=False,
+        num_splits=args.num_splits,
+        zero_sampling_factor=args.zero_sampling_factor,
+        num_folds=None,
+        train_size=args.train_size,
+        validation_size=args.validation_size,
     )
 
     if args.algorithm_command == "nega-cv":

@@ -65,8 +65,9 @@ def parse_post(subparsers: Any) -> None:
         "--post-config-path",
         type=str,
         default="/home/TheGreatestCoder/code/genepriority/configurations/post.yaml",
-        help=("Path to the post-processing configuration file containing alpha values."
-              " (default: %(default)s)"
+        help=(
+            "Path to the post-processing configuration file containing alpha values."
+            " (default: %(default)s)"
         ),
     )
 

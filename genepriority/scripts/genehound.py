@@ -16,88 +16,15 @@ Dependencies:
 import argparse
 import logging
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import List, Optional
 
 import yaml
 
 from genepriority.preprocessing.dataloader import DataLoader
 from genepriority.preprocessing.side_information_loader import SideInformationLoader
-from genepriority.scripts.utils import load_omim_meta
+from genepriority.scripts.utils import pre_processing
 from genepriority.trainer.macau_trainer import MACAUTrainer
 from genepriority.utils import serialize
-
-
-def pre_processing(
-    input_path: Path,
-    seed: int,
-    omim_meta_path: Path,
-    side_info: bool,
-    num_splits: Optional[int],
-    zero_sampling_factor: int,
-    num_folds: Optional[int],
-    train_size: float,
-    validation_size: Optional[float],
-) -> Tuple[DataLoader, Optional[SideInformationLoader]]:
-    """
-    Loads configuration parameters, gene–disease association data, and side information.
-
-    This function performs the following:
-      - Loads OMIM metadata (number of genes, diseases, and minimum associations).
-      - Initializes a DataLoader to load gene–disease data.
-      - If side_info is True, initializes a SideInformationLoader to process side information files.
-
-    Args:
-        input_path (Path): Directory containing input CSV files.
-        seed (int): Seed for reproducibility.
-        omim_meta_path (Path): Path to the OMIM metadata file.
-        side_info (bool): Whether to load side information.
-        num_splits (Optional[int]): Number of splits for OMIM1; use None if not applicable.
-        zero_sampling_factor (int): Factor for zero sampling.
-        num_folds (Optional[int]): Number of folds for OMIM2; use None if not applicable.
-        train_size (float): Fraction of data to use for training.
-        validation_size (Optional[float]): Fraction of data for validation
-            (unused data for comparison with NEGA).
-
-    Returns:
-        Tuple[DataLoader, Optional[SideInformationLoader]]: The data loader and,
-            if applicable, the side information loader.
-    """
-    logger = logging.getLogger("pre_processing")
-    logger.debug("Loading OMIM metadata.")
-    nb_genes, nb_diseases, min_associations = load_omim_meta(omim_meta_path)
-
-    # Load gene–disease association data.
-    dataloader = DataLoader(
-        nb_genes=nb_genes,
-        nb_diseases=nb_diseases,
-        path=input_path / "gene-disease.csv",
-        seed=seed,
-        num_splits=num_splits,
-        zero_sampling_factor=zero_sampling_factor,
-        num_folds=num_folds,
-        train_size=train_size,
-        min_associations=min_associations,
-        validation_size=validation_size,
-    )
-    # dataloader(filter_column="Disease ID")
-    dataloader.load_omim1()
-
-    # Load side information if requested.
-    side_info_loader: SideInformationLoader = None
-    if side_info:
-        side_info_loader = SideInformationLoader(
-            nb_genes=nb_genes, nb_diseases=nb_diseases
-        )
-        side_info_loader.process_side_info(
-            gene_side_info_paths=[
-                input_path / "interpro.csv",
-                input_path / "uniprot.csv",
-                input_path / "go.csv",
-            ],
-            disease_side_info_paths=[input_path / "phenotype.csv"],
-            names=["interpro", "uniprot", "GO", "phenotype"],
-        )
-    return dataloader, side_info_loader
 
 
 def run(
@@ -213,13 +140,15 @@ def parse_genehound(subparsers: argparse._SubParsersAction) -> None:
             "--output-path",
             type=str,
             required=True,
-            help="Directory to save output results.",
+            help="Directory to save output results (default: %(default)s).",
         )
         subparser.add_argument(
             "--zero-sampling-factor",
             type=int,
             required=True,
-            help="Zero sampling factor for the gene–disease matrix.",
+            help=("Factor for zero sampling (number of zeros = factor * "
+                  "number of ones) (default: %(default)s). "
+            ),
         )
         subparser.add_argument(
             "--side-info",
@@ -282,14 +211,15 @@ def parse_genehound(subparsers: argparse._SubParsersAction) -> None:
             "--validation-size",
             type=float,
             default=None,
-            help=("Proportion of data for validation (unused for comparison with NEGA)"
-                  " (default: %(default)s)."
+            help=(
+                "Proportion of data for validation (unused for comparison with NEGA)"
+                " (default: %(default)s)."
             ),
         )
         subparser.add_argument(
             "--seed",
             type=int,
-            default=0,
+            default=42,
             help="Random seed for reproducibility (default: %(default)s).",
         )
 

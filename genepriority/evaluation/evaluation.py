@@ -107,9 +107,29 @@ class Evaluation:
                 - The first dimension contains FPR values.
                 - The second dimension contains TPR values.
         """
-        y_true = self.avg_results.y_true.toarray().flatten()
-        y_pred = self.avg_results.y_pred.flatten()
-        fpr_per_disease, tpr_per_disease, _ = metrics.roc_curve(
-            y_true, y_pred, pos_label=1, drop_intermediate=True
+        roc_curves = []
+        for fold_res in self.results:
+            y_true = fold_res.y_true.toarray().flatten()
+            y_pred = fold_res.y_pred.flatten()
+            fpr, tpr, thresholds = metrics.roc_curve(
+                y_true, y_pred, pos_label=1, drop_intermediate=True
+            )
+            roc_curves.append((fpr, tpr, thresholds))
+
+        # Get common thresholds from all curves (sorted in ascending order)
+        common_thresholds = np.sort(
+            np.unique(np.hstack([curve[-1] for curve in roc_curves]))
         )
-        return np.vstack((fpr_per_disease, tpr_per_disease))
+
+        # Interpolate each ROC curve so that they share the same thresholds
+        data = []
+        for fpr, tpr, thresholds in roc_curves:
+            # Reverse arrays because thresholds from roc_curve are in descending order
+            sorted_thresholds = thresholds[::-1]
+            sorted_fpr = fpr[::-1]
+            sorted_tpr = tpr[::-1]
+            interp_fpr = np.interp(common_thresholds, sorted_thresholds, sorted_fpr)
+            interp_tpr = np.interp(common_thresholds, sorted_thresholds, sorted_tpr)
+            data.append((interp_fpr, interp_tpr))
+        data = np.array(data)
+        return data.mean(axis=0)
