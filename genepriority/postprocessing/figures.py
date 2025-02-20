@@ -37,7 +37,14 @@ def plot_roc_curves(
 
     """
     colors = ["#0072B2", "#E69F00", "#009E73", "#D55E00", "#CC79A7", "#F0E442"]
-    linestyles = ["solid", "dotted", "dashed", "dashdot", (0, (1, 1)), (0, (3, 10, 1, 10, 1, 10))]
+    linestyles = [
+        "solid",
+        "dotted",
+        "dashed",
+        "dashdot",
+        (0, (1, 1)),
+        (0, (3, 10, 1, 10, 1, 10)),
+    ]
 
     if len(evaluation_collection) > len(colors):
         raise ValueError("Not enough colors.")
@@ -57,6 +64,7 @@ def plot_roc_curves(
     plt.plot(
         [0, 1], [0, 1], linestyle=(0, (1, 10)), color="black", label="Random Guess"
     )
+    plt.yticks(fontsize=14)
     plt.xlabel("Average FPR", fontsize=16)
     plt.ylabel("Average TPR", fontsize=16)
     plt.legend(fontsize=16)
@@ -95,30 +103,25 @@ def plot_bedroc_boxplots(
     # Number of subplots = number of alpha values
     n_alphas = len(Evaluation.alphas)
 
-    fig, axs = plt.subplots(
-        1,
-        n_alphas,
-        figsize=figsize,
-    )
+    fig, axs = plt.subplots(1, n_alphas, figsize=figsize, sharey=True)
 
     # If there's only one alpha, axs might not be a list; make it iterable
     if n_alphas == 1:
         axs = [axs]
-
     # Plot each alpha in its own subplot
     for i, alpha in enumerate(Evaluation.alphas):
         # Create the boxplot for this alpha
         box = sns.boxplot(
             data=bedroc[i],
             ax=axs[i],
-            palette=colors[:bedroc.shape[-1]],
+            palette=colors[: bedroc.shape[-1]],
             showfliers=False,  # Do not plot outliers
         )
         # Set x-axis ticks to model names
         axs[i].set_xticks(range(bedroc.shape[2]))  # bedroc.shape[2] = number of models
         axs[i].set_xticklabels(["" for _ in model_names])
-        axs[i].set_yticks(fontsize=14)
-        
+        axs[i].yaxis.set_tick_params(labelsize=14)
+
         # Title showing alpha and top %
         axs[i].set_title(
             f"$\\alpha={float(alpha):.1f}$\nTop {Evaluation.alpha_map[alpha]}",

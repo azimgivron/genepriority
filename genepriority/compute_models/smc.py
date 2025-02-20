@@ -19,9 +19,7 @@ import scipy.sparse as sp
 import tensorflow as tf
 from sklearn.metrics import mean_squared_error
 
-from genepriority.compute_models.matrix_completion_result import (
-    MatrixCompletionResult,
-)
+from genepriority.compute_models.matrix_completion_result import MatrixCompletionResult
 from genepriority.utils import mask_sparse_containing_0s, serialize
 
 
@@ -393,28 +391,9 @@ class MatrixCompletionSession:
                         tf.summary.scalar(
                             name="testing_loss", data=testing_loss, step=ith_iteration
                         )
-                        tf.summary.scalar(
-                            name="non_euclidean_descent_lemma_cond",
-                            data=int(non_euclidean_descent_lemma_cond),
-                            step=ith_iteration,
-                        )
-                        tf.summary.scalar(
-                            name="res_norm", data=res_norm, step=ith_iteration
-                        )
-                        tf.summary.scalar(
-                            name="linear_approx", data=linear_approx, step=ith_iteration
-                        )
-                        tf.summary.scalar(
-                            name="smoothness_parameter",
-                            data=self.smoothness_parameter,
-                            step=ith_iteration,
-                        )
-                        tf.summary.scalar(
-                            name="bregman", data=bregman, step=ith_iteration
-                        )
                         tf.summary.flush()
-                except ValueError:
-                    pass
+                except ValueError as e:
+                    self.logger.warning("Tensorboard logging error: %s", e)
             while not non_euclidean_descent_lemma_cond:
                 flag = 1
                 inner_loop_it += 1

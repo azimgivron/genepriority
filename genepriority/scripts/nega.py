@@ -34,8 +34,8 @@ def pre_processing(
     """
     Loads and preprocesses gene–disease association data.
 
-    This function loads OMIM metadata, then initializes a DataLoader to load the gene–disease 
-    association data from the specified input directory. The DataLoader is also used to create 
+    This function loads OMIM metadata, then initializes a DataLoader to load the gene–disease
+    association data from the specified input directory. The DataLoader is also used to create
     the OMIM1 splits.
 
     Args:
@@ -44,7 +44,8 @@ def pre_processing(
         validation_size (float): Proportion of data to use for validation.
         input_path (Path): Directory containing the input data files.
         seed (int): Random seed for reproducibility.
-        zero_sampling_factor (int): Factor to multiply the number of positive samples to determine the number of negatives.
+        zero_sampling_factor (int): Factor to multiply the number of positive samples
+            to determine the number of negatives.
         omim_meta_path (Path): Path to the OMIM metadata file.
 
     Returns:
@@ -77,7 +78,7 @@ def cross_validation(
     threshold: int,
     seed: int,
     n_trials: int,
-    timeout: float = 8.
+    timeout: float = 8.0,
 ) -> None:
     """
     Runs cross-validation (using Optuna) for hyperparameter tuning of the NEGA model.
@@ -111,6 +112,7 @@ def cross_validation(
     serialize(optuna_study, study_file)
     logger.info("Cross-validation completed. Results saved at %s", study_file)
 
+
 def train_eval(
     logger: logging.Logger,
     output_path: Path,
@@ -125,12 +127,12 @@ def train_eval(
     rho_increase: float,
     rho_decrease: float,
     tensorboard_dir: Path,
-    results_filename: str
+    results_filename: str,
 ) -> None:
     """
     Trains the NEGA model on the training set and evaluates it on the test set.
 
-    This function initializes a NEGTrainer with the specified hyperparameters, runs the 
+    This function initializes a NEGTrainer with the specified hyperparameters, runs the
     training and evaluation cycle, and serializes the evaluation results.
 
     Args:
@@ -173,6 +175,7 @@ def train_eval(
     serialize(result, results_path / results_filename)
     logger.debug("Serialized results for latent dimension %s saved successfully.", rank)
 
+
 def parse_nega(subparsers: argparse._SubParsersAction) -> None:
     """
     Adds subcommands for NEGA to the argument parser.
@@ -182,7 +185,8 @@ def parse_nega(subparsers: argparse._SubParsersAction) -> None:
       - "nega": Run a single train-evaluation cycle.
 
     Args:
-        subparsers (argparse._SubParsersAction): The subparsers object to which the NEGA commands will be added.
+        subparsers (argparse._SubParsersAction): The subparsers object to which
+            the NEGA commands will be added.
     """
     cv_parser = subparsers.add_parser(
         "nega-cv", help="Perform cross-validation for hyperparameter tuning of NEGA."
@@ -214,7 +218,9 @@ def parse_nega(subparsers: argparse._SubParsersAction) -> None:
             "--input-path",
             type=str,
             default="/home/TheGreatestCoder/code/data/postprocessed/",
-            help="Path to the input data directory containing 'gene-disease.csv' (default: %(default)s).",
+            help=("Path to the input data directory containing 'gene-disease.csv'"
+                  " (default: %(default)s)."
+            ),
         )
         subparser.add_argument(
             "--omim-meta-path",
@@ -237,7 +243,7 @@ def parse_nega(subparsers: argparse._SubParsersAction) -> None:
         subparser.add_argument(
             "--iterations",
             type=int,
-            default=100,
+            default=200,
             help="Number of training iterations (default: %(default)s).",
         )
         subparser.add_argument(
@@ -261,7 +267,7 @@ def parse_nega(subparsers: argparse._SubParsersAction) -> None:
         subparser.add_argument(
             "--seed",
             type=int,
-            default=42,
+            default=0,
             help="Random seed for reproducibility (default: %(default)s).",
         )
 
@@ -339,7 +345,9 @@ def nega(args: argparse.Namespace) -> None:
     elif args.algorithm_command == "nega":
         config_path: Path = Path(args.config_path).absolute()
         if not config_path.exists():
-            raise FileNotFoundError(f"The configuration path does not exist: {config_path}")
+            raise FileNotFoundError(
+                f"The configuration path does not exist: {config_path}"
+            )
 
         logger.debug("Loading configuration file: %s", config_path)
         with config_path.open("r", encoding="utf-8") as stream:
@@ -351,7 +359,7 @@ def nega(args: argparse.Namespace) -> None:
         rho_increase: float = config.get("rho_increase")
         rho_decrease: float = config.get("rho_decrease")
         tensorboard_dir: Path = Path(args.tensorboard_dir).absolute()
-        
+
         train_eval(
             logger=logger,
             output_path=output_path,
@@ -366,7 +374,9 @@ def nega(args: argparse.Namespace) -> None:
             rho_increase=rho_increase,
             rho_decrease=rho_decrease,
             tensorboard_dir=tensorboard_dir,
-            results_filename=args.results_filename
+            results_filename=args.results_filename,
         )
     else:
-        raise ValueError("Invalid mode must be either 'cross-validation' or 'train-eval'.")
+        raise ValueError(
+            "Invalid mode must be either 'cross-validation' or 'train-eval'."
+        )

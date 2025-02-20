@@ -13,9 +13,7 @@ import scipy.sparse as sp
 import smurff
 import tensorflow as tf
 
-from genepriority.compute_models.matrix_completion_result import (
-    MatrixCompletionResult,
-)
+from genepriority.compute_models.matrix_completion_result import MatrixCompletionResult
 
 
 class MacauSession(smurff.MacauSession):
@@ -80,7 +78,6 @@ class MacauSession(smurff.MacauSession):
         self.direct = direct
         self.univariate = univariate
         self.writer = writer
-
 
     def run(self) -> MatrixCompletionResult:
         """

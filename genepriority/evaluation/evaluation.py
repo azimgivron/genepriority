@@ -30,7 +30,7 @@ class Evaluation:
     alphas: List[float]
     alpha_map: Dict[float, str]
     avg_results: Results
-    result: List[Results]
+    results: List[Results]
 
     def __init__(self, results: List[Results]):
         """

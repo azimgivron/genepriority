@@ -12,14 +12,15 @@ Implemented subcommands:
 """
 
 import argparse
-from typing import Any
 import logging
 import traceback
 from pathlib import Path
+from typing import Any
 
-from genepriority.scripts.genehound import parse_genehound, genehound
-from genepriority.scripts.nega import parse_nega, nega
+from genepriority.scripts.genehound import genehound, parse_genehound
+from genepriority.scripts.nega import nega, parse_nega
 from genepriority.scripts.post import parse_post, post
+
 
 def setup_logger(args: Any) -> None:
     """
@@ -30,14 +31,15 @@ def setup_logger(args: Any) -> None:
     """
     output_path: Path = Path(args.output_path).absolute()
     output_path.mkdir(exist_ok=True)
-    
+
     log_file: Path = output_path / args.log_filename
-    
+
     logging.basicConfig(
         level=logging.DEBUG,
         format="%(asctime)s - %(name)s - [%(funcName)s] - %(levelname)s - %(message)s",
         handlers=[logging.FileHandler(log_file, mode="w")],
     )
+
 
 def main() -> None:
     """
@@ -77,7 +79,9 @@ def main() -> None:
         elif "post" in args.algorithm_command:
             args = parser.parse_args()
             if len(args.evaluation_paths) != len(args.model_names):
-                parser.error("The number of evaluation paths must match the number of model names.")
+                parser.error(
+                    "The number of evaluation paths must match the number of model names."
+                )
             post(args)
         else:
             raise ValueError(f"No such command: {args.algorithm_command}")

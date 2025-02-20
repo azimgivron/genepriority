@@ -15,7 +15,6 @@ Dependencies:
 
 import argparse
 import logging
-
 from pathlib import Path
 from typing import List, Optional, Tuple
 
@@ -23,8 +22,8 @@ import yaml
 
 from genepriority.preprocessing.dataloader import DataLoader
 from genepriority.preprocessing.side_information_loader import SideInformationLoader
-from genepriority.trainer.macau_trainer import MACAUTrainer
 from genepriority.scripts.utils import load_omim_meta
+from genepriority.trainer.macau_trainer import MACAUTrainer
 from genepriority.utils import serialize
 
 
@@ -56,10 +55,12 @@ def pre_processing(
         zero_sampling_factor (int): Factor for zero sampling.
         num_folds (Optional[int]): Number of folds for OMIM2; use None if not applicable.
         train_size (float): Fraction of data to use for training.
-        validation_size (Optional[float]): Fraction of data for validation (unused data for comparison with NEGA).
+        validation_size (Optional[float]): Fraction of data for validation
+            (unused data for comparison with NEGA).
 
     Returns:
-        Tuple[DataLoader, Optional[SideInformationLoader]]: The data loader and, if applicable, the side information loader.
+        Tuple[DataLoader, Optional[SideInformationLoader]]: The data loader and,
+            if applicable, the side information loader.
     """
     logger = logging.getLogger("pre_processing")
     logger.debug("Loading OMIM metadata.")
@@ -80,11 +81,13 @@ def pre_processing(
     )
     # dataloader(filter_column="Disease ID")
     dataloader.load_omim1()
-    
+
     # Load side information if requested.
     side_info_loader: SideInformationLoader = None
     if side_info:
-        side_info_loader = SideInformationLoader(nb_genes=nb_genes, nb_diseases=nb_diseases)
+        side_info_loader = SideInformationLoader(
+            nb_genes=nb_genes, nb_diseases=nb_diseases
+        )
         side_info_loader.process_side_info(
             gene_side_info_paths=[
                 input_path / "interpro.csv",
@@ -117,14 +120,16 @@ def run(
 
     Args:
         dataloader (DataLoader): The DataLoader containing gene–disease association data.
-        side_info_loader (Optional[SideInformationLoader]): The loader for side information, if available.
+        side_info_loader (Optional[SideInformationLoader]): The loader for side information,
+            if available.
         output_path (Path): Directory where training outputs will be saved.
         tensorboard_dir (Path): Directory for TensorBoard logs.
         seed (int): Seed for reproducibility.
         latent_dimensions (List[int]): List of latent dimensions for model training.
         results_filename (str): Filename to use for saving results.
         config_path (Path): Path to the YAML configuration file.
-        is_omim1 (bool): True if using OMIM1 (multiple splits), False if using OMIM2 (cross-validation).
+        is_omim1 (bool): True if using OMIM1 (multiple splits), False if using OMIM2
+            (cross-validation).
     """
     logger = logging.getLogger("run")
     logger.debug("Loading configuration file: %s", config_path)
@@ -151,7 +156,9 @@ def run(
         verbose=0,
         tensorboard_dir=tensorboard_dir,
     )
-    train_method = trainer.train_test_splits if is_omim1 else trainer.train_test_cross_validation
+    train_method = (
+        trainer.train_test_splits if is_omim1 else trainer.train_test_cross_validation
+    )
 
     for latent in latent_dimensions:
         results_path = output_path / str(latent)
@@ -162,7 +169,9 @@ def run(
             save_name=f"latent={latent}:model-omim{int(not is_omim1) + 1}.hdf5",
         )
         serialize(result, results_path / results_filename)
-        logger.debug("Serialized results for latent dimension %s saved successfully.", latent)
+        logger.debug(
+            "Serialized results for latent dimension %s saved successfully.", latent
+        )
 
 
 def parse_genehound(subparsers: argparse._SubParsersAction) -> None:
@@ -174,7 +183,8 @@ def parse_genehound(subparsers: argparse._SubParsersAction) -> None:
       - "genehound-omim2": Run GeneHound using the filtered OMIM2 dataset with cross-validation.
 
     Args:
-        subparsers (argparse._SubParsersAction): The subparsers object to which the genehound commands will be added.
+        subparsers (argparse._SubParsersAction): The subparsers object to which the genehound
+            commands will be added.
     """
     omim1_parser = subparsers.add_parser(
         "genehound-omim1",
@@ -272,12 +282,14 @@ def parse_genehound(subparsers: argparse._SubParsersAction) -> None:
             "--validation-size",
             type=float,
             default=None,
-            help="Proportion of data for validation (unused for comparison with NEGA) (default: %(default)s).",
+            help=("Proportion of data for validation (unused for comparison with NEGA)"
+                  " (default: %(default)s)."
+            ),
         )
         subparser.add_argument(
             "--seed",
             type=int,
-            default=42,
+            default=0,
             help="Random seed for reproducibility (default: %(default)s).",
         )
 
@@ -291,7 +303,7 @@ def genehound(args: argparse.Namespace) -> None:
       2. Loads gene–disease association data and side information via pre_processing().
       3. Runs the MACAU training session with the specified latent dimensions.
       4. Serializes and saves the resulting models.
-    
+
     Errors encountered during processing are logged and re-raised.
 
     Args:
