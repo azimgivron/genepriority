@@ -17,9 +17,10 @@ import traceback
 from pathlib import Path
 from typing import Any
 
-from genepriority.scripts.genehound import genehound, parse_genehound
-from genepriority.scripts.nega import nega, parse_nega
-from genepriority.scripts.post import parse_post, post
+from genepriority.scripts.genehound import genehound
+from genepriority.scripts.nega import nega
+from genepriority.scripts.post import post
+from genepriority.scripts.parsers import parse_genehound, parse_nega, parse_post
 
 
 def setup_logger(args: Any) -> None:

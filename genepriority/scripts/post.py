@@ -12,7 +12,6 @@ import argparse
 import logging
 import pickle
 from pathlib import Path
-from typing import Any
 
 import yaml
 
@@ -25,51 +24,6 @@ from genepriority.postprocessing.figures import plot_bedroc_boxplots, plot_roc_c
 from genepriority.postprocessing.model_evaluation_collection import (
     ModelEvaluationCollection,
 )
-
-
-def parse_post(subparsers: Any) -> None:
-    """
-    Adds the 'post' subcommand to the parser for post-processing evaluation results.
-
-    This subcommand loads serialized Evaluation objects, a YAML configuration file
-    containing alpha values, and then produces ROC curves, AUC loss tables, and
-    BEDROC plots and tables. It ensures that the number of evaluation paths matches
-    the number of provided model names.
-
-    Args:
-        subparsers: The argparse subparsers object to which the 'post' command will be added.
-    """
-    parser = subparsers.add_parser(
-        "post",
-        help="Perform post-processing of evaluation results.",
-    )
-    parser.add_argument(
-        "--output-path",
-        type=str,
-        required=True,
-        help="Directory where output results will be saved.",
-    )
-    parser.add_argument(
-        "--evaluation-paths",
-        type=str,
-        nargs="+",
-        help="One or more paths to serialized `Evaluation` objects.",
-    )
-    parser.add_argument(
-        "--model-names",
-        type=str,
-        nargs="+",
-        help="One or more model names corresponding to the evaluation paths (in the same order).",
-    )
-    parser.add_argument(
-        "--post-config-path",
-        type=str,
-        default="/home/TheGreatestCoder/code/genepriority/configurations/post.yaml",
-        help=(
-            "Path to the post-processing configuration file containing alpha values."
-            " (default: %(default)s)"
-        ),
-    )
 
 
 def post(args: argparse.Namespace) -> None:
@@ -136,6 +90,7 @@ def post(args: argparse.Namespace) -> None:
         model_names=results.model_names,
         output_file=bedroc_plot_path,
         figsize=(24, 10),
+        sharey=args.shared_y,
     )
     logger.info("BEDROC boxplots saved: %s", bedroc_plot_path)
 
