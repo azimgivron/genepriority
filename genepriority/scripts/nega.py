@@ -31,7 +31,7 @@ def cross_validation(
     threshold: int,
     seed: int,
     n_trials: int,
-    timeout: float = 8.0,
+    timeout: float,
 ) -> None:
     """
     Runs cross-validation (using Optuna) for hyperparameter tuning of the NEGA model.
@@ -45,7 +45,8 @@ def cross_validation(
         threshold (int): Threshold parameter for the model.
         seed (int): Random seed for reproducibility.
         n_trials (int): Number of trials for the hyperparameter search.
-        timeout (float, optional): Time out in hours. Default to 8.
+        timeout (float, optional): Time out in hours.
+
     """
     trainer = NEGTrainer(
         dataloader=dataloader,
@@ -155,7 +156,7 @@ def nega(args: argparse.Namespace) -> None:
         seed=args.seed,
         omim_meta_path=omim_meta_path,
         side_info=False,
-        num_splits=args.num_splits,
+        num_splits=args.num_splits if 'num_splits' in args else 1,
         zero_sampling_factor=args.zero_sampling_factor,
         num_folds=None,
         train_size=args.train_size,
@@ -172,6 +173,7 @@ def nega(args: argparse.Namespace) -> None:
             threshold=args.threshold,
             seed=args.seed,
             n_trials=args.n_trials,
+            timeout=args.timeout,
         )
     elif args.algorithm_command == "nega":
         config_path: Path = Path(args.config_path).absolute()

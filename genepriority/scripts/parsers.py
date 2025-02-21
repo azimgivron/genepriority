@@ -26,25 +26,12 @@ def parse_genehound(subparsers: argparse._SubParsersAction) -> None:
         help="Run GeneHound with the filtered OMIM2 dataset (cross-validation).",
     )
 
-    omim1_parser.add_argument(
-        "--num-splits",
-        type=int,
-        default=6,
-        help="Number of data splits to use (default: %(default)s).",
-    )
-    omim2_parser.add_argument(
-        "--num-folds",
-        type=int,
-        default=5,
-        help="Number of folds for cross-validation (default: %(default)s).",
-    )
-
     for subparser in [omim1_parser, omim2_parser]:
         subparser.add_argument(
             "--output-path",
             type=str,
             required=True,
-            help="Directory to save output results (default: %(default)s).",
+            help="Directory to save output results.",
         )
         subparser.add_argument(
             "--zero-sampling-factor",
@@ -52,7 +39,7 @@ def parse_genehound(subparsers: argparse._SubParsersAction) -> None:
             required=True,
             help=(
                 "Factor for zero sampling (number of zeros = factor * "
-                "number of ones) (default: %(default)s). "
+                "number of ones). "
             ),
         )
         subparser.add_argument(
@@ -127,6 +114,18 @@ def parse_genehound(subparsers: argparse._SubParsersAction) -> None:
             default=42,
             help="Random seed for reproducibility (default: %(default)s).",
         )
+    omim1_parser.add_argument(
+        "--num-splits",
+        type=int,
+        default=6,
+        help="Number of data splits to use (default: %(default)s).",
+    )
+    omim2_parser.add_argument(
+        "--num-folds",
+        type=int,
+        default=5,
+        help="Number of folds for cross-validation (default: %(default)s).",
+    )
 
 
 def parse_nega(subparsers: argparse._SubParsersAction) -> None:
@@ -147,19 +146,19 @@ def parse_nega(subparsers: argparse._SubParsersAction) -> None:
     eval_parser = subparsers.add_parser(
         "nega", help="Train and evaluate the NEGA model."
     )
+    eval_parser.add_argument(
+        "--num-splits",
+        type=int,
+        required=True,
+        help="Number of data splits.",
+    )
 
     for subparser in [cv_parser, eval_parser]:
         subparser.add_argument(
             "--output-path",
             type=str,
             required=True,
-            help="Directory to save output result (default: %(default)s).",
-        )
-        subparser.add_argument(
-            "--num-splits",
-            type=int,
-            required=True,
-            help="Number of data splits (default: %(default)s).",
+            help="Directory to save output result.",
         )
         subparser.add_argument(
             "--zero-sampling-factor",
@@ -167,7 +166,7 @@ def parse_nega(subparsers: argparse._SubParsersAction) -> None:
             required=True,
             help=(
                 "Factor for zero sampling (number of zeros = factor * "
-                "number of ones) (default: %(default)s). "
+                "number of ones). "
             ),
         )
         subparser.add_argument(
@@ -227,7 +226,6 @@ def parse_nega(subparsers: argparse._SubParsersAction) -> None:
             default=42,
             help="Random seed for reproducibility (default: %(default)s).",
         )
-
     eval_parser.add_argument(
         "--tensorboard-dir",
         type=str,
@@ -254,6 +252,12 @@ def parse_nega(subparsers: argparse._SubParsersAction) -> None:
         type=int,
         default=100,
         help="Number of trials for hyperparameter tuning (default: %(default)s).",
+    )
+    cv_parser.add_argument(
+        "--timeout",
+        type=int,
+        default=12,
+        help="Number of hours after which to stop the search (default: %(default)s).",
     )
 
 

@@ -339,18 +339,14 @@ class NEGTrainer(BaseTrainer):
 
         storage = optuna.storages.JournalStorage(
             optuna.storages.journal.JournalFileBackend(
-                self.path / "optuna_journal_storage.log"
+                str(self.path / "optuna_journal_storage.log")
             ),
-        )
-        tensorboard_callback = optuna.integration.TensorBoardCallback(
-            self.tensorboard_dir / "optuna", metric_name="RMSE"
         )
 
         study = optuna.create_study(
             study_name="SMC hyper-parameters optimization",
             direction="minimize",
             storage=storage,
-            callbacks=[tensorboard_callback],
             **kwargs,
         )
         optuna.logging.enable_propagation()  # Propagate logs to the root logger.

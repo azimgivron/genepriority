@@ -80,6 +80,7 @@ def plot_bedroc_boxplots(
     model_names: List[str],
     output_file: str,
     figsize: Tuple[int, int],
+    sharey: bool,
 ):
     """
     Plots boxplots of BEDROC scores for multiple alpha values and latent dimensions
@@ -92,6 +93,7 @@ def plot_bedroc_boxplots(
         model_names (List[str]): Names of the models being compared.
         output_file (str): File path where the BEDROC boxplot figure will be saved.
         figsize (Tuple[int, int]): Figure size in inches (width, height).
+        sharey (bool): Whether to share the y axis.
 
     """
     # Okabe-Ito color palette
@@ -103,7 +105,7 @@ def plot_bedroc_boxplots(
     # Number of subplots = number of alpha values
     n_alphas = len(Evaluation.alphas)
 
-    fig, axs = plt.subplots(1, n_alphas, figsize=figsize, sharey=True)
+    fig, axs = plt.subplots(1, n_alphas, figsize=figsize, sharey=sharey)
 
     # If there's only one alpha, axs might not be a list; make it iterable
     if n_alphas == 1:

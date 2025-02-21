@@ -99,7 +99,7 @@ class Evaluation:
         """
         Computes the Receiver Operating Characteristic (ROC) curve metrics,
         including False Positive Rates (FPR) and True Positive Rates (TPR)
-        for all diseases.
+        for all folds.
 
         Returns:
             np.ndarray: A 2D array with the following structure:
