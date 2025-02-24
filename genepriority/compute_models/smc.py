@@ -266,16 +266,12 @@ class MatrixCompletionSession:
             step_size * grad_f_W_k
         )
         tau2 = (-2 * (tau**3) - 27 * (sp.linalg.norm(step, ord="fro") ** 2)) / 27
-        self.logger.debug("step norm: %.6e", sp.linalg.norm(step, ord="fro"))
-        self.logger.debug("tau2: %.6e", tau2)
-        self.logger.debug("(tau2 / 2) ** 2: %.6e", (tau2 / 2) ** 2)
-        self.logger.debug("(tau1 / 3) ** 3: %.6e", (tau1 / 3) ** 3)
-        self.logger.debug(
-            "(tau2 / 2) ** 2 > (tau1 / 3) ** 3: %.6e", (tau2 / 2) ** 2 > (tau1 / 3) ** 3
-        )
-        self.logger.debug(
-            "(tau2 / 2) ** 2 + (tau1 / 3) ** 3: %.6e", (tau2 / 2) ** 2 + (tau1 / 3) ** 3
-        )
+        discriminant = (tau2 / 2) ** 2 + (tau1 / 3) ** 3
+        if discriminant < 0:
+            self.logger.debug(
+                "Δ is negative: %.6e", discriminant
+            )
+            return None
         t_k = (
             (tau / 3)
             + np.cbrt(-tau2 + np.sqrt((tau2 / 2) ** 2 + (tau1 / 3) ** 3))
@@ -382,9 +378,12 @@ class MatrixCompletionSession:
             grad_v = residual.T @ self.h1 + self.regularization_parameter * self.h2.T
             grad_f_W_k = sp.vstack([grad_u, grad_v])
 
-            W_k_next, res_norm_next_it = self.substep(
+            substep_res = self.substep(
                 W_k, tau, step_size, grad_f_W_k, tau1, rows
             )
+            if substep_res is None:
+                break
+            W_k_next, res_norm_next_it = substep_res
             # Inner loop to adjust step size
             linear_approx = (grad_f_W_k.T @ (W_k_next - W_k)).sum()
             bregman = bregman_distance(W_k_next, W_k, tau)
@@ -422,9 +421,12 @@ class MatrixCompletionSession:
                 self.smoothness_parameter *= self.rho_increase**inner_loop_it
                 step_size = (1 + self.symmetry_parameter) / self.smoothness_parameter
 
-                W_k_next, res_norm_next_it = self.substep(
+                substep_res = self.substep(
                     W_k, tau, step_size, grad_f_W_k, tau1, rows
                 )
+                if substep_res is None:
+                    break
+                W_k_next, res_norm_next_it = substep_res
                 linear_approx = (grad_f_W_k.T @ (W_k_next - W_k)).sum()
                 bregman = bregman_distance(W_k_next, W_k, tau)
                 # Detect overflow and exit if necessary
