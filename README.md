@@ -44,16 +44,14 @@ Two algorithms are used/implemented:
 
 5. **Matrix Completion**:  
    - Use the trained models to generate the completed matrix, generating six predicted matrices ($\hat{O_i} \quad \forall i \in \set{1,2,3,4,5,6}$) with floating-point scores.  
-   - Aggregate the six matrices using a mean operation to produce $\bar{O}$ (averaged matrix).
 
 6. **Model Testing and Ranking**:  
-   - Flatten the matrix and rank genes based on the predicted scores.  
+   - Flatten the matrices and rank genes based on the predicted scores.  
    - Assume missing values are zeros for ranking purposes.  
-   - Use only positive associations from the test set for evaluation. Highly ranked genes in $\bar{O}$ should correspond to true positive associations.
 
 7. **Evaluation and Metrics**:  
    - Compute ranking metrics to assess the quality of predictions, focusing on the ability of the model to rank true positive associations higher.  
-   - Metrics are aggregated across the six splits to ensure robustness.
+   - Metrics are aggregated across the six splits.
 
 ---
 
