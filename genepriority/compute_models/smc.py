@@ -216,7 +216,7 @@ class MatrixCompletionSession:
         rmse = np.sqrt(mean_squared_error(test_values_actual, test_predictions))
         return rmse
 
-    def substep(self, W_k, tau, step_size, grad_f_W_k, tau1, m):
+    def substep(self, W_k: sp.csr_matrix, tau: float, step_size: float, grad_f_W_k: sp.csr_matrix, tau1: float, m: int):
         """
         Performs a single substep in the optimization process to update the factor matrices.
 
