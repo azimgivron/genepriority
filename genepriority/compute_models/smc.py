@@ -13,6 +13,7 @@ Features:
 import logging
 import time
 from pathlib import Path
+from typing import Tuple
 
 import numpy as np
 import scipy.sparse as sp
@@ -216,7 +217,15 @@ class MatrixCompletionSession:
         rmse = np.sqrt(mean_squared_error(test_values_actual, test_predictions))
         return rmse
 
-    def substep(self, W_k: sp.csr_matrix, tau: float, step_size: float, grad_f_W_k: sp.csr_matrix, tau1: float, m: int):
+    def substep(
+        self,
+        W_k: sp.csr_matrix,
+        tau: float,
+        step_size: float,
+        grad_f_W_k: sp.csr_matrix,
+        tau1: float,
+        m: int
+    ) -> Tuple[sp.csr_matrix, float]:
         """
         Performs a single substep in the optimization process to update the factor matrices.
 
@@ -258,9 +267,9 @@ class MatrixCompletionSession:
             m (int): Number of rows in the original matrix.
 
         Returns:
-            tuple:
-                - Updated stacked matrix W_{k+1} (sp.csr_matrix).
-                - New loss value f(W_{k+1}) (float).
+            Tuple[sp.csr_matrix, float]:
+                - Updated stacked matrix W_{k+1}.
+                - New loss value f(W_{k+1}).
         """
         step = (sp.linalg.norm(W_k, ord="fro") ** 2 + tau) * W_k - (
             step_size * grad_f_W_k
