@@ -224,7 +224,7 @@ class MatrixCompletionSession:
         step_size: float,
         grad_f_W_k: sp.csr_matrix,
         tau1: float,
-        m: int
+        m: int,
     ) -> Tuple[sp.csr_matrix, float]:
         """
         Performs a single substep in the optimization process to update the factor matrices.
@@ -277,9 +277,7 @@ class MatrixCompletionSession:
         tau2 = (-2 * (tau**3) - 27 * (sp.linalg.norm(step, ord="fro") ** 2)) / 27
         discriminant = (tau2 / 2) ** 2 + (tau1 / 3) ** 3
         if discriminant < 0:
-            self.logger.debug(
-                "Δ is negative: %.6e", discriminant
-            )
+            self.logger.debug("Δ is negative: %.6e", discriminant)
             return None
         t_k = (
             (tau / 3)
@@ -387,9 +385,7 @@ class MatrixCompletionSession:
             grad_v = residual.T @ self.h1 + self.regularization_parameter * self.h2.T
             grad_f_W_k = sp.vstack([grad_u, grad_v])
 
-            substep_res = self.substep(
-                W_k, tau, step_size, grad_f_W_k, tau1, rows
-            )
+            substep_res = self.substep(W_k, tau, step_size, grad_f_W_k, tau1, rows)
             if substep_res is None:
                 break
             W_k_next, res_norm_next_it = substep_res
@@ -430,9 +426,7 @@ class MatrixCompletionSession:
                 self.smoothness_parameter *= self.rho_increase**inner_loop_it
                 step_size = (1 + self.symmetry_parameter) / self.smoothness_parameter
 
-                substep_res = self.substep(
-                    W_k, tau, step_size, grad_f_W_k, tau1, rows
-                )
+                substep_res = self.substep(W_k, tau, step_size, grad_f_W_k, tau1, rows)
                 if substep_res is None:
                     break
                 W_k_next, res_norm_next_it = substep_res

@@ -306,7 +306,7 @@ def parse_post(subparsers: argparse._SubParsersAction) -> None:
         ),
     )
     parser.add_argument(
-        "--shared-y",
+        "--no-sharey",
         action="store_false",
         help="Whether to share the y axis for BEDROC boxplots (default: %(default)s).",
     )

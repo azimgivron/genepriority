@@ -5,7 +5,6 @@ Evaluation module
 Defines the `Evaluation` class for storing and managing evaluation metrics 
 such as ROC curve data, AUC loss, and BEDROC scores.
 """
-
 from typing import Dict, List
 
 import numpy as np
@@ -29,7 +28,6 @@ class Evaluation:
 
     alphas: List[float]
     alpha_map: Dict[float, str]
-    avg_results: Results
     results: List[Results]
 
     def __init__(self, results: List[Results]):
@@ -51,10 +49,6 @@ class Evaluation:
                     "`Results` class."
                 )
         self.results = results
-        self.avg_results = Results(
-            y_true=self.results[0].y_true,
-            y_pred=sum(result.y_pred for result in self.results) / len(self.results),
-        )
 
     def compute_bedroc_scores(self) -> np.ndarray:
         """
@@ -68,7 +62,7 @@ class Evaluation:
         """
         bedroc = []
         for fold_res in self.results:
-            y_true = fold_res.y_true.toarray().flatten()
+            y_true = fold_res.y_true.flatten()
             y_pred = fold_res.y_pred.flatten()
             bedroc_per_fold = [
                 bedroc_score(y_true=y_true, y_pred=y_pred, decreasing=True, alpha=alpha)
@@ -89,7 +83,7 @@ class Evaluation:
         """
         auc_loss = []
         for fold_res in self.results:
-            y_true = fold_res.y_true.toarray().flatten()
+            y_true = fold_res.y_true.flatten()
             y_pred = fold_res.y_pred.flatten()
             auc_loss.append(1 - metrics.roc_auc_score(y_true, y_pred))
         auc_loss = np.array(auc_loss)
@@ -109,7 +103,7 @@ class Evaluation:
         """
         roc_curves = []
         for fold_res in self.results:
-            y_true = fold_res.y_true.toarray().flatten()
+            y_true = fold_res.y_true.flatten()
             y_pred = fold_res.y_pred.flatten()
             fpr, tpr, thresholds = metrics.roc_curve(
                 y_true, y_pred, pos_label=1, drop_intermediate=True

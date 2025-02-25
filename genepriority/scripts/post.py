@@ -90,7 +90,7 @@ def post(args: argparse.Namespace) -> None:
         model_names=results.model_names,
         output_file=bedroc_plot_path,
         figsize=(24, 10),
-        sharey=args.shared_y,
+        sharey=args.no_sharey,
     )
     logger.info("BEDROC boxplots saved: %s", bedroc_plot_path)
 

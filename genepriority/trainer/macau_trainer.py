@@ -169,7 +169,8 @@ class MACAUTrainer(BaseTrainer):
         training_data = mask_sparse_containing_0s(matrix, train_mask)
         self.log_data("training", training_data)
 
-        testing_data = matrix.multiply(test_mask)
+        # testing_data = matrix.multiply(test_mask)
+        testing_data = mask_sparse_containing_0s(matrix, test_mask)
         self.log_data("testing", testing_data)
         side_info = (
             self.side_info_loader.side_info

@@ -156,7 +156,7 @@ def nega(args: argparse.Namespace) -> None:
         seed=args.seed,
         omim_meta_path=omim_meta_path,
         side_info=False,
-        num_splits=args.num_splits if 'num_splits' in args else 1,
+        num_splits=args.num_splits if "num_splits" in args else 1,
         zero_sampling_factor=args.zero_sampling_factor,
         num_folds=None,
         train_size=args.train_size,

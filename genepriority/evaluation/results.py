@@ -1,84 +1,121 @@
 """
 Results module
 ==============
-
 Provides a data structure for storing and processing simulation results
 of prediction tasks, including both ground truth values and model-predicted values.
+It supports input validation and optional masking of results via a test mask.
+
 """
-
-from dataclasses import dataclass
-from typing import Iterator
-
 import numpy as np
 import scipy.sparse as sp
 
 
-@dataclass
 class Results:
     """
     Encapsulates the results of a prediction task.
 
     This class provides a structure to store and process prediction results,
     including ground truth values and corresponding predicted values from a model.
-    It supports validation of input data and facilitates iteration over
-    the results in a convenient stacked format.
+    It validates the input data and supports optional application of a test maskt.
 
     Attributes:
-        y_true (sp.csr_matrix): Ground truth sparse matrix, where each entry
-            represents the true association (e.g., between a disease and a gene).
-        y_pred (np.ndarray): Predicted values as a dense array, where each entry
-            represents the likelihood of an association predicted by the model.
+        y_true (np.ndarray): Dense array of ground truth values. When the flag
+            `apply_mask` is True, only the entries specified by the test mask are returned.
+        y_pred (np.ndarray): Dense array of predicted values. When the flag
+            `apply_mask` is True, only the entries specified by the test mask are returned.
+        test_mask (sp.csr_matrix): Sparse matrix serving as a mask to identify
+            test set entries for selective evaluation.
+        apply_mask (bool): Flag indicating whether to apply the test mask when
+            accessing the results.
     """
 
-    y_true: sp.csr_matrix
-    y_pred: np.ndarray
+    _y_true: sp.csr_matrix
+    _y_pred: np.ndarray
+    test_mask: sp.csr_matrix
 
-    def __post_init__(self):
+    def __init__(
+        self,
+        y_true: sp.csr_matrix,
+        y_pred: np.ndarray,
+        test_mask: sp.csr_matrix = None,
+        apply_mask: bool = False,
+    ):
         """
-        Validates the input data types and shapes after initialization.
+        Initializes the Results object.
 
-        Ensures that `y_true` is a sparse CSR matrix and `y_pred` is a dense
-        numpy array. Also checks that the shapes of `y_true` and `y_pred` match.
+        Validates input types and shapes, and sets up internal data structures.
+
+        Args:
+            y_true (sp.csr_matrix): Ground truth sparse matrix, where each entry
+                represents the true association (e.g., between a disease and a gene).
+            y_pred (np.ndarray): Predicted values as a dense array, where each entry
+                represents the likelihood of an association predicted by the model.
+            test_mask (sp.csr_matrix, optional): Sparse matrix serving as a mask to identify
+                the test set entries. Default to None.
+            apply_mask (bool, optional): Whether to apply the test mask when accessing the
+                results. Default to False.
 
         Raises:
-            TypeError: If `y_true` is not of type `sp.csr_matrix` or
-                       `y_pred` is not of type `np.ndarray`.
-            ValueError: If the shapes of `y_true` and `y_pred` do not match.
+            TypeError: If y_true is not a sp.csr_matrix, y_pred is not a np.ndarray,
+                or test_mask is not a sp.csr_matrix.
+            ValueError: If the shapes of y_true and y_pred do not match.
         """
-        if not isinstance(self.y_true, sp.csr_matrix):
+        if not isinstance(y_true, sp.csr_matrix):
             raise TypeError(
                 "`y_true` must be of type sp.csr_matrix, but "
-                f"got type {type(self.y_true)} instead."
+                f"got type {type(y_true)} instead."
             )
-        if not isinstance(self.y_pred, np.ndarray):
+        if not isinstance(y_pred, np.ndarray):
             raise TypeError(
                 "`y_pred` must be of type np.ndarray, but got "
-                f"type {type(self.y_pred)} instead."
+                f"type {type(y_pred)} instead."
             )
-        if self.y_true.shape != self.y_pred.shape:
+        if y_true.shape != y_pred.shape:
             raise ValueError(
-                f"Shape mismatch: `y_true` has shape {self.y_true.shape}, "
-                f"but `y_pred` has shape {self.y_pred.shape}. Shapes must match."
+                f"Shape mismatch: `y_true` has shape {y_true.shape}, "
+                f"but `y_pred` has shape {y_pred.shape}. Shapes must match."
             )
+        if test_mask is not None and not isinstance(test_mask, sp.csr_matrix):
+            raise TypeError(
+                "`test_mask` must be of type sp.csr_matrix, but "
+                f"got type {type(test_mask)} instead."
+            )
+        self._y_true = y_true
+        self._y_pred = y_pred
+        self.test_mask = (
+            test_mask
+            if test_mask is not None
+            else sp.coo_matrix(([], ([], [])), shape=y_true.shape)
+        )
+        self.apply_mask = apply_mask
 
-    def __iter__(self) -> Iterator[np.ndarray]:
+    @property
+    def y_true(self) -> np.ndarray:
         """
-        Returns an iterator over a stacked array of predictions and ground truth values.
+        Returns the ground truth values as a dense numpy array.
 
-        The stacked array has shape `(disease, 2, gene)`, where the second dimension contains:
-        - The predicted value (`y_pred`) in the first position.
-        - The ground truth value (`y_true`) in the second position.
-
-        This representation is useful for tasks requiring simultaneous access
-        to both the predictions and the ground truth.
+        If `apply_mask` is True, the test mask is applied to the ground truth
+        sparse matrix before conversion to a dense array.
 
         Returns:
-            Iterator[np.ndarray]: An iterator over the stacked array combining
-            ground truth values and predictions.
+            np.ndarray: Dense array representation of the ground truth values.
         """
-        all_1s = self.y_true.T.toarray() == 1  # shape = (disease, gene)
-        disease_mask = all_1s.any(axis=1)  # keep where there is a 1
-        pred_truth_mat = np.stack((self.y_true.T.toarray(), self.y_pred.T), axis=2)
-        pred_truth_mat = pred_truth_mat[disease_mask]
-        pred_truth_mat = np.swapaxes(pred_truth_mat, 1, 2)
-        return iter(pred_truth_mat)
+        return (
+            self._y_true.multiply(self.test_mask).toarray()
+            if self.apply_mask
+            else self._y_true.toarray()
+        )
+
+    @property
+    def y_pred(self) -> np.ndarray:
+        """
+        Returns the predicted values as a dense numpy array.
+
+        If `apply_mask` is True, the test mask is applied to the predicted values.
+
+        Returns:
+            np.ndarray: Dense array representation of the predicted values.
+        """
+        return (
+            self._y_pred * self.test_mask.toarray() if self.apply_mask else self._y_pred
+        )

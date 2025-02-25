@@ -54,29 +54,25 @@ def sample_zeros(
     Returns:
         sp.csr_matrix: Sparse matrix with additional sampled zeros.
     """
-    # Set the random seed for reproducibility
     if seed is not None:
         np.random.seed(seed)
 
-    num_existing_ones = sparse_matrix.nnz
-    nnz = num_existing_ones * (sampling_factor + 1)
-
-    output = sparse_matrix.copy()
-    current_nnz = output.nnz
-    row, col = output.shape
+    nnz = sparse_matrix.nnz * sampling_factor
+    current_nnz = 0
+    row, col = sparse_matrix.shape
+    output = sp.coo_matrix(([], ([], [])), shape=(row, col))
     while current_nnz < nnz:
-        # Randomly sample row and column indices
         row_indices = np.random.randint(0, row, size=nnz - current_nnz)
         col_indices = np.random.randint(0, col, size=nnz - current_nnz)
         output += sp.coo_matrix(
             (-np.ones_like(col_indices), (row_indices, col_indices)),
-            shape=sparse_matrix.shape,
+            shape=(row, col),
         ).tocsr()
+        output -= output.multiply(sparse_matrix)
         current_nnz = output.nnz
 
-    mask = output.data <= -1
-    output.data[mask] = 0
-
+    output += sparse_matrix
+    output.data[output.data <= -1] = 0
     return output.tocsr()
 
 

@@ -200,7 +200,9 @@ class BaseTrainer(metaclass=ABCMeta):
             self.post_training_callback(training_status, session, run_name)
 
             y_pred = self.predict(session)
-            results.append(Results(y_true=matrix.tocsr(), y_pred=y_pred))
+            results.append(
+                Results(y_true=matrix.tocsr(), y_pred=y_pred, test_mask=test_mask)
+            )
         return Evaluation(results)
 
     def log_data(self, set_name: str, data: sp.csr_matrix):

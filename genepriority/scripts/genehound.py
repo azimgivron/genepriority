@@ -143,9 +143,9 @@ def genehound(args: argparse.Namespace) -> None:
         seed=seed,
         omim_meta_path=omim_meta_path,
         side_info=args.side_info,
-        num_splits=args.num_splits if hasattr(args, "num_splits") else None,
+        num_splits=args.num_splits if "num_splits" in args else None,
         zero_sampling_factor=args.zero_sampling_factor,
-        num_folds=args.num_folds if hasattr(args, "num_folds") else None,
+        num_folds=args.num_folds if "num_folds" in args else None,
         train_size=args.train_size,
         validation_size=args.validation_size,
     )
