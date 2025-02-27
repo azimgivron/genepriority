@@ -5,7 +5,7 @@ Parser Module
 import argparse
 
 
-def parse_genehound(subparsers: argparse._SubParsersAction) -> None:
+def parse_genehound(subparsers: argparse._SubParsersAction):
     """
     Parses command-line arguments for the GeneHound reproduction pipeline.
 
@@ -128,7 +128,7 @@ def parse_genehound(subparsers: argparse._SubParsersAction) -> None:
     )
 
 
-def parse_nega(subparsers: argparse._SubParsersAction) -> None:
+def parse_nega(subparsers: argparse._SubParsersAction):
     """
     Adds subcommands for NEGA to the argument parser.
 
@@ -261,7 +261,7 @@ def parse_nega(subparsers: argparse._SubParsersAction) -> None:
     )
 
 
-def parse_post(subparsers: argparse._SubParsersAction) -> None:
+def parse_post(subparsers: argparse._SubParsersAction):
     """
     Adds the 'post' subcommand to the parser for post-processing evaluation results.
 
@@ -309,4 +309,9 @@ def parse_post(subparsers: argparse._SubParsersAction) -> None:
         "--no-sharey",
         action="store_false",
         help="Whether to share the y axis for BEDROC boxplots (default: %(default)s).",
+    )
+    parser.add_argument(
+        "--apply-mask",
+        action="store_true",
+        help="Whether apply the test masks on the data (default: %(default)s).",
     )

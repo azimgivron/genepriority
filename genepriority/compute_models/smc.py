@@ -243,11 +243,14 @@ class MatrixCompletionSession:
            - grad_f_W_k: Gradient of the objective function at W_k.
 
         2. Solve the Cubic Equation for the Step Size t:
+           Δ = tau_2^2 + (tau1/3)^3
+           if Δ >= 0:
+
            t = (tau / 3) + cube_root(T_1) + cube_root(T_2)
 
-           - T_1 = -tau_2 + sqrt(tau_2^2 + (tau1/3)^3)
-           - T_2 = -tau_2 - sqrt(tau_2^2 + (tau1/3)^3)
-           - tau_2 = (-2 * tau^3 - 27 * ||grad||_F^2) / 54
+           - T_1 = -tau_2 + sqrt(Δ)
+           - T_2 = -tau_2 - sqrt(Δ)
+           - tau_2 = (-2 * tau^3 - 27 * ||grad||_F^2) / 27
 
            The cubic root function ensures stability, even for negative T_1 and T_2.
 
@@ -277,7 +280,7 @@ class MatrixCompletionSession:
         tau2 = (-2 * (tau**3) - 27 * (sp.linalg.norm(step, ord="fro") ** 2)) / 27
         discriminant = (tau2 / 2) ** 2 + (tau1 / 3) ** 3
         if discriminant < 0:
-            self.logger.debug("Δ is negative: %.6e", discriminant)
+            self.logger.debug("[Substep] Δ is negative: %.6e", discriminant)
             return None
         t_k = (
             (tau / 3)

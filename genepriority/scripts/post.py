@@ -26,7 +26,7 @@ from genepriority.postprocessing.model_evaluation_collection import (
 )
 
 
-def post(args: argparse.Namespace) -> None:
+def post(args: argparse.Namespace):
     """
     Processes evaluation results and generates performance metrics and plots.
 
@@ -68,6 +68,8 @@ def post(args: argparse.Namespace) -> None:
     for name, path_str in zip(args.model_names, args.evaluation_paths):
         with Path(path_str).open("rb") as stream:
             results_data[name] = pickle.load(stream)
+            if args.apply_mask:
+                results_data[name].apply_mask(value=True)
 
     results = ModelEvaluationCollection(results_data)
 

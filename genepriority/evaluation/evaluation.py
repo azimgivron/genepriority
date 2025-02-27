@@ -50,6 +50,17 @@ class Evaluation:
                 )
         self.results = results
 
+    def apply_mask(self, value: bool):
+        """
+        Set the mask application flag for all result objects.
+
+        Args:
+            value (bool): Flag indicating whether to apply the mask
+                (True) or not (False).
+        """
+        for res in self.results:
+            res.apply_mask = value
+
     def compute_bedroc_scores(self) -> np.ndarray:
         """
         Computes BEDROC (Boltzmann-Enhanced Discrimination of Receiver Operating Characteristic)

@@ -7,7 +7,7 @@ Contains utility functions for scripts.
 # pylint: disable=R0913
 import logging
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Tuple
 
 import yaml
 
@@ -47,12 +47,12 @@ def pre_processing(
     seed: int,
     omim_meta_path: Path,
     side_info: bool,
-    num_splits: Optional[int],
+    num_splits: int,
     zero_sampling_factor: int,
-    num_folds: Optional[int],
+    num_folds: int,
     train_size: float,
-    validation_size: Optional[float],
-) -> Tuple[DataLoader, Optional[SideInformationLoader]]:
+    validation_size: float,
+) -> Tuple[DataLoader, SideInformationLoader]:
     """
     Loads configuration parameters, gene–disease association data, and side information.
 
@@ -66,15 +66,15 @@ def pre_processing(
         seed (int): Seed for reproducibility.
         omim_meta_path (Path): Path to the OMIM metadata file.
         side_info (bool): Whether to load side information.
-        num_splits (Optional[int]): Number of splits for OMIM1; use None if not applicable.
+        num_splits (int): Number of splits for OMIM1; use None if not applicable.
         zero_sampling_factor (int): Factor for zero sampling.
-        num_folds (Optional[int]): Number of folds for OMIM2; use None if not applicable.
+        num_folds (int): Number of folds for OMIM2; use None if not applicable.
         train_size (float): Fraction of data to use for training.
-        validation_size (Optional[float]): Fraction of data for validation
+        validation_size (float): Fraction of data for validation
             (unused data for comparison with NEGA).
 
     Returns:
-        Tuple[DataLoader, Optional[SideInformationLoader]]: The data loader and,
+        Tuple[DataLoader, SideInformationLoader]: The data loader and,
             if applicable, the side information loader.
     """
     logger = logging.getLogger("pre_processing")
@@ -97,7 +97,7 @@ def pre_processing(
     dataloader(filter_column="Disease ID")
 
     # Load side information if requested.
-    side_info_loader: SideInformationLoader = None
+    side_info_loader = None
     if side_info:
         side_info_loader = SideInformationLoader(
             nb_genes=nb_genes, nb_diseases=nb_diseases

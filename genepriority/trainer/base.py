@@ -113,7 +113,7 @@ class BaseTrainer(metaclass=ABCMeta):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def pre_training_callback(self, session: Any, run_name: str) -> None:
+    def pre_training_callback(self, session: Any, run_name: str):
         """
         Invoked before the training process starts for monitoring and debugging.
 
@@ -130,9 +130,7 @@ class BaseTrainer(metaclass=ABCMeta):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def post_training_callback(
-        self, training_status: Any, session: Any, run_name: str
-    ) -> None:
+    def post_training_callback(self, training_status: Any, session: Any, run_name: str):
         """
         Invoked after the training process completes for monitoring and debugging.
 

@@ -82,11 +82,12 @@ class Results:
             )
         self._y_true = y_true
         self._y_pred = y_pred
-        self.test_mask = (
+        test_mask = (
             test_mask
             if test_mask is not None
             else sp.coo_matrix(([], ([], [])), shape=y_true.shape)
         )
+        self.test_mask = test_mask.toarray().astype(bool)
         self.apply_mask = apply_mask
 
     @property
@@ -101,7 +102,7 @@ class Results:
             np.ndarray: Dense array representation of the ground truth values.
         """
         return (
-            self._y_true.multiply(self.test_mask).toarray()
+            self._y_true.toarray()[self.test_mask]
             if self.apply_mask
             else self._y_true.toarray()
         )
@@ -116,6 +117,4 @@ class Results:
         Returns:
             np.ndarray: Dense array representation of the predicted values.
         """
-        return (
-            self._y_pred * self.test_mask.toarray() if self.apply_mask else self._y_pred
-        )
+        return self._y_pred[self.test_mask] if self.apply_mask else self._y_pred

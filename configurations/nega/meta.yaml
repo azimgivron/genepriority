@@ -18,8 +18,8 @@
 #   rho_increase: (float) Factor for increasing the step size dynamically.
 #   rho_decrease: (float) Factor for decreasing the step size dynamically.
 ---
-regularization_parameter: 3.89e-5
-symmetry_parameter: 0.78
-smoothness_parameter: 0.006
+regularization_parameter: 0.003
+symmetry_parameter: 0.08
+smoothness_parameter: 0.002
 rho_increase: 4.0
-rho_decrease: 0.3
+rho_decrease: 0.9

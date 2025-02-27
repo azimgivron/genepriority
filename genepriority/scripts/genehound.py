@@ -16,7 +16,7 @@ Dependencies:
 import argparse
 import logging
 from pathlib import Path
-from typing import List, Optional
+from typing import List
 
 import yaml
 
@@ -29,7 +29,7 @@ from genepriority.utils import serialize
 
 def run(
     dataloader: DataLoader,
-    side_info_loader: Optional[SideInformationLoader],
+    side_info_loader: SideInformationLoader,
     output_path: Path,
     tensorboard_dir: Path,
     seed: int,
@@ -37,7 +37,7 @@ def run(
     results_filename: str,
     config_path: Path,
     is_omim1: bool,
-) -> None:
+):
     """
     Configures and runs the MACAU training session.
 
@@ -47,7 +47,7 @@ def run(
 
     Args:
         dataloader (DataLoader): The DataLoader containing gene–disease association data.
-        side_info_loader (Optional[SideInformationLoader]): The loader for side information,
+        side_info_loader (SideInformationLoader): The loader for side information,
             if available.
         output_path (Path): Directory where training outputs will be saved.
         tensorboard_dir (Path): Directory for TensorBoard logs.
@@ -101,7 +101,7 @@ def run(
         )
 
 
-def genehound(args: argparse.Namespace) -> None:
+def genehound(args: argparse.Namespace):
     """
     Executes the GeneHound reproduction pipeline.
 
@@ -116,25 +116,25 @@ def genehound(args: argparse.Namespace) -> None:
     Args:
         args (argparse.Namespace): Parsed command-line arguments.
     """
-    output_path: Path = Path(args.output_path).absolute()
+    output_path = Path(args.output_path).absolute()
     output_path.mkdir(parents=True, exist_ok=True)
 
-    latent_dimensions: List[int] = args.latent_dimensions
+    latent_dimensions = args.latent_dimensions
 
-    tensorboard_dir: Path = Path(args.tensorboard_dir).absolute()
+    tensorboard_dir = Path(args.tensorboard_dir).absolute()
     tensorboard_dir.mkdir(parents=True, exist_ok=True)
 
-    seed: int = args.seed
+    seed = args.seed
 
-    input_path: Path = Path(args.input_path).absolute()
+    input_path = Path(args.input_path).absolute()
     if not input_path.exists():
         raise FileNotFoundError(f"The input path does not exist: {input_path}")
 
-    config_path: Path = Path(args.config_path).absolute()
+    config_path = Path(args.config_path).absolute()
     if not config_path.exists():
         raise FileNotFoundError(f"The configuration path does not exist: {config_path}")
 
-    omim_meta_path: Path = Path(args.omim_meta_path).absolute()
+    omim_meta_path = Path(args.omim_meta_path).absolute()
     if not omim_meta_path.exists():
         raise FileNotFoundError(f"OMIM metadata path does not exist: {omim_meta_path}")
 

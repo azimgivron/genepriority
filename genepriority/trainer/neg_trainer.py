@@ -294,9 +294,9 @@ class NEGTrainer(BaseTrainer):
             )
             symmetry_parameter = trial.suggest_float(
                 "Symmetry parameter for the gradient adjustment.",
-                0.0,
-                1.0,
-                step=0.01,
+                1e-8,
+                1e-0,
+                log=True,
             )
             smoothness_parameter = trial.suggest_float(
                 "Initial smoothness parameter.", 0.001, 0.01, step=0.001

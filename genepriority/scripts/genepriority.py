@@ -12,10 +12,13 @@ Implemented subcommands:
 """
 
 import argparse
+import datetime
 import logging
 import traceback
 from pathlib import Path
 from typing import Any
+
+import pytz
 
 from genepriority.scripts.genehound import genehound
 from genepriority.scripts.nega import nega
@@ -23,26 +26,43 @@ from genepriority.scripts.parsers import parse_genehound, parse_nega, parse_post
 from genepriority.scripts.post import post
 
 
-def setup_logger(args: Any) -> None:
+def setup_logger(args: Any):
     """
-    Configures the root logger to write logs to a file and the console.
+    Configures the root logger to write logs to a file and the console
+    with timestamps in the Brussels time zone.
 
     Args:
-        args (Any): Arguments from argparser.
+        args (Any): Arguments from the argument parser. Expected to have attributes:
+            - output_path: The directory path where log files will be stored.
+            - log_filename: The name of the log file.
     """
-    output_path: Path = Path(args.output_path).absolute()
+    output_path = Path(args.output_path).absolute()
     output_path.mkdir(exist_ok=True)
 
-    log_file: Path = output_path / args.log_filename
+    log_file = output_path / args.log_filename
+
+    def brussels_time(*_) -> Any:
+        """Return the current time as a time tuple in Brussels time zone."""
+        return (
+            datetime.datetime.now(datetime.timezone.utc)
+            .astimezone(pytz.timezone("Europe/Brussels"))
+            .timetuple()
+        )
+
+    file_handler = logging.FileHandler(log_file, mode="w")
+    formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - [%(funcName)s] - %(levelname)s - %(message)s"
+    )
+    formatter.converter = brussels_time
+    file_handler.setFormatter(formatter)
 
     logging.basicConfig(
         level=logging.DEBUG,
-        format="%(asctime)s - %(name)s - [%(funcName)s] - %(levelname)s - %(message)s",
-        handlers=[logging.FileHandler(log_file, mode="w")],
+        handlers=[file_handler],
     )
 
 
-def main() -> None:
+def main():
     """
     Main entry point for the Gene Prioritization Tool.
 

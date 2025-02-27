@@ -32,7 +32,7 @@ def cross_validation(
     seed: int,
     n_trials: int,
     timeout: float,
-) -> None:
+):
     """
     Runs cross-validation (using Optuna) for hyperparameter tuning of the NEGA model.
 
@@ -82,7 +82,7 @@ def train_eval(
     rho_decrease: float,
     tensorboard_dir: Path,
     results_filename: str,
-) -> None:
+):
     """
     Trains the NEGA model on the training set and evaluates it on the test set.
 
@@ -130,7 +130,7 @@ def train_eval(
     logger.debug("Serialized results for latent dimension %s saved successfully.", rank)
 
 
-def nega(args: argparse.Namespace) -> None:
+def nega(args: argparse.Namespace):
     """
     Main entry point for the NEGA script.
 
@@ -140,10 +140,10 @@ def nega(args: argparse.Namespace) -> None:
     Args:
         args (argparse.Namespace): Parsed command-line arguments.
     """
-    input_path: Path = Path(args.input_path).absolute()
-    omim_meta_path: Path = Path(args.omim_meta_path).absolute()
-    output_path: Path = Path(args.output_path).absolute()
-    logger: logging.Logger = logging.getLogger("NEGA")
+    input_path = Path(args.input_path).absolute()
+    omim_meta_path = Path(args.omim_meta_path).absolute()
+    output_path = Path(args.output_path).absolute()
+    logger = logging.getLogger("NEGA")
 
     if not input_path.exists():
         raise FileNotFoundError(f"Input path does not exist: {input_path}")
@@ -176,7 +176,7 @@ def nega(args: argparse.Namespace) -> None:
             timeout=args.timeout,
         )
     elif args.algorithm_command == "nega":
-        config_path: Path = Path(args.config_path).absolute()
+        config_path = Path(args.config_path).absolute()
         if not config_path.exists():
             raise FileNotFoundError(
                 f"The configuration path does not exist: {config_path}"
@@ -186,12 +186,12 @@ def nega(args: argparse.Namespace) -> None:
         with config_path.open("r", encoding="utf-8") as stream:
             config = yaml.safe_load(stream)
 
-        regularization_parameter: float = config.get("regularization_parameter")
-        symmetry_parameter: float = config.get("symmetry_parameter")
-        smoothness_parameter: float = config.get("smoothness_parameter")
-        rho_increase: float = config.get("rho_increase")
-        rho_decrease: float = config.get("rho_decrease")
-        tensorboard_dir: Path = Path(args.tensorboard_dir).absolute()
+        regularization_parameter = config.get("regularization_parameter")
+        symmetry_parameter = config.get("symmetry_parameter")
+        smoothness_parameter = config.get("smoothness_parameter")
+        rho_increase = config.get("rho_increase")
+        rho_decrease = config.get("rho_decrease")
+        tensorboard_dir = Path(args.tensorboard_dir).absolute()
 
         train_eval(
             logger=logger,
