@@ -8,9 +8,25 @@ from genepriority.scripts.nega import train_eval
 
 
 def main():
-    input_path = Path(input_path).absolute()
-    omim_meta_path = Path(omim_meta_path).absolute()
-    output_path = Path(output_path).absolute()
+    # Path are hardcoded and might need to be modified
+    input_path = Path("/home/TheGreatestCoder/code/data/postprocessed")
+    omim_meta_path = Path("/home/TheGreatestCoder/code/genepriority/configurations/omim.yaml")
+    config_path = Path("/home/TheGreatestCoder/code/genepriority/configurations/nega/meta.yaml")
+    tensorboard_dir = Path("/home/TheGreatestCoder/code/logs")
+    output_path = Path("./output-profiling").absolute()
+    log_file = Path("./logs.log").absolute()
+    
+    file_handler = logging.FileHandler(log_file, mode="w")
+    formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - [%(funcName)s] - %(levelname)s - %(message)s"
+    )
+    file_handler.setFormatter(formatter)
+
+    logging.basicConfig(
+        level=logging.DEBUG,
+        handlers=[file_handler],
+    )
+    
     logger = logging.getLogger("NEGA")
 
     if not input_path.exists():
@@ -65,6 +81,7 @@ def main():
         results_filename="results.pickle",
     )
 
-cProfile.run('main()', 'profile_stats')
-stats = pstats.Stats('profile_stats')
-stats.sort_stats('cumtime').print_stats(10)
+if __name__ == "__main__":
+    cProfile.run('main()', 'profile_stats')
+    stats = pstats.Stats('profile_stats')
+    stats.sort_stats('cumtime').print_stats(10)

@@ -279,11 +279,11 @@ class MatrixCompletionSession:
         )
         tau2 = (-2 * (tau**3) - 27 * (sp.linalg.norm(step, ord="fro") ** 2)) / 27
         discriminant = (tau2 / 2) ** 2 + (tau1 / 3) ** 3
-        discriminant_sqrt = discriminant.power(1/2, dtype=np.complex128)
+        discriminant_sqrt = np.sqrt(discriminant, dtype=np.complex128)
         t_k = (
             (tau / 3)
-            + ((-tau2 + discriminant_sqrt).power(1/3)
-            + (-tau2 - discriminant_sqrt).power(1/3)).real
+            + (np.power(-tau2 + discriminant_sqrt, 1/3, dtype=np.complex128)
+            + np.power(-tau2 - discriminant_sqrt, 1/3, dtype=np.complex128)).real
         )
         W_k_next = (1 / t_k) * step
         self.h1 = sp.csr_matrix(W_k_next[:m, :])

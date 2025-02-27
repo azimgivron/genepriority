@@ -19,12 +19,12 @@ class Results:
     It validates the input data and supports optional application of a test maskt.
 
     Attributes:
-        y_true (np.ndarray): Dense array of ground truth values. When the flag
+        y_true (sp.csr_matrix): Sparse matrix of ground truth values. When the flag
             `apply_mask` is True, only the entries specified by the test mask are returned.
         y_pred (np.ndarray): Dense array of predicted values. When the flag
             `apply_mask` is True, only the entries specified by the test mask are returned.
         test_mask (sp.csr_matrix): Sparse matrix serving as a mask to identify
-            test set entries for selective evaluation.
+            test set entries (no 0s) for selective evaluation.
         apply_mask (bool): Flag indicating whether to apply the test mask when
             accessing the results.
     """
@@ -32,6 +32,7 @@ class Results:
     _y_true: sp.csr_matrix
     _y_pred: np.ndarray
     test_mask: sp.csr_matrix
+    apply_mask: bool
 
     def __init__(
         self,
@@ -87,9 +88,20 @@ class Results:
             if test_mask is not None
             else sp.coo_matrix(([], ([], [])), shape=y_true.shape)
         )
-        self.test_mask = test_mask.toarray().astype(bool)
+        mask = y_true.copy()
+        mask.data[mask.data != 0] = 1
+        self.test_mask = test_mask.multiply(mask)
         self.apply_mask = apply_mask
+        
+    @property
+    def np_mask(self) -> np.ndarray:
+        """A boolean numpy mask.
 
+        Returns:
+            np.ndarray: The mask.
+        """
+        return self.test_mask.toarray().astype(bool)
+        
     @property
     def y_true(self) -> np.ndarray:
         """
@@ -102,7 +114,7 @@ class Results:
             np.ndarray: Dense array representation of the ground truth values.
         """
         return (
-            self._y_true.toarray()[self.test_mask]
+            self._y_true.toarray()[self.np_mask]
             if self.apply_mask
             else self._y_true.toarray()
         )
@@ -117,4 +129,4 @@ class Results:
         Returns:
             np.ndarray: Dense array representation of the predicted values.
         """
-        return self._y_pred[self.test_mask] if self.apply_mask else self._y_pred
+        return self._y_pred[self.np_mask] if self.apply_mask else self._y_pred
