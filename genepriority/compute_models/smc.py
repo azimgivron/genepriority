@@ -279,13 +279,11 @@ class MatrixCompletionSession:
         )
         tau2 = (-2 * (tau**3) - 27 * (sp.linalg.norm(step, ord="fro") ** 2)) / 27
         discriminant = (tau2 / 2) ** 2 + (tau1 / 3) ** 3
-        if discriminant < 0:
-            self.logger.debug("[Substep] Δ is negative: %.6e", discriminant)
-            return None
+        discriminant_sqrt = discriminant.power(1/2, dtype=np.complex128)
         t_k = (
             (tau / 3)
-            + np.cbrt(-tau2 + np.sqrt((tau2 / 2) ** 2 + (tau1 / 3) ** 3))
-            + np.cbrt(-tau2 - np.sqrt((tau2 / 2) ** 2 + (tau1 / 3) ** 3))
+            + ((-tau2 + discriminant_sqrt).power(1/3)
+            + (-tau2 - discriminant_sqrt).power(1/3)).real
         )
         W_k_next = (1 / t_k) * step
         self.h1 = sp.csr_matrix(W_k_next[:m, :])
