@@ -137,7 +137,66 @@ def plot_bedroc_boxplots(
             box.legend_.remove()
 
     # Adjust the spacing so we have room on the right for the legend
-    fig.subplots_adjust(right=0.8, wspace=0.3)
+    fig.subplots_adjust(right=1 - (bedroc.shape[-1] * 0.05), wspace=0.3)
+
+    # Create a custom legend on the side
+    # Each model gets one color, so we make patches for each color-model pair
+    handles = [mpatches.Patch(color=c, label=m) for c, m in zip(colors, model_names)]
+    fig.legend(
+        handles,
+        model_names,
+        loc="center right",
+        bbox_to_anchor=(0.98, 0.5),  # adjust as needed
+        fontsize=18,
+    )
+
+    plt.savefig(output_file, dpi=300, bbox_inches="tight")
+    plt.close()
+
+
+def plot_auc_loss_boxplots(
+    auc_loss: np.ndarray,
+    model_names: List[str],
+    output_file: str,
+    figsize: Tuple[int, int],
+):
+    """
+    Plots boxplots of BEDROC scores for multiple alpha values and latent dimensions
+    without plotting outliers, with a shared y-axis and a single legend on the side.
+
+    Args:
+        auc_loss (np.ndarray): A 2D array containing the AUC loss for
+            each model and fold. Shape: (folds, models).
+        model_names (List[str]): Names of the models being compared.
+        output_file (str): File path where the BEDROC boxplot figure will be saved.
+        figsize (Tuple[int, int]): Figure size in inches (width, height).
+
+    """
+    # Okabe-Ito color palette
+    colors = ["#0072B2", "#E69F00", "#009E73", "#D55E00", "#CC79A7", "#F0E442"]
+
+    if auc_loss.shape[-1] > len(colors):
+        raise ValueError("Not enough colors.")
+
+    fig, axis = plt.subplots(1, 1, figsize=figsize)
+    _ = sns.boxplot(
+        data=auc_loss,
+        ax=axis,
+        palette=colors[: auc_loss.shape[-1]],
+        showfliers=False,  # Do not plot outliers
+    )
+    # Set x-axis ticks to model names
+    axis.set_xticks(range(auc_loss.shape[1]))  # auc_loss.shape[1] = number of models
+    axis.set_xticklabels(["" for _ in model_names])
+    axis.yaxis.set_tick_params(labelsize=14)
+    axis.grid(axis="y", alpha=0.3)
+    axis.set_title(
+        "1-AUC",
+        fontsize=16,
+        weight="bold",
+    )
+    # Adjust the spacing so we have room on the right for the legend
+    fig.subplots_adjust(right=1 - (auc_loss.shape[-1] * 0.1))
 
     # Create a custom legend on the side
     # Each model gets one color, so we make patches for each color-model pair

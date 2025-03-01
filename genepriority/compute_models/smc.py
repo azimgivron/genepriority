@@ -15,6 +15,7 @@ import time
 from pathlib import Path
 from typing import Tuple
 
+import line_profiler
 import numpy as np
 import scipy.sparse as sp
 import tensorflow as tf
@@ -160,6 +161,7 @@ class MatrixCompletionSession:
         """
         return self.h1 @ self.h2
 
+    @line_profiler.profile
     def calculate_loss(self) -> float:
         """
         Computes the loss function value for the training data.
@@ -182,6 +184,7 @@ class MatrixCompletionSession:
         )
         return 0.5 * sp.linalg.norm(residual, ord="fro") ** 2
 
+    @line_profiler.profile
     def calculate_rmse(self) -> float:
         """
         Computes the Root Mean Square Error (RMSE) for the test data.
@@ -217,6 +220,7 @@ class MatrixCompletionSession:
         rmse = np.sqrt(mean_squared_error(test_values_actual, test_predictions))
         return rmse
 
+    @line_profiler.profile
     def substep(
         self,
         W_k: sp.csr_matrix,
@@ -280,17 +284,17 @@ class MatrixCompletionSession:
         tau2 = (-2 * (tau**3) - 27 * (sp.linalg.norm(step, ord="fro") ** 2)) / 27
         discriminant = (tau2 / 2) ** 2 + (tau1 / 3) ** 3
         discriminant_sqrt = np.sqrt(discriminant, dtype=np.complex128)
-        t_k = (
-            (tau / 3)
-            + (np.power(-tau2 + discriminant_sqrt, 1/3, dtype=np.complex128)
-            + np.power(-tau2 - discriminant_sqrt, 1/3, dtype=np.complex128)).real
-        )
+        t_k = (tau / 3) + (
+            np.power(-tau2 + discriminant_sqrt, 1 / 3, dtype=np.complex128)
+            + np.power(-tau2 - discriminant_sqrt, 1 / 3, dtype=np.complex128)
+        ).real
         W_k_next = (1 / t_k) * step
         self.h1 = sp.csr_matrix(W_k_next[:m, :])
         self.h2 = sp.csr_matrix(W_k_next[m:, :].T)
         res_norm_next_it = self.calculate_loss()
         return W_k_next, res_norm_next_it
 
+    @line_profiler.profile
     def run(self) -> MatrixCompletionResult:
         """
         Performs matrix completion using adaptive step size optimization.
@@ -485,6 +489,7 @@ class MatrixCompletionSession:
         return training_data
 
 
+@line_profiler.profile
 def kernel(W: sp.csr_matrix, tau: float) -> float:
     """
     Computes the value of the kernel function h for a given matrix W and
@@ -505,6 +510,7 @@ def kernel(W: sp.csr_matrix, tau: float) -> float:
     return h_value
 
 
+@line_profiler.profile
 def bregman_distance(W1: sp.csr_matrix, W2: sp.csr_matrix, tau: float) -> float:
     """
     Computes the Bregman distance:

@@ -21,8 +21,8 @@ def generate_auc_loss_table(
     deviations for each model.
 
     Args:
-        auc_loss (np.ndarray): A 2D array containing the average and standard deviation
-            of the AUC loss for each model. Shape: (models, 2).
+        auc_loss (np.ndarray): A 2D array containing the AUC loss for
+            each model and fold. Shape: (folds, models).
         model_names (List[str]): Names of the models corresponding to the AUC losses.
         avg_auc_loss_name (str, optional): Column name for averaged 1-AUC error.
             Defaults to "Averaged 1-AUC error".
@@ -32,6 +32,8 @@ def generate_auc_loss_table(
     Returns:
         pd.DataFrame: A dataframe summarizing AUC loss metrics.
     """
+    auc_loss = np.hstack((np.mean(auc_loss, axis=0), np.std(auc_loss, axis=0)))
+    auc_loss = auc_loss.reshape((2, -1)).T
     dataframe = pd.DataFrame(
         auc_loss, columns=[avg_auc_loss_name, std_auc_loss_name], index=model_names
     ).map(lambda x: f"{x:.2e}")

@@ -41,7 +41,9 @@ def mask_sparse_containing_0s(
         sp.csr_matrix: A sparse matrix (CSR format) resulting from applying the `mask` to `matrix`.
     """
     matrix_tmp = matrix.copy()
+    # Replace explicit 0s with a temporary marker.
     matrix_tmp.data[matrix_tmp.data == 0] = -1
     result = matrix_tmp.multiply(mask)
+    # Restore explicit 0s
     result.data[result.data == -1] = 0
     return result

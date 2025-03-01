@@ -96,18 +96,16 @@ class ModelEvaluationCollection:
 
     def compute_auc_losses(self) -> np.ndarray:
         """
-        Calculates the mean and standard deviation of the
-        AUC loss (1 - AUC) for each model across all diseases.
+        Calculates the AUC loss (1 - AUC) for each model and fold.
 
         Returns:
-            np.ndarray: A 2D array containing the average and standard deviation
-                of the AUC loss for each model. Shape: (models, 2).
+            np.ndarray: A 2D array containing the AUC loss for
+                each model and for each fold. Shape: (folds, models).
         """
         auc_loss = np.array(
             [eval_res.compute_avg_auc_loss() for eval_res in self.evaluations]
         )
-        avg_auc_loss = np.hstack((np.mean(auc_loss, axis=1), np.std(auc_loss, axis=1)))
-        return avg_auc_loss.reshape((2, len(self.evaluations))).T
+        return auc_loss.T
 
     def compute_bedroc_scores(self) -> np.ndarray:
         """

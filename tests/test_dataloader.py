@@ -1,24 +1,28 @@
+from pathlib import Path
+from typing import Generator
+
+import numpy as np
+import pandas as pd
+import pytest
+
 from genepriority.preprocessing.dataloader import DataLoader
 from genepriority.utils import mask_sparse_containing_0s
 
-import pytest
-from pathlib import Path
-import numpy as np
-import pandas as pd
-from typing import Generator
-
 # Set global seed for reproducibility
 np.random.seed(42)
+
 
 @pytest.fixture(name="nb_genes", scope="session")
 def get_genes() -> int:
     """Return the number of genes for testing."""
     return 10
 
+
 @pytest.fixture(name="nb_diseases", scope="session")
 def get_diseases() -> int:
     """Return the number of diseases for testing."""
     return 10
+
 
 @pytest.fixture(name="path", scope="session")
 def get_path(nb_genes: int, nb_diseases: int) -> Generator[Path, None, None]:
@@ -34,7 +38,9 @@ def get_path(nb_genes: int, nb_diseases: int) -> Generator[Path, None, None]:
         genes_ID = np.random.randint(0, nb_genes, 10, dtype=np.int64)
         diseases_ID = np.random.randint(0, nb_diseases, 10, dtype=np.int64)
         data = np.vstack((genes_ID, diseases_ID)).T
-        pd.DataFrame(data, columns=["Gene ID", "Disease ID"]).to_csv(file_path, index=False)
+        pd.DataFrame(data, columns=["Gene ID", "Disease ID"]).to_csv(
+            file_path, index=False
+        )
         created = True
 
     yield file_path
@@ -43,6 +49,7 @@ def get_path(nb_genes: int, nb_diseases: int) -> Generator[Path, None, None]:
     if created and file_path.exists():
         file_path.unlink()
         path.rmdir()
+
 
 def test_dataloader_construction(nb_genes: int, nb_diseases: int, path: Path):
     """Test DataLoader construction and its masking behavior."""
@@ -147,8 +154,12 @@ def test_dataloader_construction(nb_genes: int, nb_diseases: int, path: Path):
 
     assert (with0s.omim1.data == 0).any()
     assert (with0s.omim2.data == 0).any()
-    assert (with0s.omim1.data == 1).sum() + (with0s.omim1.data == 0).sum() == with0s.omim1.nnz
-    assert ((with0s.omim1.data == 1).sum() * zero_sampling_factor) == ((with0s.omim1.data == 0).sum())
+    assert (with0s.omim1.data == 1).sum() + (
+        with0s.omim1.data == 0
+    ).sum() == with0s.omim1.nnz
+    assert ((with0s.omim1.data == 1).sum() * zero_sampling_factor) == (
+        (with0s.omim1.data == 0).sum()
+    )
 
     # DataLoader without folds.
     without_folds = DataLoader(

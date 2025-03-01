@@ -20,7 +20,8 @@ packages = [
     "genepriority.postprocessing",
     "genepriority.preprocessing",
     "genepriority.trainer",
-    "genepriority.compute_models"
+    "genepriority.compute_models",
+    "genepriority.scripts"
 ]
 
 [tool.setuptools.dynamic]

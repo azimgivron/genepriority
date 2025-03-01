@@ -92,7 +92,7 @@ class Results:
         mask.data[mask.data != 0] = 1
         self.test_mask = test_mask.multiply(mask)
         self.apply_mask = apply_mask
-        
+
     @property
     def np_mask(self) -> np.ndarray:
         """A boolean numpy mask.
@@ -101,7 +101,7 @@ class Results:
             np.ndarray: The mask.
         """
         return self.test_mask.toarray().astype(bool)
-        
+
     @property
     def y_true(self) -> np.ndarray:
         """

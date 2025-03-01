@@ -5,6 +5,7 @@ from .postprocessing import (
     ModelEvaluationCollection,
     generate_auc_loss_table,
     generate_bedroc_table,
+    plot_auc_loss_boxplots,
     plot_bedroc_boxplots,
     plot_roc_curves,
 )
@@ -26,6 +27,7 @@ __all__ = [
     "Results",
     "generate_auc_loss_table",
     "generate_bedroc_table",
+    "plot_auc_loss_boxplots",
     "plot_bedroc_boxplots",
     "plot_roc_curves",
     "ModelEvaluationCollection",
