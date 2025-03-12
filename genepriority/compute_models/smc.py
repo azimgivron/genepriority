@@ -19,7 +19,9 @@ import line_profiler
 import numpy as np
 import scipy.sparse as sp
 import tensorflow as tf
-from sklearn.metrics import mean_squared_error
+from sklearn import metrics
+
+from genepriority.evaluation.metrics import bedroc_score
 
 from genepriority.compute_models.matrix_completion_result import MatrixCompletionResult
 from genepriority.utils import mask_sparse_containing_0s, serialize
@@ -161,7 +163,6 @@ class MatrixCompletionSession:
         """
         return self.h1 @ self.h2
 
-    @line_profiler.profile
     def calculate_loss(self) -> float:
         """
         Computes the loss function value for the training data.
@@ -184,7 +185,6 @@ class MatrixCompletionSession:
         )
         return 0.5 * sp.linalg.norm(residual, ord="fro") ** 2
 
-    @line_profiler.profile
     def calculate_rmse(self) -> float:
         """
         Computes the Root Mean Square Error (RMSE) for the test data.
@@ -217,10 +217,81 @@ class MatrixCompletionSession:
         test_predictions = np.asarray(self.predict_all()[row_indices, col_indices])
 
         # Compute RMSE
-        rmse = np.sqrt(mean_squared_error(test_values_actual, test_predictions))
+        rmse = np.sqrt(metrics.mean_squared_error(test_values_actual, test_predictions))
         return rmse
 
-    @line_profiler.profile
+    def calculate_auc_bedroc(self, alpha: float = 160.9) -> tuple[float, float, float]:
+        """
+        Computes the Area Under the Curve (AUC-ROC), Average Precision (AP),
+        and the Boltzmann-Enhanced Discrimination of ROC (BEDROC) score for the test data.
+
+        - AUC-ROC measures the model's ability to rank positive instances
+        higher than negative ones, capturing its overall classification performance.
+
+        - Average Precision (AP) represents the weighted mean of precisions
+        at different thresholds, considering both precision and recall.
+
+        - BEDROC extends AUC-ROC by emphasizing early retrieval, making it
+        particularly useful for ranking problems where top predictions matter most.
+
+        Formula for AUC-ROC:
+            AUC = ∫ TPR(FPR) d(FPR)
+
+        Formula for AP:
+            AP = sum( (R_n - R_{n-1}) * P_n )
+
+        Formula for BEDROC:
+            BEDROC = (1 / N) * sum(exp(-alpha * rank(y_i))) * normalization_factor
+
+        Where:
+            - TPR: True Positive Rate.
+            - FPR: False Positive Rate.
+            - N: Number of positive samples.
+            - rank(y_i): Rank of the positive sample in the sorted predictions.
+            - alpha: Controls the early recognition emphasis.
+            - R_n: Recall at threshold n.
+            - P_n: Precision at threshold n.
+
+        Process:
+        1. Extract the observed entries from both the test matrix (`M_test`) and
+        the predicted matrix (`M_pred`) using `test_mask`.
+        2. Compute AUC-ROC using `roc_auc_score`.
+        3. Compute Average Precision (AP) using `average_precision_score`.
+        4. Compute BEDROC using an exponential weighting scheme.
+        5. Return all three scores.
+
+        Args:
+            alpha (float): The alpha value for the bedroc metric.
+                Default to 160.9.
+
+        Returns:
+            tuple[float, float, float]: A tuple containing:
+                - AUC-ROC score: Measures overall ranking performance.
+                - Average Precision (AP) score: Reflects precision-recall trade-off.
+                - BEDROC score: Emphasizes early recognition quality.
+        """
+        # Extract observed test values and corresponding predictions
+        mask = self.test_mask.toarray().flatten().astype(bool)
+        test_predictions = self.predict_all().toarray().flatten()[mask]
+        test_values_actual = self.matrix.toarray().flatten()[mask]
+
+        # Compute AUC-ROC
+        auc = metrics.roc_auc_score(test_values_actual, test_predictions)
+
+        # Compute Average Precision (AP)
+        avg_precision = metrics.average_precision_score(
+            test_values_actual, test_predictions
+        )
+
+        # Compute BEDROC
+        bedroc = bedroc_score(
+            y_true=test_values_actual,
+            y_pred=test_predictions,
+            decreasing=True,
+            alpha=alpha,
+        )
+        return auc, avg_precision, bedroc
+
     def substep(
         self,
         W_k: sp.csr_matrix,
@@ -294,8 +365,7 @@ class MatrixCompletionSession:
         res_norm_next_it = self.calculate_loss()
         return W_k_next, res_norm_next_it
 
-    @line_profiler.profile
-    def run(self) -> MatrixCompletionResult:
+    def run(self, log_freq: int = 10) -> MatrixCompletionResult:
         """
         Performs matrix completion using adaptive step size optimization.
 
@@ -308,31 +378,35 @@ class MatrixCompletionSession:
             - ||W||_F: The Frobenius norm of the stacked factor matrix W.
             - mu: The regularization parameter.
 
-        **Key Steps in the Optimization Process:**
+        Key Steps in the Optimization Process:
 
-        1. **Initialization**:
+        1. Initialization:
            Initialize the factor matrices:
                - h_1 (shape: m x rank),
                - h_2 (shape: rank x n).
 
-        2. **Iterative Updates**:
+        2. Iterative Updates:
            Update the stacked factor matrix W_k = [h_1; h_2^T] using gradients and adaptive
            step sizes:
                - ∇_u = (mask ⊙ (h_1 @ h_2 - M)) @ h_2^T + mu * h_1,
                - ∇_v = (mask.T ⊙ (h_2^T @ h_1^T - M.T)) @ h_1 + mu * h_2^T,
            where ⊙ represents hadamard product.
 
-        3. **Dynamic Step Size Adjustment**:
+        3. Dynamic Step Size Adjustment:
            Adjust the step size if the new loss does not satisfy the improvement condition:
                f(W_{k+1}) <= f(W_k) + ∇f(W_k)^T (W_{k+1} - W_k) + η * D_h(W_{k+1}, W_k, τ),
            where:
                - η is the step size/smoothness adjustment parameter,
                - D_h is the difference in h-function values.
 
-        4. **Termination**:
+        4. Termination:
            Stop when the maximum number of iterations is reached or the loss converges.
 
-        **Returns**:
+        Args:
+            log_freq (int, optional): Period at which to log data in Tensorboard.
+                Default to 10 (iterations).
+
+        Returns:
             MatrixCompletionResult: A dataclass containing:
                 - completed_matrix: The reconstructed matrix (low-rank approximation).
                 - loss_history: List of loss values at each iteration.
@@ -401,7 +475,7 @@ class MatrixCompletionSession:
                 res_norm_next_it
                 <= res_norm + linear_approx + self.smoothness_parameter * bregman
             )
-            if self.writer is not None:
+            if self.writer is not None and ith_iteration % log_freq == 0:
                 try:
                     with self.writer.as_default():
                         tf.summary.scalar(
@@ -409,6 +483,16 @@ class MatrixCompletionSession:
                         )
                         tf.summary.scalar(
                             name="testing_loss", data=testing_loss, step=ith_iteration
+                        )
+                        auc, avg_precision, bedroc = self.calculate_auc_bedroc()
+                        tf.summary.scalar(name="auc", data=auc, step=ith_iteration)
+                        tf.summary.scalar(
+                            name="average precision",
+                            data=avg_precision,
+                            step=ith_iteration,
+                        )
+                        tf.summary.scalar(
+                            name="bedroc top1%", data=bedroc, step=ith_iteration
                         )
                         tf.summary.flush()
                 except ValueError as e:

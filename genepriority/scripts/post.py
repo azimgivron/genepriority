@@ -21,7 +21,7 @@ from genepriority.postprocessing.dataframes import (
     generate_bedroc_table,
 )
 from genepriority.postprocessing.figures import (
-    plot_auc_loss_boxplots,
+    plot_auc_boxplots,
     plot_bedroc_boxplots,
     plot_roc_curves,
 )
@@ -90,9 +90,9 @@ def post(args: argparse.Namespace):
     ).to_csv(auc_loss_csv_path)
     logger.info("AUC Loss table saved: %s", auc_loss_csv_path)
 
-    auc_loss_plot_path = output_path / "auc_loss.png"
-    plot_auc_loss_boxplots(
-        results.compute_auc_losses(),
+    auc_loss_plot_path = output_path / "auc.png"
+    plot_auc_boxplots(
+        -results.compute_auc_losses() + 1,
         model_names=results.model_names,
         output_file=auc_loss_plot_path,
         figsize=(12, 10),

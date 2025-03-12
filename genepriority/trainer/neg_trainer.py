@@ -183,6 +183,8 @@ class NEGTrainer(BaseTrainer):
 
         testing_data = matrix.multiply(test_mask)
         self.log_data("testing", testing_data)
+        testing_data = mask_sparse_containing_0s(matrix, train_mask)
+
         return MatrixCompletionSession(
             **self.neg_session_kwargs,
             rank=num_latent,
