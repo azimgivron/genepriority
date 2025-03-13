@@ -15,7 +15,6 @@ import time
 from pathlib import Path
 from typing import Tuple
 
-import line_profiler
 import numpy as np
 import scipy.sparse as sp
 import tensorflow as tf
@@ -24,7 +23,7 @@ from sklearn import metrics
 from genepriority.evaluation.metrics import bedroc_score
 
 from genepriority.compute_models.matrix_completion_result import MatrixCompletionResult
-from genepriority.utils import mask_sparse_containing_0s, serialize
+from genepriority.utils import serialize
 
 
 class MatrixCompletionSession:
@@ -32,10 +31,10 @@ class MatrixCompletionSession:
     Manages the configuration, training, and evaluation of a matrix completion model.
 
     Attributes:
-        matrix (sp.csr_matrix): Input matrix to be approximated. Shape: (m, n).
-        train_mask (sp.csr_matrix): Mask indicating observed entries in `matrix` for training.
+        matrix (np.ndarray): Input matrix to be approximated. Shape: (m, n).
+        train_mask (np.ndarray): Mask indicating observed entries in `matrix` for training.
             Shape: (m, n).
-        test_mask (sp.csr_matrix): Mask indicating observed entries in `matrix` for test.
+        test_mask (np.ndarray): Mask indicating observed entries in `matrix` for test.
             Shape: (m, n).
         rank (int): The rank of the low-rank approximation.
         regularization_parameter (float): Regularization parameter for the optimization.
@@ -98,9 +97,9 @@ class MatrixCompletionSession:
             save_name (str, optional): The file path where the model will be saved.
                 If set to None, the model will not be saved after training.  Defaults to None.
         """
-        self.matrix = matrix
-        self.train_mask = train_mask
-        self.test_mask = test_mask
+        self.matrix = matrix.toarray()
+        self.train_mask = train_mask.toarray().astype(bool)
+        self.test_mask = test_mask.toarray().astype(bool)
         self.rank = rank
         self.regularization_parameter = regularization_parameter
         self.iterations = iterations
@@ -141,13 +140,13 @@ class MatrixCompletionSession:
 
         # Initialize factor matrices h1 and h2 with random values
         num_rows, num_cols = matrix.shape
-        self.h1 = sp.csr_matrix(np.random.randn(num_rows, rank))
-        self.h2 = sp.csr_matrix(np.random.randn(rank, num_cols))
+        self.h1 = np.random.randn(num_rows, rank)
+        self.h2 = np.random.randn(rank, num_cols)
         self.logger.debug(
             "Initialized h1 and h2 with shapes %s and %s", self.h1.shape, self.h2.shape
         )
 
-    def predict_all(self) -> sp.csr_matrix:
+    def predict_all(self) -> np.ndarray:
         """
         Computes the reconstructed matrix from the factor matrices h1 and h2.
 
@@ -159,7 +158,7 @@ class MatrixCompletionSession:
         - h_2 is the right factor matrix (shape: rank x n).
 
         Returns:
-            sp.csr_matrix: The reconstructed (completed) matrix.
+            np.ndarray: The reconstructed (completed) matrix.
         """
         return self.h1 @ self.h2
 
@@ -180,10 +179,9 @@ class MatrixCompletionSession:
         Returns:
             float: The computed loss value.
         """
-        residual = mask_sparse_containing_0s(
-            (self.matrix - self.predict_all()), self.train_mask
-        )
-        return 0.5 * sp.linalg.norm(residual, ord="fro") ** 2
+        residual = (self.matrix - self.predict_all())
+        residual[~self.train_mask] = 0
+        return 0.5 * np.linalg.norm(residual, ord='fro') ** 2
 
     def calculate_rmse(self) -> float:
         """
@@ -211,10 +209,9 @@ class MatrixCompletionSession:
             float: The computed RMSE value, representing the prediction error
                    on the observed test entries.
         """
-        # Extract observed test values and corresponding predictions
-        row_indices, col_indices = self.test_mask.nonzero()
-        test_values_actual = np.asarray(self.matrix[row_indices, col_indices])
-        test_predictions = np.asarray(self.predict_all()[row_indices, col_indices])
+        mask = self.test_mask & (self.matrix == 1)
+        test_values_actual = self.matrix[mask]
+        test_predictions = self.predict_all()[mask]
 
         # Compute RMSE
         rmse = np.sqrt(metrics.mean_squared_error(test_values_actual, test_predictions))
@@ -271,9 +268,8 @@ class MatrixCompletionSession:
                 - BEDROC score: Emphasizes early recognition quality.
         """
         # Extract observed test values and corresponding predictions
-        mask = self.test_mask.toarray().flatten().astype(bool)
-        test_predictions = self.predict_all().toarray().flatten()[mask]
-        test_values_actual = self.matrix.toarray().flatten()[mask]
+        test_values_actual = self.matrix[self.test_mask]
+        test_predictions = self.predict_all()[self.test_mask]
 
         # Compute AUC-ROC
         auc = metrics.roc_auc_score(test_values_actual, test_predictions)
@@ -294,13 +290,13 @@ class MatrixCompletionSession:
 
     def substep(
         self,
-        W_k: sp.csr_matrix,
+        W_k: np.ndarray,
         tau: float,
         step_size: float,
-        grad_f_W_k: sp.csr_matrix,
+        grad_f_W_k: np.ndarray,
         tau1: float,
         m: int,
-    ) -> Tuple[sp.csr_matrix, float]:
+    ) -> Tuple[np.ndarray, float]:
         """
         Performs a single substep in the optimization process to update the factor matrices.
 
@@ -337,22 +333,22 @@ class MatrixCompletionSession:
            - h_2 = W_{k+1}[m:, :].T
 
         Args:
-            W_k (sp.csr_matrix): Current stacked factor matrices.
+            W_k (np.ndarray): Current stacked factor matrices.
             tau (float): Regularization parameter.
             step_size (float): Learning rate for the gradient step.
-            grad_f_W_k (sp.csr_matrix): Gradient of the objective function at W_k.
+            grad_f_W_k (np.ndarray): Gradient of the objective function at W_k.
             tau1 (float): Cubic root parameter for step size adjustment.
             m (int): Number of rows in the original matrix.
 
         Returns:
-            Tuple[sp.csr_matrix, float]:
+            Tuple[np.ndarray, float]:
                 - Updated stacked matrix W_{k+1}.
                 - New loss value f(W_{k+1}).
         """
-        step = (sp.linalg.norm(W_k, ord="fro") ** 2 + tau) * W_k - (
+        step = (np.linalg.norm(W_k, ord="fro") ** 2 + tau) * W_k - (
             step_size * grad_f_W_k
         )
-        tau2 = (-2 * (tau**3) - 27 * (sp.linalg.norm(step, ord="fro") ** 2)) / 27
+        tau2 = (-2 * (tau**3) - 27 * (np.linalg.norm(step, ord="fro") ** 2)) / 27
         discriminant = (tau2 / 2) ** 2 + (tau1 / 3) ** 3
         discriminant_sqrt = np.sqrt(discriminant, dtype=np.complex128)
         t_k = (tau / 3) + (
@@ -360,8 +356,8 @@ class MatrixCompletionSession:
             + np.power(-tau2 - discriminant_sqrt, 1 / 3, dtype=np.complex128)
         ).real
         W_k_next = (1 / t_k) * step
-        self.h1 = sp.csr_matrix(W_k_next[:m, :])
-        self.h2 = sp.csr_matrix(W_k_next[m:, :].T)
+        self.h1 = W_k_next[:m, :]
+        self.h2 = W_k_next[m:, :].T
         res_norm_next_it = self.calculate_loss()
         return W_k_next, res_norm_next_it
 
@@ -427,9 +423,9 @@ class MatrixCompletionSession:
         rmse = [testing_loss]
 
         # Stack h1 and h2 for optimization
-        W_k = sp.vstack([self.h1, self.h2.T])
+        W_k = np.vstack([self.h1, self.h2.T])
         step_size = 1 / self.smoothness_parameter
-        tau = sp.linalg.norm(self.matrix, ord="fro") / 3
+        tau = np.linalg.norm(self.matrix, ord="fro") / 3
         tau1 = -(tau**2) / 3
 
         self.logger.debug(
@@ -454,15 +450,12 @@ class MatrixCompletionSession:
                 loss[-1],
             )
             # Compute gradients for h1 and h2
-            residual = (
-                mask_sparse_containing_0s(
-                    (self.predict_all() - self.matrix), self.train_mask
-                )
-            ).toarray()
+            residual = (self.predict_all() - self.matrix)
+            residual[~self.train_mask] = 0
 
             grad_u = residual @ self.h2.T + self.regularization_parameter * self.h1
             grad_v = residual.T @ self.h1 + self.regularization_parameter * self.h2.T
-            grad_f_W_k = sp.vstack([grad_u, grad_v])
+            grad_f_W_k = np.vstack([grad_u, grad_v])
 
             substep_res = self.substep(W_k, tau, step_size, grad_f_W_k, tau1, rows)
             if substep_res is None:
@@ -573,8 +566,7 @@ class MatrixCompletionSession:
         return training_data
 
 
-@line_profiler.profile
-def kernel(W: sp.csr_matrix, tau: float) -> float:
+def kernel(W: np.ndarray, tau: float) -> float:
     """
     Computes the value of the kernel function h for a given matrix W and
     regularization parameter tau.
@@ -583,26 +575,25 @@ def kernel(W: sp.csr_matrix, tau: float) -> float:
         h(W) = 0.25 * ||W||_F^4 + 0.5 * tau * ||W||_F^2
 
     Args:
-        W (sp.csr_matrix): The input sparse matrix.
+        W (np.ndarray): The input matrix.
         tau (float): Regularization parameter.
 
     Returns:
         float: The computed value of the h function.
     """
-    norm = sp.linalg.norm(W, ord="fro")
+    norm = np.linalg.norm(W, ord="fro")
     h_value = 0.25 * norm**4 + 0.5 * tau * norm**2
     return h_value
 
 
-@line_profiler.profile
-def bregman_distance(W1: sp.csr_matrix, W2: sp.csr_matrix, tau: float) -> float:
+def bregman_distance(W1: np.ndarray, W2: np.ndarray, tau: float) -> float:
     """
     Computes the Bregman distance:
         D_h = h(W1) - h(W2) - <grad_h(W2), W1 - W2>
 
     Args:
-        W1 (sp.csr_matrix): The first input sparse matrix.
-        W2 (sp.csr_matrix): The second input sparse matrix.
+        W1 (np.ndarray): The first input sparse matrix.
+        W2 (np.ndarray): The second input sparse matrix.
         tau (float): Regularization parameter.
 
     Returns:
@@ -610,7 +601,7 @@ def bregman_distance(W1: sp.csr_matrix, W2: sp.csr_matrix, tau: float) -> float:
     """
     h_W1 = kernel(W1, tau)
     h_W2 = kernel(W2, tau)
-    grad_h_W2 = (sp.linalg.norm(W2, ord="fro") ** 2 + tau) * W2
+    grad_h_W2 = (np.linalg.norm(W2, ord="fro") ** 2 + tau) * W2
     linear_approx = (grad_h_W2.T @ (W1 - W2)).sum()
     dist = h_W1 - h_W2 - linear_approx
     return dist
