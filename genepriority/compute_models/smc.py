@@ -15,7 +15,6 @@ import time
 from pathlib import Path
 from typing import Tuple
 
-import line_profiler
 import numpy as np
 import scipy.sparse as sp
 import tensorflow as tf
@@ -573,7 +572,6 @@ class MatrixCompletionSession:
         return training_data
 
 
-@line_profiler.profile
 def kernel(W: sp.csr_matrix, tau: float) -> float:
     """
     Computes the value of the kernel function h for a given matrix W and
@@ -594,7 +592,6 @@ def kernel(W: sp.csr_matrix, tau: float) -> float:
     return h_value
 
 
-@line_profiler.profile
 def bregman_distance(W1: sp.csr_matrix, W2: sp.csr_matrix, tau: float) -> float:
     """
     Computes the Bregman distance:
