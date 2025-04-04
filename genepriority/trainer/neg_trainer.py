@@ -152,7 +152,7 @@ class NEGTrainer(BaseTrainer):
             np.ndarray: Predicted values as a NumPy array, computed by
                 averaging over the reconstructed matrix.
         """
-        y_pred = session.predict_all().toarray()
+        y_pred = session.predict_all()
         return y_pred
 
     def create_session(
