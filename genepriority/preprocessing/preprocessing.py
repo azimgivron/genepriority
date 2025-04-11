@@ -112,7 +112,7 @@ def compute_statistics(
     counts = []
     for _, test_mask in splits:
         data = sp.find(sparse_matrix.multiply(test_mask))[1]
-        counts.append(len(np.unique(data)))
+        counts.append(len(set(data)))
     average_count = np.mean(counts)
     variance_count = np.std(counts)
     return pd.DataFrame(

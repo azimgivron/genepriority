@@ -49,10 +49,14 @@ class NEGTrainer(BaseTrainer):
         rho_increase (float): Factor for increasing step size dynamically.
         rho_decrease (float): Factor for decreasing step size dynamically.
         threshold (int): Maximum number of iterations allowed for the inner loop.
+        positive_flip_fraction (float, optional): The fraction of observed positive entries
+            (ones) in the training mask that will be flipped to negatives (zeros) to simulate
+            label noise. Must be between 0 and 1. Default is None, meaning no label flipping
+            is performed.
         seed (int): Random seed for reproducibility.
         side_info_loader (SideInformationLoader): Loader for additional side information.
         logger (logging.Logger): Logger instance for tracking progress and debugging.
-       tensorboard_dir (Path): The base directory path where
+        tensorboard_dir (Path): The base directory path where
             TensorBoard log files are saved.
         writer (tf.summary.SummaryWriter): A tensorflow log writer.
     """
@@ -69,6 +73,7 @@ class NEGTrainer(BaseTrainer):
         rho_increase: float = None,
         rho_decrease: float = None,
         threshold: int = None,
+        positive_flip_fraction: float = None,
         side_info_loader: SideInformationLoader = None,
         tensorboard_dir: Path = None,
     ):
@@ -94,6 +99,10 @@ class NEGTrainer(BaseTrainer):
                 size dynamically. Defaults to None.
             threshold (int, optional): Maximum number of iterations allowed for the inner loop.
                 Defaults to None.
+            positive_flip_fraction (float, optional): The fraction of observed positive entries
+                (ones) in the training mask that will be flipped to negatives (zeros) to simulate
+                label noise. Must be between 0 and 1. Default is None, meaning no label flipping
+                is performed.
             side_info_loader (SideInformationLoader, optional): Loader for additional side
                 information. Defaults to None.
            tensorboard_dir (Path, optional): The base directory path where
@@ -114,6 +123,7 @@ class NEGTrainer(BaseTrainer):
         self.rho_increase = rho_increase
         self.rho_decrease = rho_decrease
         self.threshold = threshold
+        self.positive_flip_fraction = positive_flip_fraction
         self.tensorboard_dir = tensorboard_dir
         self.writer = None
 
@@ -135,6 +145,7 @@ class NEGTrainer(BaseTrainer):
             "rho_increase": self.rho_increase,
             "rho_decrease": self.rho_decrease,
             "threshold": self.threshold,
+            "positive_flip_fraction": self.positive_flip_fraction,
         }
 
     def predict(
@@ -181,9 +192,8 @@ class NEGTrainer(BaseTrainer):
         training_data = mask_sparse_containing_0s(matrix, train_mask)
         self.log_data("training", training_data)
 
-        testing_data = matrix.multiply(test_mask)
+        testing_data = mask_sparse_containing_0s(matrix, test_mask)
         self.log_data("testing", testing_data)
-        testing_data = mask_sparse_containing_0s(matrix, train_mask)
 
         return MatrixCompletionSession(
             **self.neg_session_kwargs,
@@ -207,6 +217,8 @@ class NEGTrainer(BaseTrainer):
             run_name (str): Custom run name for this training session.
         """
         if self.tensorboard_dir is not None:
+            if self.positive_flip_fraction is not None:
+                run_name += "-bootstrap"
             run_log_dir = self.tensorboard_dir / run_name
             run_log_dir.mkdir(parents=True, exist_ok=True)
             self.writer = tf.summary.create_file_writer(str(run_log_dir))
@@ -221,6 +233,7 @@ class NEGTrainer(BaseTrainer):
                             session.rho_increase,
                             session.rho_decrease,
                             session.threshold,
+                            session.positive_flip_fraction,
                         ]
                     ],
                     columns=[
@@ -231,6 +244,7 @@ class NEGTrainer(BaseTrainer):
                         "Rho Increase Factor",
                         "Rho Decrease Factor",
                         "Inner Loop Threshold",
+                        "Positive Flip Fraction",
                     ],
                     index=["Value"],
                 ).to_markdown()
