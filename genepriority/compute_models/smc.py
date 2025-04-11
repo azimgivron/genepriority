@@ -1,15 +1,27 @@
-# pylint: disable=C0103, R0913, R0914, R0915, R0902
+# pylint: disable=C0103, R0913, R0914, R0915, R0902, R0903
 """
 Matrix Completion Module
 ========================
 
-Implements a matrix completion algorithm with adaptive step size. The API is designed
-to be straightforward and intuitive, with explicitly defined parameters for configuration.
+This module implements matrix completion algorithms using adaptive step size optimization.
+The API is designed to be straightforward and intuitive, offering configurable parameters
+for training, evaluation, and prediction of low-rank approximations.
+
+Key Components:
+- BaseMatrixCompletion: An abstract base class that encapsulates the common configuration,
+  training routines, and evaluation metrics for matrix completion.
+- SideInfoMatrixCompletion: A specialized session that integrates auxiliary side information
+  (e.g., gene and disease features) into the matrix completion process.
+- StandardMatrixCompletion: A standard implementation for matrix completion without side
+    information.
 
 Features:
-- Training with adaptive optimization.
-- Evaluation through RMSE and loss metrics.
+- Adaptive optimization with dynamic step size adjustment.
+- Label noise simulation via controlled flipping of positive entries.
+- Comprehensive evaluation using RMSE and loss metrics.
+- Optional TensorBoard logging for monitoring training progress.
 """
+import abc
 import logging
 import time
 from pathlib import Path
@@ -20,20 +32,23 @@ import scipy.sparse as sp
 import tensorflow as tf
 from sklearn import metrics
 
-from genepriority.compute_models.matrix_completion_result import MatrixCompletionResult
+from genepriority.compute_models.flip_labels import FlipLabels
+from genepriority.compute_models.matrix_completion_result import \
+    MatrixCompletionResult
 from genepriority.utils import calculate_auc_bedroc, serialize
 
 
-class MatrixCompletionSession:
+class BaseMatrixCompletion(metaclass=abc.ABCMeta):
     """
     Manages the configuration, training, and evaluation of a matrix completion model.
 
     Attributes:
-        matrix (np.ndarray): Input matrix to be approximated. Shape: (m, n).
+        matrix (np.ndarray): Input matrix to be approximated. Shape: (n, m). With m
+            the number of diseases and n the number of genes.
         train_mask (np.ndarray): Boolean mask indicating observed entries in `matrix`
-            for training. Shape: (m, n).
+            for training. Shape: (n, m).
         test_mask (np.ndarray): Boolean mask indicating observed entries in `matrix`
-            for testing. Shape: (m, n).
+            for testing. Shape: (n, m).
         rank (int): The target rank for the low-rank approximation.
         regularization_parameter (float): Regularization parameter used in the optimization
             objective.
@@ -45,31 +60,20 @@ class MatrixCompletionSession:
         rho_increase (float): Factor used to increase the optimization step size dynamically.
         rho_decrease (float): Factor used to decrease the optimization step size dynamically.
         threshold (int): Maximum iterations allowed for the inner optimization loop.
-        h1 (np.ndarray): Left factor matrix in the low-rank approximation (shape: m x rank).
-        h2 (np.ndarray): Right factor matrix in the low-rank approximation (shape: rank x n).
+        h1 (np.ndarray): Left factor matrix in the low-rank approximation (shape: n x rank).
+            With the gene feature vector size.
+        h2 (np.ndarray): Right factor matrix in the low-rank approximation (shape: rank x m).
+            With the disease feature vector size.
         logger (logging.Logger): Logger instance for debugging and progress monitoring.
         writer (tf.summary.SummaryWriter): TensorFlow summary writer for logging training
             summaries.
         seed (int): Seed for reproducible random initialization.
         save_name (str or pathlib.Path or None): File path where the model will be saved.
             If None, the model will not be saved after training.
-        positive_flip_fraction (float or None): Fraction of observed positive entries (ones)
-            in the training mask that will be flipped to negatives (zeros) to simulate label
-            noise. Must be between 0 and 1. If None, no label flipping is performed.
-        positive_flip_ones_indices (np.ndarray or None): Array of indices (row, col)
-            identifying the locations of positive entries in `matrix` that are observed in
-            the training mask.
-        positive_flip_n_ones (int or None): Total number of positive entries in `matrix` that
-            are observed in the training mask.
-        positive_flip_n_to_zero (int or None): Number of positive entries to flip to negatives,
-            computed as int(positive_flip_fraction * positive_flip_n_ones).
-        flip_frequency (int or None): Frequency (in iterations) at which to resample the
-            observed positive entries for flipping. Only set when `positive_flip_fraction`
-            is specified.
-        flip_iteration (int or None): Counter tracking the number of iterations for flipping
-            operations. Updated each time a label flipping check is performed.
-        tmp_labels (np.ndarray or None): Temporary label matrix with simulated label noise,
-            used when `positive_flip_fraction` is set.
+        flip_labels (FlipLabels or None): The fraction of observed positive entries
+            (ones) in the training mask that will be flipped to negatives (zeros) to simulate
+            label noise. Must be between 0 and 1. Default is None, meaning no label flipping
+            is performed.
     """
 
     def __init__(
@@ -88,15 +92,15 @@ class MatrixCompletionSession:
         writer: tf.summary.SummaryWriter = None,
         seed: int = 123,
         save_name: str = None,
-        positive_flip_fraction: float = None,
+        flip_fraction: float = None,
         flip_frequency: int = 5,
     ):
         """
         Initializes the MatrixCompletionSession instance.
 
         Args:
-            matrix (sp.csr_matrix): Input matrix to be approximated.
-                Shape: (m, n).
+            matrix (sp.csr_matrix): Input matrix to be approximated. Shape: (n, m). With m
+                the number of diseases and n the number of genes.
             train_mask (sp.csr_matrix): Mask indicating observed entries in `matrix` for training.
                 Shape: (m, n).
             test_mask (sp.csr_matrix): Mask indicating observed entries in
@@ -115,7 +119,7 @@ class MatrixCompletionSession:
                 Default is 123.
             save_name (str, optional): The file path where the model will be saved.
                 If set to None, the model will not be saved after training.  Defaults to None.
-            positive_flip_fraction (float, optional): The fraction of observed positive entries
+            flip_fraction (float, optional): The fraction of observed positive entries
                 (ones) in the training mask that will be flipped to negatives (zeros) to simulate
                 label noise. Must be between 0 and 1. Default is None, meaning no label flipping
                 is performed.
@@ -134,26 +138,14 @@ class MatrixCompletionSession:
         self.rho_increase = rho_increase
         self.rho_decrease = rho_decrease
         self.threshold = threshold
-        self.positive_flip_fraction = positive_flip_fraction
-        if self.positive_flip_fraction is not None:
-            if not 0 < self.positive_flip_fraction < 1:
-                raise ValueError("Bootstrap faction must between 0 and 1 excluded.")
-            self.positive_flip_ones_indices = np.argwhere(
-                (self.matrix * self.train_mask) == 1
-            )
-            self.positive_flip_n_ones = self.positive_flip_ones_indices.shape[0]
-            self.positive_flip_n_to_zero = int(
-                self.positive_flip_fraction * self.positive_flip_n_ones
-            )
-            self.flip_iteration = 0
-            self.flip_frequency = flip_frequency
+        self.h1 = None
+        self.h2 = None
+
+        if flip_fraction is None:
+            self.flip_labels = None
         else:
-            self.positive_flip_ones_indices = None
-            self.positive_flip_n_ones = None
-            self.positive_flip_n_to_zero = None
-            self.flip_iteration = None
-            self.flip_frequency = None
-        self.tmp_labels = None
+            ones_indices = np.argwhere((self.matrix * self.train_mask) == 1)
+            self.flip_labels = FlipLabels(flip_fraction, flip_frequency, ones_indices)
 
         if save_name is None:
             # If save_name is None, set self.save_name to None (no saving)
@@ -184,61 +176,43 @@ class MatrixCompletionSession:
         self.logger = logging.getLogger(self.__class__.__name__)
         self.writer = writer
 
-        # Initialize factor matrices h1 and h2 with random values
-        num_rows, num_cols = matrix.shape
-        self.h1 = np.random.randn(num_rows, rank)
-        self.h2 = np.random.randn(rank, num_cols)
-        self.logger.debug(
-            "Initialized h1 and h2 with shapes %s and %s", self.h1.shape, self.h2.shape
-        )
-
+    @abc.abstractmethod
     def predict_all(self) -> np.ndarray:
         """
         Computes the reconstructed matrix from the factor matrices h1 and h2.
 
-        Mathematically, the completed matrix is computed as:
-            M_pred = h1 * h2
-
-        where:
-        - h_1 is the left factor matrix (shape: m x rank),
-        - h_2 is the right factor matrix (shape: rank x n).
-
         Returns:
             np.ndarray: The reconstructed (completed) matrix.
         """
-        return self.h1 @ self.h2
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def compute_grad_f_W_k(self) -> np.ndarray:
+        """Compute the gradients for for each latent as:
+
+        grad_f_W_k = (∇_h1, ∇_h2).T
+
+        Returns:
+            np.ndarray: The gradient of the latents (n+m x rank)
+        """
+        raise NotImplementedError
 
     def calculate_training_residual(self) -> np.ndarray:
         """
         Compute the training residual from the input matrix M (m x n), the model's prediction
-        M_pred and the binary training mask P. Optionally, if positive_flip_fraction ’d’ is set,
+        M_pred and the binary training mask. Optionally, if positive_flip_fraction ’d’ is set,
         a fraction ’d’ of the positive entries (ones) in M (where P is 1) is flipped to 0,
         yielding a modified label matrix L. Otherwise, L = M.
 
         The training residual R is computed as:
-            R = (M_pred - L) ∘ P
-        where ∘ denotes elementwise multiplication to consider only training entries.
+            R = (M_pred - L) ⊙  mask
+        where ⊙ represents hadamard product.
 
         Returns:
             np.ndarray: The residual matrix R (m x n).
         """
-        if (
-            self.positive_flip_fraction is not None
-            and self.flip_iteration % self.flip_frequency == 0
-        ):
-            labels = self.matrix.copy()
-            selected_indices = np.random.choice(
-                self.positive_flip_n_ones,
-                size=self.positive_flip_n_to_zero,
-                replace=False,
-            )
-            coords_to_zero = self.positive_flip_ones_indices[selected_indices]
-            labels[coords_to_zero[:, 0], coords_to_zero[:, 1]] = 0
-            self.tmp_labels = labels
-            self.flip_iteration += 1
-        elif self.positive_flip_fraction is not None:
-            labels = self.tmp_labels
-            self.flip_iteration += 1
+        if self.flip_labels is not None:
+            labels = self.flip_labels(self.matrix)
         else:
             labels = self.matrix
         residual = self.predict_all() - labels
@@ -305,7 +279,6 @@ class MatrixCompletionSession:
         step_size: float,
         grad_f_W_k: np.ndarray,
         tau1: float,
-        m: int,
     ) -> Tuple[np.ndarray, float]:
         """
         Performs a single substep in the optimization process to update the factor matrices.
@@ -338,9 +311,9 @@ class MatrixCompletionSession:
         3. Update the Next Iterate W_{k+1}:
            W_{k+1} = (1 / t) * grad
 
-        4. Split W_{k+1} into Factor Matrices h_1 and h_2:
-           - h_1 = W_{k+1}[:m, :]
-           - h_2 = W_{k+1}[m:, :].T
+        4. Split W_{k+1} into Factor Matrices h1 and h2:
+           - h1 = W_{k+1}[:m, :]
+           - h2 = W_{k+1}[m:, :].T
 
         Args:
             W_k (np.ndarray): Current stacked factor matrices.
@@ -348,7 +321,6 @@ class MatrixCompletionSession:
             step_size (float): Learning rate for the gradient step.
             grad_f_W_k (np.ndarray): Gradient of the objective function at W_k.
             tau1 (float): Cubic root parameter for step size adjustment.
-            m (int): Number of rows in the original matrix.
 
         Returns:
             Tuple[np.ndarray, float]:
@@ -366,6 +338,7 @@ class MatrixCompletionSession:
             + np.power(-tau2 - discriminant_sqrt, 1 / 3, dtype=np.complex128)
         ).real
         W_k_next = (1 / t_k) * step
+        m = self.h1.shape[0]
         self.h1 = W_k_next[:m, :]
         self.h2 = W_k_next[m:, :].T
         res_norm_next_it = self.calculate_loss()
@@ -380,7 +353,7 @@ class MatrixCompletionSession:
 
         where:
             - M: The input matrix (shape: m x n).
-            - M_pred: The low-rank approximation, computed as h_1 @ h_2.
+            - M_pred: The low-rank approximation.
             - ||W||_F: The Frobenius norm of the stacked factor matrix W.
             - mu: The regularization parameter.
 
@@ -388,19 +361,18 @@ class MatrixCompletionSession:
 
         1. Initialization:
            Initialize the factor matrices:
-               - h_1 (shape: m x rank),
-               - h_2 (shape: rank x n).
+               - h1,
+               - h2
 
         2. Iterative Updates:
-           Update the stacked factor matrix W_k = [h_1; h_2^T] using gradients and adaptive
+           Update the stacked factor matrix W_k = [h1; h2.T] using gradients and adaptive
            step sizes:
-               - ∇_u = (mask ⊙ (h_1 @ h_2 - M)) @ h_2^T + mu * h_1,
-               - ∇_v = (mask.T ⊙ (h_2^T @ h_1^T - M.T)) @ h_1 + mu * h_2^T,
-           where ⊙ represents hadamard product.
+               - ∇_h1,
+               - ∇_h2
 
         3. Dynamic Step Size Adjustment:
            Adjust the step size if the new loss does not satisfy the improvement condition:
-               f(W_{k+1}) <= f(W_k) + ∇f(W_k)^T (W_{k+1} - W_k) + η * D_h(W_{k+1}, W_k, τ),
+               f(W_{k+1}) <= f(W_k) + ∇f(W_k).T (W_{k+1} - W_k) + η * D_h(W_{k+1}, W_k, τ),
            where:
                - η is the step size/smoothness adjustment parameter,
                - D_h is the difference in h-function values.
@@ -459,14 +431,9 @@ class MatrixCompletionSession:
                 rmse[-1],
                 loss[-1],
             )
-            # Compute gradients for h1 and h2
-            residual = self.calculate_training_residual()
+            grad_f_W_k = self.compute_grad_f_W_k()
 
-            grad_u = residual @ self.h2.T + self.regularization_parameter * self.h1
-            grad_v = residual.T @ self.h1 + self.regularization_parameter * self.h2.T
-            grad_f_W_k = np.vstack([grad_u, grad_v])
-
-            substep_res = self.substep(W_k, tau, step_size, grad_f_W_k, tau1, rows)
+            substep_res = self.substep(W_k, tau, step_size, grad_f_W_k, tau1)
             if substep_res is None:
                 break
             W_k_next, res_norm_next_it = substep_res
@@ -541,7 +508,7 @@ class MatrixCompletionSession:
                 self.smoothness_parameter *= self.rho_increase**inner_loop_it
                 step_size = (1 + self.symmetry_parameter) / self.smoothness_parameter
 
-                substep_res = self.substep(W_k, tau, step_size, grad_f_W_k, tau1, rows)
+                substep_res = self.substep(W_k, tau, step_size, grad_f_W_k, tau1)
                 if substep_res is None:
                     break
                 W_k_next, res_norm_next_it = substep_res
@@ -638,3 +605,174 @@ def bregman_distance(W1: np.ndarray, W2: np.ndarray, tau: float) -> float:
     linear_approx = (grad_h_W2.T @ (W1 - W2)).sum()
     dist = h_W1 - h_W2 - linear_approx
     return dist
+
+
+class SideInfoMatrixCompletion(BaseMatrixCompletion):
+    """
+    Specialized matrix completion session that incorporates side information.
+
+    Attributes:
+        gene_side_info (sp.csr_matrix): Side information for genes (shape: n x g).
+        disease_side_info (sp.csr_matrix): Side information for diseases (shape: m x d).
+    """
+
+    def __init__(
+        self, *args, side_info: Tuple[sp.csr_matrix, sp.csr_matrix] = None, **kwargs
+    ):
+        """
+        Initializes the session with side information.
+
+        Args:
+            side_info (Tuple[sp.csr_matrix, sp.csr_matrix]): Tuple containing gene and disease
+                side information matrices.
+        """
+        super().__init__(*args, **kwargs)
+        if side_info is None:
+            raise ValueError("Side information must be provided for this session.")
+
+        gene_side_info, disease_side_info = side_info
+        if self.matrix.shape[0] != gene_side_info.shape[0]:
+            raise ValueError(
+                "Dimension 0 of matrix does not match dimension 0 of gene side information."
+            )
+        if self.matrix.shape[1] != disease_side_info.shape[0]:
+            raise ValueError(
+                "Dimension 1 of matrix does not match dimension 0 of gene side information."
+            )
+
+        self.gene_side_info = gene_side_info
+        self.disease_side_info = disease_side_info
+
+        # Initialize factor matrices based on side information dimensions.
+        self.h1 = np.random.randn(self.gene_side_info.shape[1], self.rank)
+        self.h2 = np.random.randn(self.rank, self.disease_side_info.shape[1])
+
+        self.logger.debug(
+            "Initialized h1 with shape %s and h2 with shape %s",
+            self.h1.shape,
+            self.h2.shape,
+        )
+
+    def predict_all(self) -> np.ndarray:
+        """
+        Computes the reconstructed matrix from the factor matrices h1 and h2.
+
+        Mathematically, the completed matrix is computed as:
+            M_pred = (X @ h1) @ (h2 @ Y.T)
+
+        where:
+        - X is the gene feature matrix (shape: n x g),
+        - h1 is the left factor matrix (shape: g x rank),
+        - h2 is the right factor matrix (shape: rank x d),
+        - Y is the disease feature matrix (shape: d x m).
+
+        Returns:
+            np.ndarray: The reconstructed (completed) matrix.
+        """
+        return (self.gene_side_info @ self.h1) @ (self.h2 @ self.disease_side_info.T)
+
+    def compute_grad_f_W_k(self) -> np.ndarray:
+        """Compute the gradients for for each latent as:
+
+        grad_f_W_k = (∇_h1, ∇_h2.T).T
+
+        where:
+        - ∇_h1 = X.T @ (mask ⊙ ((X @ h1) @ (h2 @ Y.T) - M)) @ (Y @ h2.T) + mu * h1,
+        - ∇_h2 = (X @ h1).T @ (mask ⊙ ((X @ h1) @ (h2 @ Y.T) - M)) @ Y + mu * h2
+
+        Returns:
+            np.ndarray: The gradient of the latents (n+m x rank)
+        """
+        residual = self.calculate_training_residual()
+        grad_u = (
+            self.gene_side_info.T @ residual @ (self.disease_side_info @ self.h2.T)
+            + self.regularization_parameter * self.h1
+        )
+        grad_v = (
+            (self.gene_side_info @ self.h1).T @ residual
+        ) @ self.disease_side_info + self.regularization_parameter * self.h2
+        return np.vstack([grad_u, grad_v.T])
+
+
+class StandardMatrixCompletion(BaseMatrixCompletion):
+    """
+    Matrix completion session without side information.
+    """
+
+    def __init__(self, *args, **kwargs):
+        """
+        Initializes the session without side information.
+        """
+        super().__init__(*args, **kwargs)
+        # Initialize factor matrices based solely on the matrix dimensions.
+        num_rows, num_cols = self.matrix.shape
+        self.h1 = np.random.randn(num_rows, self.rank)
+        self.h2 = np.random.randn(self.rank, num_cols)
+        self.logger.debug(
+            "Initialized h1 with shape %s and h2 with shape %s",
+            self.h1.shape,
+            self.h2.shape,
+        )
+
+    def predict_all(self) -> np.ndarray:
+        """
+        Computes the reconstructed matrix from the factor matrices h1 and h2.
+
+        Mathematically, the completed matrix is computed as:
+            M_pred = h1 @ h2
+
+        where:
+        - h1 is the left factor matrix (shape: n x rank),
+        - h2 is the right factor matrix (shape: rank x m).
+
+        Returns:
+            np.ndarray: The reconstructed (completed) matrix.
+        """
+        return self.h1 @ self.h2
+
+    def compute_grad_f_W_k(self) -> np.ndarray:
+        """Compute the gradients for for each latent as:
+
+        grad_f_W_k = (∇_h1, ∇_h2.T).T
+
+        where:
+        - ∇_h1 = (mask ⊙ (h1 @ h2 - M)) @ h2.T + mu * h1,
+        - ∇_h2 = (mask ⊙ (h1 @ h2 - M)) @ h1 + mu * h2
+
+        Returns:
+            np.ndarray: The gradient of the latents (n+m x rank)
+        """
+        residual = self.calculate_training_residual()
+        grad_u = residual @ self.h2.T + self.regularization_parameter * self.h1
+        grad_v = residual @ self.h1 + self.regularization_parameter * self.h2
+        return np.vstack([grad_u, grad_v.T])
+
+
+class MatrixCompletionSession:
+    """
+    Factory class that selects and returns an appropriate matrix completion session
+    implementation based on the provided parameters.
+
+    This class exposes a unified API for matrix completion. When creating an instance,
+    if the `side_info` parameter is provided, an instance of SideInfoMatrixCompletion is returned;
+    otherwise, an instance of StandardMatrixCompletion is instantiated.
+    """
+
+    def __new__(cls, *args, side_info=None, **kwargs):
+        """
+        Creates a new instance of a matrix completion session.
+
+        Args:
+            *args: Positional arguments for the underlying session class.
+            side_info (tuple or None): A tuple containing side information for genes and diseases.
+                If provided, a SideInfoMatrixCompletion instance is created; if None,
+                a StandardMatrixCompletion instance is returned.
+            **kwargs: Keyword arguments for the underlying session class.
+
+        Returns:
+            An instance of StandardMatrixCompletion or SideInfoMatrixCompletion based on the
+            presence of side_info.
+        """
+        if side_info is None:
+            return StandardMatrixCompletion(*args, **kwargs)
+        return SideInfoMatrixCompletion(*args, side_info=side_info, **kwargs)

@@ -13,7 +13,7 @@ import abc
 import logging
 from abc import ABCMeta
 from pathlib import Path
-from typing import Any, Union
+from typing import Any, Tuple, Union
 
 import numpy as np
 import scipy.sparse as sp
@@ -23,7 +23,8 @@ from tqdm import tqdm
 from genepriority.evaluation.evaluation import Evaluation
 from genepriority.evaluation.results import Results
 from genepriority.preprocessing.dataloader import DataLoader
-from genepriority.preprocessing.side_information_loader import SideInformationLoader
+from genepriority.preprocessing.side_information_loader import \
+    SideInformationLoader
 
 
 class BaseTrainer(metaclass=ABCMeta):
@@ -90,11 +91,11 @@ class BaseTrainer(metaclass=ABCMeta):
     def create_session(
         self,
         iteration: int,
-        matrix: sp.csr_matrix,
         train_mask: sp.csr_matrix,
         test_mask: sp.csr_matrix,
         num_latent: int,
         save_name: Union[str, Path],
+        side_info: Tuple[sp.csr_matrix, sp.csr_matrix],
     ) -> Any:
         """
         Create a session for model training and evaluation.
@@ -106,6 +107,8 @@ class BaseTrainer(metaclass=ABCMeta):
             test_mask (sp.csr_matrix): The test mask.
             num_latent (int): The number of latent dimensions for the model.
             save_name (Union[str, Path]): Filename or path for saving model snapshots.
+            side_info (Tuple[sp.csr_matrix, sp.csr_matrix]): The side information
+                for both genes and diseases.
 
         Returns:
             Any: A session object configured for training and evaluation.
@@ -176,8 +179,13 @@ class BaseTrainer(metaclass=ABCMeta):
         ):
             self.logger.debug("Initiating training on fold %d", i + 1)
 
+            side_info = (
+                self.side_info_loader.side_info
+                if self.side_info_loader is not None
+                else None
+            )
             session = self.create_session(
-                i, self.dataloader.omim, train_mask, test_mask, num_latent, save_name
+                i, train_mask, test_mask, num_latent, save_name, side_info
             )
 
             run_name = f"fold{i+1}-latent{num_latent}"

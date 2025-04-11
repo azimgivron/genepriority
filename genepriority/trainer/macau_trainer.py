@@ -11,7 +11,7 @@ and model snapshots can be saved for reproducibility.
 
 import logging
 from pathlib import Path
-from typing import Dict, Literal, Union
+from typing import Dict, Literal, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -19,11 +19,14 @@ import scipy.sparse as sp
 import tensorflow as tf
 
 from genepriority.compute_models.macau import MacauSession
-from genepriority.compute_models.matrix_completion_result import MatrixCompletionResult
+from genepriority.compute_models.matrix_completion_result import \
+    MatrixCompletionResult
 from genepriority.preprocessing.dataloader import DataLoader
-from genepriority.preprocessing.side_information_loader import SideInformationLoader
+from genepriority.preprocessing.side_information_loader import \
+    SideInformationLoader
 from genepriority.trainer.base import BaseTrainer
-from genepriority.utils import calculate_auc_bedroc, mask_sparse_containing_0s
+from genepriority.utils import (calculate_auc_bedroc, create_tb_dir,
+                                mask_sparse_containing_0s)
 
 
 class MACAUTrainer(BaseTrainer):
@@ -146,11 +149,11 @@ class MACAUTrainer(BaseTrainer):
     def create_session(
         self,
         iteration: int,
-        matrix: sp.csr_matrix,
         train_mask: sp.csr_matrix,
         test_mask: sp.csr_matrix,
         num_latent: int,
         save_name: Union[str, Path],
+        side_info: Tuple[sp.csr_matrix, sp.csr_matrix],
     ) -> MacauSession:
         """
         Create a session for model training and evaluation.
@@ -162,21 +165,17 @@ class MACAUTrainer(BaseTrainer):
             test_mask (sp.csr_matrix): The test mask.
             num_latent (int): The number of latent dimensions for the model.
             save_name (Union[str, Path]): Filename or path for saving model snapshots.
+            side_info (Tuple[sp.csr_matrix, sp.csr_matrix]): The side information
+                for both genes and diseases.
 
         Returns:
             MacauSession: A configured session object for model training and evaluation.
         """
-        training_data = mask_sparse_containing_0s(matrix, train_mask)
+        training_data = mask_sparse_containing_0s(self.dataloader.omim, train_mask)
         self.log_data("training", training_data)
 
-        # testing_data = matrix.multiply(test_mask)
-        testing_data = mask_sparse_containing_0s(matrix, test_mask)
+        testing_data = mask_sparse_containing_0s(self.dataloader.omim, test_mask)
         self.log_data("testing", testing_data)
-        side_info = (
-            self.side_info_loader.side_info
-            if self.side_info_loader is not None
-            else None
-        )
         return MacauSession(
             **self.macau_session_kwargs,
             num_latent=num_latent,
@@ -200,12 +199,7 @@ class MACAUTrainer(BaseTrainer):
         """
         if self.tensorboard_dir is not None:
             run_log_dir = self.tensorboard_dir / run_name
-            if run_log_dir.exists() and any(run_log_dir.iterdir()):
-                for item in run_log_dir.iterdir():
-                    if item.is_file() or item.is_symlink():
-                        item.unlink()  # Remove the current log
-            run_log_dir.mkdir(parents=True, exist_ok=True)
-            self.writer = tf.summary.create_file_writer(str(run_log_dir))
+            self.writer = create_tb_dir(run_log_dir)
             with self.writer.as_default():
                 hyperparameter_table = pd.DataFrame(
                     [

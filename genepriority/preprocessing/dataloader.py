@@ -24,10 +24,7 @@ import pandas as pd
 import scipy.sparse as sp
 
 from genepriority.preprocessing.preprocessing import (
-    compute_statistics,
-    convert_dataframe_to_sparse_matrix,
-    sample_zeros,
-)
+    compute_statistics, convert_dataframe_to_sparse_matrix, sample_zeros)
 from genepriority.preprocessing.train_val_test_mask import TrainValTestMasks
 
 
@@ -87,6 +84,7 @@ class DataLoader:
         self.num_folds = num_folds
         self.validation_size = validation_size
         self.logger = logging.getLogger(self.__class__.__name__)
+        self()
 
     @property
     def with_0s(self) -> bool:
@@ -111,7 +109,7 @@ class DataLoader:
         )
         return dataframe
 
-    def __call__(self, filter_column: str):
+    def __call__(self):
         """
         Process and prepare the OMIM dataset by creating a sparse matrix, optionally
         sampling negative associations, and generating random splits for training and testing.

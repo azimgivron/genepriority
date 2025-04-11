@@ -11,7 +11,7 @@ models, generating predictions, and computing evaluation metrics.
 
 import logging
 from pathlib import Path
-from typing import Dict, Union
+from typing import Dict, Tuple, Union
 
 import numpy as np
 import optuna
@@ -19,15 +19,15 @@ import pandas as pd
 import scipy.sparse as sp
 import tensorflow as tf
 
-from genepriority.compute_models.smc import (
-    MatrixCompletionResult,
-    MatrixCompletionSession,
-)
+from genepriority.compute_models.matrix_completion_result import \
+    MatrixCompletionResult
+from genepriority.compute_models.smc import MatrixCompletionSession
 from genepriority.preprocessing.dataloader import DataLoader
-from genepriority.preprocessing.side_information_loader import SideInformationLoader
+from genepriority.preprocessing.side_information_loader import \
+    SideInformationLoader
 from genepriority.preprocessing.train_val_test_mask import TrainValTestMasks
 from genepriority.trainer.base import BaseTrainer
-from genepriority.utils import create_tb_dir, mask_sparse_containing_0s
+from genepriority.utils import create_tb_dir
 
 
 class NEGTrainer(BaseTrainer):
@@ -49,7 +49,7 @@ class NEGTrainer(BaseTrainer):
         rho_increase (float): Factor for increasing step size dynamically.
         rho_decrease (float): Factor for decreasing step size dynamically.
         threshold (int): Maximum number of iterations allowed for the inner loop.
-        positive_flip_fraction (float, optional): The fraction of observed positive entries
+        flip_fraction (float, optional): The fraction of observed positive entries
             (ones) in the training mask that will be flipped to negatives (zeros) to simulate
             label noise. Must be between 0 and 1. Default is None, meaning no label flipping
             is performed.
@@ -73,7 +73,7 @@ class NEGTrainer(BaseTrainer):
         rho_increase: float = None,
         rho_decrease: float = None,
         threshold: int = None,
-        positive_flip_fraction: float = None,
+        flip_fraction: float = None,
         side_info_loader: SideInformationLoader = None,
         tensorboard_dir: Path = None,
     ):
@@ -99,7 +99,7 @@ class NEGTrainer(BaseTrainer):
                 size dynamically. Defaults to None.
             threshold (int, optional): Maximum number of iterations allowed for the inner loop.
                 Defaults to None.
-            positive_flip_fraction (float, optional): The fraction of observed positive entries
+            flip_fraction (float, optional): The fraction of observed positive entries
                 (ones) in the training mask that will be flipped to negatives (zeros) to simulate
                 label noise. Must be between 0 and 1. Default is None, meaning no label flipping
                 is performed.
@@ -123,7 +123,7 @@ class NEGTrainer(BaseTrainer):
         self.rho_increase = rho_increase
         self.rho_decrease = rho_decrease
         self.threshold = threshold
-        self.positive_flip_fraction = positive_flip_fraction
+        self.flip_fraction = flip_fraction
         self.tensorboard_dir = tensorboard_dir
         self.writer = None
 
@@ -145,7 +145,7 @@ class NEGTrainer(BaseTrainer):
             "rho_increase": self.rho_increase,
             "rho_decrease": self.rho_decrease,
             "threshold": self.threshold,
-            "positive_flip_fraction": self.positive_flip_fraction,
+            "flip_fraction": self.flip_fraction,
         }
 
     def predict(
@@ -169,11 +169,11 @@ class NEGTrainer(BaseTrainer):
     def create_session(
         self,
         iteration: int,
-        matrix: sp.csr_matrix,
         train_mask: sp.csr_matrix,
         test_mask: sp.csr_matrix,
         num_latent: int,
         save_name: Union[str, Path],
+        side_info: Tuple[sp.csr_matrix, sp.csr_matrix],
     ) -> MatrixCompletionSession:
         """
         Create a session for model training and evaluation.
@@ -185,23 +185,20 @@ class NEGTrainer(BaseTrainer):
             test_mask (sp.csr_matrix): The test mask.
             num_latent (int): The number of latent dimensions for the model.
             save_name (Union[str, Path]): Filename or path for saving model snapshots.
+            side_info (Tuple[sp.csr_matrix, sp.csr_matrix]): The side information
+                for both genes and diseases.
 
         Returns:
             MatrixCompletionSession: A configured session object for model training and evaluation.
         """
-        training_data = mask_sparse_containing_0s(matrix, train_mask)
-        self.log_data("training", training_data)
-
-        testing_data = mask_sparse_containing_0s(matrix, test_mask)
-        self.log_data("testing", testing_data)
-
         return MatrixCompletionSession(
             **self.neg_session_kwargs,
             rank=num_latent,
-            matrix=matrix,
+            matrix=self.dataloader.omim,
             train_mask=train_mask,
             test_mask=test_mask,
             save_name=str(self.path / f"{iteration}:{save_name}"),
+            side_info=side_info,
         )
 
     def pre_training_callback(
@@ -217,34 +214,37 @@ class NEGTrainer(BaseTrainer):
             run_name (str): Custom run name for this training session.
         """
         if self.tensorboard_dir is not None:
-            if self.positive_flip_fraction is not None:
-                run_name += "-bootstrap"
+            if self.flip_fraction is not None:
+                run_name += "-flip_pos_labels"
             run_log_dir = self.tensorboard_dir / run_name
             self.writer = create_tb_dir(run_log_dir)
             with self.writer.as_default():
-                hyperparameter_table = pd.DataFrame(
+                data = [
                     [
-                        [
-                            session.rank,
-                            session.regularization_parameter,
-                            session.symmetry_parameter,
-                            session.smoothness_parameter,
-                            session.rho_increase,
-                            session.rho_decrease,
-                            session.threshold,
-                            session.positive_flip_fraction,
-                        ]
-                    ],
-                    columns=[
-                        "Rank",
-                        "Regularization Parameter",
-                        "Symmetry Parameter",
-                        "Smoothness Parameter",
-                        "Rho Increase Factor",
-                        "Rho Decrease Factor",
-                        "Inner Loop Threshold",
-                        "Positive Flip Fraction",
-                    ],
+                        session.rank,
+                        session.regularization_parameter,
+                        session.symmetry_parameter,
+                        session.smoothness_parameter,
+                        session.rho_increase,
+                        session.rho_decrease,
+                        session.threshold,
+                    ]
+                ]
+                columns = [
+                    "Rank",
+                    "Regularization Parameter",
+                    "Symmetry Parameter",
+                    "Smoothness Parameter",
+                    "Rho Increase Factor",
+                    "Rho Decrease Factor",
+                    "Inner Loop Threshold",
+                ]
+                if session.flip_labels is not None:
+                    data[0].append(session.flip_labels.fraction)
+                    columns.append("Positive Flip Fraction")
+                hyperparameter_table = pd.DataFrame(
+                    data,
+                    columns=columns,
                     index=["Value"],
                 ).to_markdown()
                 tf.summary.text("hyperparameters", hyperparameter_table, step=0)

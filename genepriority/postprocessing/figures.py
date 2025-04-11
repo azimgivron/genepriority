@@ -16,9 +16,8 @@ import numpy as np
 import seaborn as sns
 
 from genepriority.evaluation.evaluation import Evaluation
-from genepriority.postprocessing.model_evaluation_collection import (
-    ModelEvaluationCollection,
-)
+from genepriority.postprocessing.model_evaluation_collection import \
+    ModelEvaluationCollection
 
 
 def plot_roc_curves(

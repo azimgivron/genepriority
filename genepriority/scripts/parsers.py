@@ -184,7 +184,7 @@ def parse_nega(subparsers: argparse._SubParsersAction):
             help="Threshold parameter for the model (default: %(default)s).",
         )
         subparser.add_argument(
-            "--positive_flip_fraction",
+            "--flip_fraction",
             type=float,
             default=None,
             help=(
@@ -205,6 +205,11 @@ def parse_nega(subparsers: argparse._SubParsersAction):
             default=42,
             help="Random seed for reproducibility (default: %(default)s).",
         )
+    eval_parser.add_argument(
+        "--side-info",
+        action="store_true",
+        help="Include side information for genes and diseases (default: %(default)s).",
+    )
     eval_parser.add_argument(
         "--tensorboard-dir",
         type=str,

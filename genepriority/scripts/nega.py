@@ -17,6 +17,8 @@ import pint
 import yaml
 
 from genepriority.preprocessing.dataloader import DataLoader
+from genepriority.preprocessing.side_information_loader import \
+    SideInformationLoader
 from genepriority.scripts.utils import pre_processing
 from genepriority.trainer.neg_trainer import NEGTrainer
 from genepriority.utils import serialize
@@ -71,10 +73,11 @@ def train_eval(
     logger: logging.Logger,
     output_path: Path,
     dataloader: DataLoader,
+    side_info_loader: SideInformationLoader,
     rank: int,
     iterations: int,
     threshold: int,
-    positive_flip_fraction: float,
+    flip_fraction: float,
     seed: int,
     regularization_parameter: float,
     symmetry_parameter: float,
@@ -94,10 +97,12 @@ def train_eval(
         logger (logging.Logger): Logger for output messages.
         output_path (Path): Directory to save output results.
         dataloader (DataLoader): Preprocessed DataLoader with gene–disease data.
+        side_info_loader (SideInformationLoader): The loader for side information,
+            if available.
         rank (int): Model rank (number of latent factors).
         iterations (int): Number of training iterations.
         threshold (int): Threshold parameter for the model.
-        positive_flip_fraction (float): Fraction of observed positive training entries
+        flip_fraction (float): Fraction of observed positive training entries
             to flip to negatives (zeros) to simulate label noise. Must be between 0 and 1.
         seed (int): Random seed for reproducibility.
         regularization_parameter (float): Regularization parameter for training.
@@ -111,11 +116,12 @@ def train_eval(
     """
     trainer = NEGTrainer(
         dataloader=dataloader,
+        side_info_loader=side_info_loader,
         path=output_path,
         seed=seed,
         iterations=iterations,
         threshold=threshold,
-        positive_flip_fraction=positive_flip_fraction,
+        flip_fraction=flip_fraction,
         regularization_parameter=regularization_parameter,
         symmetry_parameter=symmetry_parameter,
         smoothness_parameter=smoothness_parameter,
@@ -155,11 +161,11 @@ def nega(args: argparse.Namespace):
     if not omim_meta_path.exists():
         raise FileNotFoundError(f"OMIM metadata path does not exist: {omim_meta_path}")
 
-    dataloader, _ = pre_processing(
+    dataloader, side_info_loader = pre_processing(
         input_path=input_path,
         seed=args.seed,
         omim_meta_path=omim_meta_path,
-        side_info=False,
+        side_info=args.side_info,
         zero_sampling_factor=args.zero_sampling_factor,
         num_folds=args.num_folds,
         validation_size=args.validation_size,
@@ -202,7 +208,7 @@ def nega(args: argparse.Namespace):
             rank=args.rank,
             iterations=args.iterations,
             threshold=args.threshold,
-            positive_flip_fraction=args.positive_flip_fraction,
+            flip_fraction=args.flip_fraction,
             seed=args.seed,
             regularization_parameter=regularization_parameter,
             symmetry_parameter=symmetry_parameter,
@@ -211,6 +217,7 @@ def nega(args: argparse.Namespace):
             rho_decrease=rho_decrease,
             tensorboard_dir=tensorboard_dir,
             results_filename=args.results_filename,
+            side_info_loader=side_info_loader,
         )
     else:
         raise ValueError(
