@@ -1,4 +1,4 @@
-# pylint: disable=C0103, R0913, R0914, R0915, R0902, R0903
+# pylint: disable=C0103,R0913,R0914,R0915,R0902,R0903
 """
 Matrix Completion Module
 ========================
@@ -25,7 +25,7 @@ import abc
 import logging
 import time
 from pathlib import Path
-from typing import Tuple
+from typing import Tuple, Union
 
 import numpy as np
 import scipy.sparse as sp
@@ -676,7 +676,7 @@ class SideInfoMatrixCompletion(BaseMatrixCompletion):
 
         grad_f_W_k = (∇_h1, ∇_h2.T).T
 
-        where:
+        with:
         - ∇_h1 = X.T @ (mask ⊙ ((X @ h1) @ (h2 @ Y.T) - M)) @ (Y @ h2.T) + mu * h1,
         - ∇_h2 = (X @ h1).T @ (mask ⊙ ((X @ h1) @ (h2 @ Y.T) - M)) @ Y + mu * h2
 
@@ -684,14 +684,14 @@ class SideInfoMatrixCompletion(BaseMatrixCompletion):
             np.ndarray: The gradient of the latents (n+m x rank)
         """
         residual = self.calculate_training_residual()
-        grad_u = (
+        grad_h1 = (
             self.gene_side_info.T @ residual @ (self.disease_side_info @ self.h2.T)
             + self.regularization_parameter * self.h1
         )
-        grad_v = (
+        grad_h2 = (
             (self.gene_side_info @ self.h1).T @ residual
         ) @ self.disease_side_info + self.regularization_parameter * self.h2
-        return np.vstack([grad_u, grad_v.T])
+        return np.vstack([grad_h1, grad_h2.T])
 
 
 class StandardMatrixCompletion(BaseMatrixCompletion):
@@ -743,10 +743,11 @@ class StandardMatrixCompletion(BaseMatrixCompletion):
             np.ndarray: The gradient of the latents (n+m x rank)
         """
         residual = self.calculate_training_residual()
-        grad_u = residual @ self.h2.T + self.regularization_parameter * self.h1
-        grad_v = residual @ self.h1 + self.regularization_parameter * self.h2
-        return np.vstack([grad_u, grad_v.T])
+        grad_h1 = residual @ self.h2.T + self.regularization_parameter * self.h1
+        grad_h2 = residual @ self.h1 + self.regularization_parameter * self.h2
+        return np.vstack([grad_h1, grad_h2.T])
 
+MatrixCompletionSessionType = Union["StandardMatrixCompletion", "SideInfoMatrixCompletion"]
 
 class MatrixCompletionSession:
     """
@@ -758,7 +759,7 @@ class MatrixCompletionSession:
     otherwise, an instance of StandardMatrixCompletion is instantiated.
     """
 
-    def __new__(cls, *args, side_info=None, **kwargs):
+    def __new__(cls, *args, side_info=None, **kwargs) -> MatrixCompletionSessionType:
         """
         Creates a new instance of a matrix completion session.
 
@@ -770,8 +771,8 @@ class MatrixCompletionSession:
             **kwargs: Keyword arguments for the underlying session class.
 
         Returns:
-            An instance of StandardMatrixCompletion or SideInfoMatrixCompletion based on the
-            presence of side_info.
+            MatrixCompletionSessionType: An instance of StandardMatrixCompletion or
+                SideInfoMatrixCompletion based on the presence of side_info.
         """
         if side_info is None:
             return StandardMatrixCompletion(*args, **kwargs)

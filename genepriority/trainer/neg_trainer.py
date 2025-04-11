@@ -1,4 +1,4 @@
-# pylint: disable=R0913,R0914,R0902,R0801
+# pylint: disable=R0913,R0914,R0902,R0801,E1101
 """
 NEGTrainer module
 =================
