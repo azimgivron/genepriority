@@ -19,27 +19,22 @@ class Results:
     It validates the input data and supports optional application of a test maskt.
 
     Attributes:
-        y_true (sp.csr_matrix): Sparse matrix of ground truth values. When the flag
+        _y_true (sp.csr_matrix): Sparse matrix of ground truth values. When the flag
             `apply_mask` is True, only the entries specified by the test mask are returned.
         y_pred (np.ndarray): Dense array of predicted values. When the flag
             `apply_mask` is True, only the entries specified by the test mask are returned.
         test_mask (sp.csr_matrix): Sparse matrix serving as a mask to identify
-            test set entries (no 0s) for selective evaluation.
+            test set entries for selective evaluation.
         apply_mask (bool): Flag indicating whether to apply the test mask when
             accessing the results.
     """
-
-    _y_true: sp.csr_matrix
-    _y_pred: np.ndarray
-    test_mask: sp.csr_matrix
-    apply_mask: bool
 
     def __init__(
         self,
         y_true: sp.csr_matrix,
         y_pred: np.ndarray,
-        test_mask: sp.csr_matrix = None,
-        apply_mask: bool = False,
+        test_mask: sp.csr_matrix,
+        apply_mask: bool = True,
     ):
         """
         Initializes the Results object.
@@ -54,7 +49,7 @@ class Results:
             test_mask (sp.csr_matrix, optional): Sparse matrix serving as a mask to identify
                 the test set entries. Default to None.
             apply_mask (bool, optional): Whether to apply the test mask when accessing the
-                results. Default to False.
+                results. Default to True.
 
         Raises:
             TypeError: If y_true is not a sp.csr_matrix, y_pred is not a np.ndarray,
@@ -88,9 +83,7 @@ class Results:
             if test_mask is not None
             else sp.coo_matrix(([], ([], [])), shape=y_true.shape)
         )
-        mask = y_true.copy()
-        mask.data[mask.data != 0] = 1
-        self.test_mask = test_mask.multiply(mask)
+        self.test_mask = test_mask
         self.apply_mask = apply_mask
 
     @property

@@ -15,7 +15,7 @@ import numpy as np
 import pandas as pd
 import scipy.sparse as sp
 
-from genepriority.preprocessing.train_test_masks import TrainTestMasks
+from genepriority.preprocessing.train_val_test_mask import TrainValTestMasks
 
 
 def convert_dataframe_to_sparse_matrix(
@@ -43,37 +43,41 @@ def sample_zeros(
     sparse_matrix: sp.csr_matrix, sampling_factor: int, seed: int = None
 ) -> sp.csr_matrix:
     """
-    Randomly samples zero entries and add them.
+    Randomly samples zero entries from the input sparse matrix and explicitly adds them.
 
     Args:
-        sparse_matrix (sp.csr_matrix): The input sparse matrix with existing non-zero entries.
-        sampling_factor (int): The number of zero entries to sample, expressed as a multiple
-            of the current number of non-zero entries.
+        sparse_matrix (sp.csr_matrix): The input sparse matrix containing non-zero entries.
+        sampling_factor (int): Factor that determines the number of zero entries to sample.
+            The total number of zeros to sample will be `sparse_matrix.nnz * sampling_factor`.
         seed (int, optional): Random seed for reproducibility. Defaults to None.
 
     Returns:
-        sp.csr_matrix: Sparse matrix with additional sampled zeros.
+        sp.csr_matrix: A new sparse matrix with the same shape as the input matrix, where the
+            sampled zero entries are explicitly added along with the existing non-zero entries.
     """
     if seed is not None:
         np.random.seed(seed)
 
-    nnz = sparse_matrix.nnz * sampling_factor
-    current_nnz = 0
-    row, col = sparse_matrix.shape
-    output = sp.coo_matrix(([], ([], [])), shape=(row, col))
-    while current_nnz < nnz:
-        row_indices = np.random.randint(0, row, size=nnz - current_nnz)
-        col_indices = np.random.randint(0, col, size=nnz - current_nnz)
-        output += sp.coo_matrix(
-            (-np.ones_like(col_indices), (row_indices, col_indices)),
-            shape=(row, col),
-        ).tocsr()
-        output -= output.multiply(sparse_matrix)
-        current_nnz = output.nnz
+    nb_samples = sparse_matrix.nnz * sampling_factor
+    dense_matrix = sparse_matrix.toarray()
 
-    output += sparse_matrix
-    output.data[output.data <= -1] = 0
-    return output.tocsr()
+    zero_indices = np.argwhere(dense_matrix == 0)
+    if nb_samples > zero_indices.shape[0]:
+        raise ValueError(
+            "sampling_factor results in more zero samples than available zeros."
+        )
+
+    selected_idx = np.random.choice(
+        zero_indices.shape[0], size=nb_samples, replace=False
+    )
+    selected_zero_indices = zero_indices[selected_idx]
+
+    nonzero_indices = np.argwhere(dense_matrix != 0)
+    all_indices = np.vstack((nonzero_indices, selected_zero_indices))
+    rows = all_indices[:, 0]
+    cols = all_indices[:, 1]
+    data = dense_matrix[rows, cols]
+    return sp.csr_matrix((data, (rows, cols)), shape=dense_matrix.shape)
 
 
 def filter_by_number_of_association(
@@ -96,21 +100,21 @@ def filter_by_number_of_association(
 
 
 def compute_statistics(
-    sparse_matrix: sp.coo_matrix, splits: List[TrainTestMasks]
+    sparse_matrix: sp.coo_matrix, folds: List[TrainValTestMasks]
 ) -> pd.DataFrame:
     """
     Computes summary statistics (mean, variance) of unique testing entries across splits.
 
     Args:
         sparse_matrix (sp.coo_matrix): The input sparse matrix.
-        splits (List[TrainTestMasks]): List of TrainTestMasks objects.
+        folds (List[TrainTestMasks]): List of TrainTestMasks objects.
 
     Returns:
         pd.DataFrame: DataFrame summarizing the counts and statistics of testing entries
             across all splits.
     """
     counts = []
-    for _, test_mask in splits:
+    for _, test_mask, _ in folds:
         data = sp.find(sparse_matrix.multiply(test_mask))[1]
         counts.append(len(set(data)))
     average_count = np.mean(counts)
@@ -118,7 +122,7 @@ def compute_statistics(
     return pd.DataFrame(
         [[*counts, average_count, variance_count]],
         columns=(
-            [f"Split {i+1}" for i in range(len(counts))]
+            [f"Fold {i+1}" for i in range(len(counts))]
             + ["Average", "Standard Deviation"]
         ),
         index=["Counts"],

@@ -477,7 +477,11 @@ class MatrixCompletionSession:
                 res_norm_next_it
                 <= res_norm + linear_approx + self.smoothness_parameter * bregman
             )
-            if self.writer is not None and ith_iteration % log_freq == 0:
+            if (
+                self.writer is not None
+                and (ith_iteration + 1) % log_freq == 0
+                or ith_iteration == 0
+            ):
                 try:
                     with self.writer.as_default():
                         training_rmse = self.calculate_rmse(self.train_mask)
@@ -489,7 +493,8 @@ class MatrixCompletionSession:
                         )
                         # Extract observed test values and corresponding predictions
                         test_values_actual = self.matrix[self.test_mask]
-                        test_predictions = self.predict_all()[self.test_mask]
+                        pred = self.predict_all()
+                        test_predictions = pred[self.test_mask]
                         auc, avg_precision, bedroc = calculate_auc_bedroc(
                             test_values_actual, test_predictions
                         )
@@ -501,6 +506,19 @@ class MatrixCompletionSession:
                         )
                         tf.summary.scalar(
                             name="bedroc top1%", data=bedroc, step=ith_iteration
+                        )
+                        tf.summary.histogram(
+                            "Values on test points",
+                            test_predictions,
+                            step=ith_iteration,
+                        )
+                        tf.summary.histogram(
+                            "Values on training points",
+                            pred[self.train_mask],
+                            step=ith_iteration,
+                        )
+                        tf.summary.histogram(
+                            "Gradient f(W^k)", grad_f_W_k.flatten(), step=ith_iteration
                         )
                         tf.summary.flush()
                 except ValueError as e:

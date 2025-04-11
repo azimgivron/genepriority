@@ -126,9 +126,9 @@ def train_eval(
     results_path = output_path / str(rank)
     results_path.mkdir(parents=True, exist_ok=True)
     trainer.path = results_path
-    result = trainer.train_test_splits(
+    result = trainer.train_test_cross_validation(
         rank,
-        save_name=f"latent={rank}:model-omim1.pickle",
+        save_name=f"nega:latent={rank}.pickle",
     )
     serialize(result, results_path / results_filename)
     logger.debug("Serialized results for latent dimension %s saved successfully.", rank)
@@ -160,10 +160,8 @@ def nega(args: argparse.Namespace):
         seed=args.seed,
         omim_meta_path=omim_meta_path,
         side_info=False,
-        num_splits=args.num_splits if "num_splits" in args else 1,
         zero_sampling_factor=args.zero_sampling_factor,
-        num_folds=None,
-        train_size=args.train_size,
+        num_folds=args.num_folds,
         validation_size=args.validation_size,
     )
 

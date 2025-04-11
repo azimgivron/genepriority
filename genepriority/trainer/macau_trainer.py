@@ -23,7 +23,7 @@ from genepriority.compute_models.matrix_completion_result import MatrixCompletio
 from genepriority.preprocessing.dataloader import DataLoader
 from genepriority.preprocessing.side_information_loader import SideInformationLoader
 from genepriority.trainer.base import BaseTrainer
-from genepriority.utils import mask_sparse_containing_0s
+from genepriority.utils import calculate_auc_bedroc, mask_sparse_containing_0s
 
 
 class MACAUTrainer(BaseTrainer):
@@ -200,6 +200,10 @@ class MACAUTrainer(BaseTrainer):
         """
         if self.tensorboard_dir is not None:
             run_log_dir = self.tensorboard_dir / run_name
+            if run_log_dir.exists() and any(run_log_dir.iterdir()):
+                for item in run_log_dir.iterdir():
+                    if item.is_file() or item.is_symlink():
+                        item.unlink()  # Remove the current log
             run_log_dir.mkdir(parents=True, exist_ok=True)
             self.writer = tf.summary.create_file_writer(str(run_log_dir))
             with self.writer.as_default():
@@ -230,7 +234,7 @@ class MACAUTrainer(BaseTrainer):
         self,
         training_status: MatrixCompletionResult,
         session: MacauSession,
-        run_name: str,
+        test_mask: sp.csr_matrix,
     ):
         """
         Post training callback used for monitoring and debugging purposes.
@@ -239,12 +243,35 @@ class MACAUTrainer(BaseTrainer):
             training_status (MatrixCompletionResult): The predictions on
                 the test set during training.
             session (MacauSession): Trained model session.
-            run_name (str): Custom run name for this training session.
+            test_mask (sp.csr_matrix): Sparse matrix serving as a mask to identify
+                the test set entries.
         """
         if self.tensorboard_dir is not None:
             with self.writer.as_default():
-                # Log final runtime
+                pred = self.predict(session)
+                test_mask = test_mask.toarray().astype(bool)
+                test_values_actual = self.dataloader.omim.toarray()[test_mask]
+                test_predictions = pred[test_mask]
+                auc, avg_precision, bedroc = calculate_auc_bedroc(
+                    test_values_actual, test_predictions
+                )
+                tf.summary.scalar(name="auc", data=auc, step=training_status.iterations)
+                tf.summary.scalar(
+                    name="average precision",
+                    data=avg_precision,
+                    step=training_status.iterations,
+                )
+                tf.summary.scalar(
+                    name="bedroc top1%", data=bedroc, step=training_status.iterations
+                )
+                tf.summary.histogram(
+                    "Values on test points",
+                    test_predictions,
+                    step=training_status.iterations,
+                )
                 tf.summary.text(
-                    name="Run Time", data=f"{training_status.runtime}s", step=0
+                    name="Run Time",
+                    data=f"{training_status.runtime}s",
+                    step=training_status.iterations,
                 )
                 tf.summary.flush()

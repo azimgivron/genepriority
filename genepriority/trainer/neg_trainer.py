@@ -27,7 +27,7 @@ from genepriority.preprocessing.dataloader import DataLoader
 from genepriority.preprocessing.side_information_loader import SideInformationLoader
 from genepriority.preprocessing.train_val_test_mask import TrainValTestMasks
 from genepriority.trainer.base import BaseTrainer
-from genepriority.utils import mask_sparse_containing_0s
+from genepriority.utils import create_tb_dir, mask_sparse_containing_0s
 
 
 class NEGTrainer(BaseTrainer):
@@ -220,8 +220,7 @@ class NEGTrainer(BaseTrainer):
             if self.positive_flip_fraction is not None:
                 run_name += "-bootstrap"
             run_log_dir = self.tensorboard_dir / run_name
-            run_log_dir.mkdir(parents=True, exist_ok=True)
-            self.writer = tf.summary.create_file_writer(str(run_log_dir))
+            self.writer = create_tb_dir(run_log_dir)
             with self.writer.as_default():
                 hyperparameter_table = pd.DataFrame(
                     [
@@ -256,7 +255,7 @@ class NEGTrainer(BaseTrainer):
         self,
         training_status: MatrixCompletionResult,
         session: MatrixCompletionSession,
-        run_name: str,
+        test_mask: sp.csr_matrix,
     ):
         """
         Post training callback used for monitoring and debugging purposes.
@@ -267,13 +266,16 @@ class NEGTrainer(BaseTrainer):
             session (MatrixCompletionSession): The session object of the trained
                 matrix completion model, which contains model parameters such as
                 rank, regularization parameter, etc.
-            run_name (str): Custom run name for this training session.
+            test_mask (sp.csr_matrix): Sparse matrix serving as a mask to identify
+                the test set entries.
         """
         if self.tensorboard_dir is not None:
             with self.writer.as_default():
                 # Log final runtime
                 tf.summary.text(
-                    name="Run Time", data=f"{training_status.runtime}s", step=0
+                    name="Run Time",
+                    data=f"{training_status.runtime}s",
+                    step=training_status.iterations,
                 )
                 tf.summary.flush()
 
@@ -369,12 +371,11 @@ class NEGTrainer(BaseTrainer):
         optuna.logging.disable_default_handler()
         optuna.logging.set_verbosity(optuna.logging.DEBUG)
 
-        matrix = self.dataloader.omim1
+        matrix = self.dataloader.omim
 
-        self.dataloader.iter_over_validation = True
         self.logger.debug("Set `iter_over_validation` to True.")
 
-        train_mask, test_mask = next(iter(self.dataloader.splits))
+        train_mask, _, val_mask = next(iter(self.dataloader.splits))
 
         study.optimize(
             lambda trial: objective(
@@ -384,7 +385,7 @@ class NEGTrainer(BaseTrainer):
                 self.threshold,
                 matrix,
                 train_mask,
-                test_mask,
+                val_mask,
             ),
             n_trials=n_trials,
             n_jobs=-1,
@@ -392,7 +393,6 @@ class NEGTrainer(BaseTrainer):
             timeout=timeout,
         )
 
-        self.dataloader.iter_over_validation = False
         self.logger.debug("Set `iter_over_validation` to False.")
 
         return study

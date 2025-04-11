@@ -73,8 +73,8 @@ def post(args: argparse.Namespace):
     for name, path_str in zip(args.model_names, args.evaluation_paths):
         with Path(path_str).open("rb") as stream:
             results_data[name] = pickle.load(stream)
-            if args.apply_mask:
-                results_data[name].apply_mask(value=True)
+            if not args.apply_mask:
+                results_data[name].apply_mask(value=False)
 
     results = ModelEvaluationCollection(results_data)
 

@@ -13,7 +13,7 @@ import abc
 import logging
 from abc import ABCMeta
 from pathlib import Path
-from typing import Any, Iterator, Tuple, Union
+from typing import Any, Union
 
 import numpy as np
 import scipy.sparse as sp
@@ -32,8 +32,8 @@ class BaseTrainer(metaclass=ABCMeta):
 
     This abstract class implements a template for the training and evaluation of
     predictive models for gene prioritization tasks. It supports evaluation across
-    train-test splits or cross-validation folds and integrates preprocessing
-    and metrics functionalities to compute and log performance.
+    cross-validation folds and integrates preprocessing and metrics functionalities
+    to compute and log performance.
 
     Attributes:
         dataloader (DataLoader): The data loader containing all data for training
@@ -130,7 +130,9 @@ class BaseTrainer(metaclass=ABCMeta):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def post_training_callback(self, training_status: Any, session: Any, run_name: str):
+    def post_training_callback(
+        self, training_status: Any, session: Any, test_mask: sp.csr_matrix
+    ):
         """
         Invoked after the training process completes for monitoring and debugging.
 
@@ -145,47 +147,40 @@ class BaseTrainer(metaclass=ABCMeta):
                 on the specific framework or implementation.
             session (Any): Represents the model's session, including configurations
                 used during training.
-            run_name (str): Unique identifier for the training session, used to
-                organize logs or outputs.
+            test_mask (sp.csr_matrix): Sparse matrix serving as a mask to identify
+                the test set entries.
         """
         raise NotImplementedError
 
-    def train_test(
+    def train_test_cross_validation(
         self,
-        matrix: sp.csr_matrix,
         num_latent: int,
         save_name: str,
-        desc: str,
-        splitted_data: Iterator[Tuple[sp.csr_matrix, sp.csr_matrix]],
     ) -> Evaluation:
         """
-        Train and evaluate the model using predefined train-test splits.
+        Train and evaluate the model using cross-validation.
 
-        For each split, the method trains the model on training data, evaluates
+        For each fold, the method trains the model on training data, evaluates
         its performance on test data, and saves predictions and evaluation metrics.
 
         Args:
-            matrix (sp.csr_matrix): The input matrix containing gene-disease associations.
             num_latent (int): Number of latent dimensions for the model.
             save_name (str): Filename for saving model snapshots.
-            desc (str): Description of the dataset (e.g., "split" or "fold").
-            splitted_data (Iterator[Tuple[sp.csr_matrix, sp.csr_matrix]]): Iterator
-                yielding train-test masks for each split.
 
         Returns:
             Evaluation: Aggregated evaluation results across all splits.
         """
         results = []
-        for i, (train_mask, test_mask) in tqdm(
-            enumerate(splitted_data), desc=desc, leave=False
+        for i, (train_mask, test_mask, _) in tqdm(
+            enumerate(self.dataloader.omim_masks), desc="Fold", leave=False
         ):
-            self.logger.debug("Initiating training on %s %d", desc, i + 1)
+            self.logger.debug("Initiating training on fold %d", i + 1)
 
             session = self.create_session(
-                i, matrix, train_mask, test_mask, num_latent, save_name
+                i, self.dataloader.omim, train_mask, test_mask, num_latent, save_name
             )
 
-            run_name = f"{desc}{i+1}-latent{num_latent}"
+            run_name = f"fold{i+1}-latent{num_latent}"
             if self.side_info_loader is None:
                 run_name += "-no-side-info"
             if not self.dataloader.with_0s:
@@ -195,11 +190,11 @@ class BaseTrainer(metaclass=ABCMeta):
 
             training_status = session.run()
 
-            self.post_training_callback(training_status, session, run_name)
+            self.post_training_callback(training_status, session, test_mask)
 
             y_pred = self.predict(session)
             results.append(
-                Results(y_true=matrix.tocsr(), y_pred=y_pred, test_mask=test_mask)
+                Results(y_true=self.dataloader.omim, y_pred=y_pred, test_mask=test_mask)
             )
         return Evaluation(results)
 
@@ -228,56 +223,4 @@ class BaseTrainer(metaclass=ABCMeta):
             "Number of 0s in the %s set %s",
             set_name,
             f"{np.sum(data.data == 0):_}",
-        )
-
-    def train_test_cross_validation(
-        self,
-        num_latent: int,
-        save_name: str,
-    ) -> Evaluation:
-        """
-        Train and evaluate the model using cross-validation.
-
-        For each fold, the method trains the model on training data, evaluates
-        its performance on test data, and saves predictions and evaluation metrics.
-
-        Args:
-            num_latent (int): Number of latent dimensions for the model.
-            save_name (str): Filename for saving model snapshots.
-
-        Returns:
-            Evaluation: Aggregated evaluation results across all folds.
-        """
-        return self.train_test(
-            matrix=self.dataloader.omim2,
-            num_latent=num_latent,
-            save_name=save_name,
-            desc="fold",
-            splitted_data=self.dataloader.folds,
-        )
-
-    def train_test_splits(
-        self,
-        num_latent: int,
-        save_name: str,
-    ) -> Evaluation:
-        """
-        Train and evaluate the model using predefined train-test splits.
-
-        For each split, the method trains the model on training data, evaluates
-        its performance on test data, and saves predictions and evaluation metrics.
-
-        Args:
-            num_latent (int): Number of latent dimensions for the model.
-            save_name (str): Filename for saving model snapshots.
-
-        Returns:
-            Evaluation: Aggregated evaluation results across all splits.
-        """
-        return self.train_test(
-            matrix=self.dataloader.omim1,
-            num_latent=num_latent,
-            save_name=save_name,
-            desc="split",
-            splitted_data=self.dataloader.splits,
         )

@@ -5,10 +5,12 @@ Utils module
 This module defines the utility functions.
 """
 import pickle
+from pathlib import Path
 from typing import Any
 
 import numpy as np
 import scipy.sparse as sp
+import tensorflow as tf
 from sklearn import metrics
 
 
@@ -114,3 +116,22 @@ def mask_sparse_containing_0s(
     # Restore explicit 0s
     result.data[result.data == -1] = 0
     return result
+
+
+def create_tb_dir(run_log_dir: Path) -> "tf.SummaryWriter":
+    """
+    Create and return a TensorFlow SummaryWriter for the specified log directory.
+
+    Args:
+        run_log_dir (Path): The path to the directory where TensorBoard logs will be stored.
+
+    Returns:
+        tf.SummaryWriter: A TensorFlow SummaryWriter configured to write logs to the
+            specified directory.
+    """
+    if run_log_dir.exists() and any(run_log_dir.iterdir()):
+        for item in run_log_dir.iterdir():
+            if item.is_file() or item.is_symlink():
+                item.unlink()  # Remove the current log
+    run_log_dir.mkdir(parents=True, exist_ok=True)
+    return tf.summary.create_file_writer(str(run_log_dir))
