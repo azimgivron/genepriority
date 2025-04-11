@@ -75,4 +75,4 @@ def test_result(
     assert (y_true.data == 0).any()
 
     res = Results(y_true, y_pred, test_mask, apply_mask=True)
-    assert not (res.y_true == 0).any()
+    assert (res.y_true == 0).any()

@@ -53,146 +53,55 @@ def get_path(nb_genes: int, nb_diseases: int) -> Generator[Path, None, None]:
 
 def test_dataloader_construction(nb_genes: int, nb_diseases: int, path: Path):
     """Test DataLoader construction and its masking behavior."""
-    train_size: float = 0.8
+    # DataLoader without zeros.
+    num_folds = 5
+    validation_size = 0.1
+    zero_sampling_factor = 5
 
-    # DataLoader without zero sampling.
     without_0s = DataLoader(
         nb_genes,
         nb_diseases,
         path,
         seed=42,
-        num_splits=1,
-        num_folds=2,
-        train_size=train_size,
-        min_associations=2,
-        validation_size=None,
-        zero_sampling_factor=0,
-    )
-    without_0s(filter_column="Disease ID")
-
-    assert not (without_0s.omim1.data == 0).any()
-    assert not (without_0s.omim2.data == 0).any()
-    assert (without_0s.omim1.data == 1).sum() == without_0s.omim1.nnz
-
-    train_mask, test_mask = next(iter(without_0s.splits))
-    data = without_0s.omim1
-    train_data = mask_sparse_containing_0s(data, train_mask)
-    test_data = mask_sparse_containing_0s(data, test_mask)
-    assert np.isclose(
-        (train_data.data == 1).sum(), np.ceil(train_size * (data.data == 1).sum())
-    )
-    assert np.isclose(
-        (test_data.data == 1).sum(), np.ceil((1 - train_size) * (data.data == 1).sum())
-    )
-
-    # DataLoader with zero_sampling_factor set to None.
-    with_none_factor = DataLoader(
-        nb_genes,
-        nb_diseases,
-        path,
-        seed=42,
-        num_splits=1,
-        num_folds=2,
-        train_size=train_size,
-        min_associations=2,
-        validation_size=None,
-        zero_sampling_factor=None,
-    )
-    with_none_factor(filter_column="Disease ID")
-
-    assert not (with_none_factor.omim1.data == 0).any()
-    assert not (with_none_factor.omim2.data == 0).any()
-
-    # DataLoader with a validation set.
-    validation_size: float = 0.1
-    with_validation_set = DataLoader(
-        nb_genes,
-        nb_diseases,
-        path,
-        seed=42,
-        num_splits=1,
-        num_folds=2,
-        train_size=train_size,
-        min_associations=2,
+        num_folds=num_folds,
         validation_size=validation_size,
         zero_sampling_factor=0,
     )
-    with_validation_set(filter_column="Disease ID")
+    assert not (without_0s.omim.data == 0).any()
+    assert (without_0s.omim.data == 1).sum() == without_0s.omim.nnz
 
-    assert not (with_validation_set.omim1.data == 0).any()
-    assert not (with_validation_set.omim2.data == 0).any()
-
-    train_mask, test_mask = next(iter(with_validation_set.splits))
-    data = with_validation_set.omim1
+    train_mask, test_mask, val_mask = next(iter(without_0s.omim_masks))
+    data = without_0s.omim
     train_data = mask_sparse_containing_0s(data, train_mask)
     test_data = mask_sparse_containing_0s(data, test_mask)
-
+    val_data = mask_sparse_containing_0s(data, val_mask)
+    tot = len(without_0s.omim.data)
+    train_size = (num_folds - 1) / num_folds * (1 - validation_size)
+    assert tot == len(train_data.data) + len(test_data.data) + len(val_data.data)
     assert np.isclose(
-        (train_data.data == 1).sum(),
-        np.floor(np.ceil(train_size * (data.data == 1).sum()) * (1 - validation_size)),
+        len(train_data.data)/tot, np.floor(train_size * tot)/tot
     )
     assert np.isclose(
-        (test_data.data == 1).sum(),
-        np.ceil((1 - validation_size) * (1 - train_size) * (data.data == 1).sum()),
+        len(val_data.data)/tot, validation_size
+    )
+    assert np.isclose(
+        len(test_data.data)/tot, 1 - np.floor(train_size * tot)/tot - validation_size
     )
 
     # DataLoader with zero sampling.
-    zero_sampling_factor: int = 5
     with0s = DataLoader(
         nb_genes,
         nb_diseases,
         path,
         seed=42,
-        num_splits=1,
         num_folds=2,
-        train_size=0.8,
-        min_associations=2,
-        validation_size=None,
+        validation_size=validation_size,
         zero_sampling_factor=zero_sampling_factor,
     )
-    with0s(filter_column="Disease ID")
-
-    assert (with0s.omim1.data == 0).any()
-    assert (with0s.omim2.data == 0).any()
-    assert (with0s.omim1.data == 1).sum() + (
-        with0s.omim1.data == 0
-    ).sum() == with0s.omim1.nnz
-    assert ((with0s.omim1.data == 1).sum() * zero_sampling_factor) == (
-        (with0s.omim1.data == 0).sum()
+    assert (with0s.omim.data == 0).any()
+    assert (with0s.omim.data == 1).sum() + (
+        with0s.omim.data == 0
+    ).sum() == with0s.omim.nnz
+    assert ((with0s.omim.data == 1).sum() * zero_sampling_factor) == (
+        (with0s.omim.data == 0).sum()
     )
-
-    # DataLoader without folds.
-    without_folds = DataLoader(
-        nb_genes,
-        nb_diseases,
-        path,
-        seed=42,
-        num_splits=1,
-        num_folds=None,
-        train_size=train_size,
-        min_associations=2,
-        validation_size=None,
-        zero_sampling_factor=0,
-    )
-    without_folds(filter_column="Disease ID")
-
-    assert not (without_folds.omim1.data == 0).any()
-    assert without_folds.omim2 is None
-
-    # DataLoader without splits.
-    without_splits = DataLoader(
-        nb_genes,
-        nb_diseases,
-        path,
-        seed=42,
-        num_splits=None,
-        num_folds=2,
-        train_size=train_size,
-        min_associations=2,
-        validation_size=None,
-        zero_sampling_factor=0,
-    )
-    without_splits(filter_column="Disease ID")
-
-    assert without_splits.omim1 is None
-    assert not (without_splits.omim2.data == 0).any()

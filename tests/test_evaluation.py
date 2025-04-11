@@ -29,8 +29,10 @@ def create_results(genes: int, diseases: int):
     ).tocsr()
     y_pred1 = np.random.rand(genes, diseases)
     y_pred2 = np.random.rand(genes, diseases)
-    res1 = Results(y_true, y_pred1)
-    res2 = Results(y_true, y_pred2)
+    test_mask1 = y_true.copy()
+    test_mask2 = y_true.copy()
+    res1 = Results(y_true, y_pred1, test_mask1, apply_mask=False)
+    res2 = Results(y_true, y_pred2, test_mask2, apply_mask=False)
     return [res1, res2]
 
 
