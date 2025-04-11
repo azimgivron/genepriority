@@ -20,10 +20,8 @@ import scipy.sparse as sp
 import tensorflow as tf
 from sklearn import metrics
 
-from genepriority.evaluation.metrics import bedroc_score
-
 from genepriority.compute_models.matrix_completion_result import MatrixCompletionResult
-from genepriority.utils import serialize
+from genepriority.utils import calculate_auc_bedroc, serialize
 
 
 class MatrixCompletionSession:
@@ -32,27 +30,46 @@ class MatrixCompletionSession:
 
     Attributes:
         matrix (np.ndarray): Input matrix to be approximated. Shape: (m, n).
-        train_mask (np.ndarray): Mask indicating observed entries in `matrix` for training.
-            Shape: (m, n).
-        test_mask (np.ndarray): Mask indicating observed entries in `matrix` for test.
-            Shape: (m, n).
-        rank (int): The rank of the low-rank approximation.
-        regularization_parameter (float): Regularization parameter for the optimization.
+        train_mask (np.ndarray): Boolean mask indicating observed entries in `matrix`
+            for training. Shape: (m, n).
+        test_mask (np.ndarray): Boolean mask indicating observed entries in `matrix`
+            for testing. Shape: (m, n).
+        rank (int): The target rank for the low-rank approximation.
+        regularization_parameter (float): Regularization parameter used in the optimization
+            objective.
         iterations (int): Maximum number of optimization iterations.
-        symmetry_parameter (float): Symmetry parameter for the gradient adjustment.
-        smoothness_parameter (float): Initial smoothness parameter.
-        rho_increase (float): Factor for increasing the step size dynamically.
-        rho_decrease (float): Factor for decreasing the step size dynamically.
+        symmetry_parameter (float): Parameter used to adjust gradient symmetry in the
+            optimization process.
+        smoothness_parameter (float): Initial smoothness parameter for the optimization
+            steps.
+        rho_increase (float): Factor used to increase the optimization step size dynamically.
+        rho_decrease (float): Factor used to decrease the optimization step size dynamically.
         threshold (int): Maximum iterations allowed for the inner optimization loop.
-        h1 (sp.csr_matrix): Left factor matrix in the low-rank approximation
-            (shape: rows of `matrix` x `rank`).
-        h2 (sp.csr_matrix): Right factor matrix in the low-rank approximation
-            (shape: `rank` x columns of `matrix`).
-        logger (logging.Logger): Logger instance for debugging and progress tracking.
-        writer (tf.summary.SummaryWriter): Tensorflow summary writer.
-        seed (int, optional): Seed for reproducible random initialization.
-        save_name (str, optional): The file path where the model will be saved.
-            If set to None, the model will not be saved after training.
+        h1 (np.ndarray): Left factor matrix in the low-rank approximation (shape: m x rank).
+        h2 (np.ndarray): Right factor matrix in the low-rank approximation (shape: rank x n).
+        logger (logging.Logger): Logger instance for debugging and progress monitoring.
+        writer (tf.summary.SummaryWriter): TensorFlow summary writer for logging training
+            summaries.
+        seed (int): Seed for reproducible random initialization.
+        save_name (str or pathlib.Path or None): File path where the model will be saved.
+            If None, the model will not be saved after training.
+        positive_flip_fraction (float or None): Fraction of observed positive entries (ones)
+            in the training mask that will be flipped to negatives (zeros) to simulate label
+            noise. Must be between 0 and 1. If None, no label flipping is performed.
+        positive_flip_ones_indices (np.ndarray or None): Array of indices (row, col)
+            identifying the locations of positive entries in `matrix` that are observed in
+            the training mask.
+        positive_flip_n_ones (int or None): Total number of positive entries in `matrix` that
+            are observed in the training mask.
+        positive_flip_n_to_zero (int or None): Number of positive entries to flip to negatives,
+            computed as int(positive_flip_fraction * positive_flip_n_ones).
+        flip_frequency (int or None): Frequency (in iterations) at which to resample the
+            observed positive entries for flipping. Only set when `positive_flip_fraction`
+            is specified.
+        flip_iteration (int or None): Counter tracking the number of iterations for flipping
+            operations. Updated each time a label flipping check is performed.
+        tmp_labels (np.ndarray or None): Temporary label matrix with simulated label noise,
+            used when `positive_flip_fraction` is set.
     """
 
     def __init__(
@@ -71,6 +88,8 @@ class MatrixCompletionSession:
         writer: tf.summary.SummaryWriter = None,
         seed: int = 123,
         save_name: str = None,
+        positive_flip_fraction: float = None,
+        flip_frequency: int = 5,
     ):
         """
         Initializes the MatrixCompletionSession instance.
@@ -96,6 +115,13 @@ class MatrixCompletionSession:
                 Default is 123.
             save_name (str, optional): The file path where the model will be saved.
                 If set to None, the model will not be saved after training.  Defaults to None.
+            positive_flip_fraction (float, optional): The fraction of observed positive entries
+                (ones) in the training mask that will be flipped to negatives (zeros) to simulate
+                label noise. Must be between 0 and 1. Default is None, meaning no label flipping
+                is performed.
+            flip_frequency (int, optional): The frequency at which to resample the observed positive
+                entries in the training mask to be flipped to negatives. Default to 5.
+
         """
         self.matrix = matrix.toarray()
         self.train_mask = train_mask.toarray().astype(bool)
@@ -108,6 +134,26 @@ class MatrixCompletionSession:
         self.rho_increase = rho_increase
         self.rho_decrease = rho_decrease
         self.threshold = threshold
+        self.positive_flip_fraction = positive_flip_fraction
+        if self.positive_flip_fraction is not None:
+            if not 0 < self.positive_flip_fraction < 1:
+                raise ValueError("Bootstrap faction must between 0 and 1 excluded.")
+            self.positive_flip_ones_indices = np.argwhere(
+                (self.matrix * self.train_mask) == 1
+            )
+            self.positive_flip_n_ones = self.positive_flip_ones_indices.shape[0]
+            self.positive_flip_n_to_zero = int(
+                self.positive_flip_fraction * self.positive_flip_n_ones
+            )
+            self.flip_iteration = 0
+            self.flip_frequency = flip_frequency
+        else:
+            self.positive_flip_ones_indices = None
+            self.positive_flip_n_ones = None
+            self.positive_flip_n_to_zero = None
+            self.flip_iteration = None
+            self.flip_frequency = None
+        self.tmp_labels = None
 
         if save_name is None:
             # If save_name is None, set self.save_name to None (no saving)
@@ -162,6 +208,43 @@ class MatrixCompletionSession:
         """
         return self.h1 @ self.h2
 
+    def calculate_training_residual(self) -> np.ndarray:
+        """
+        Compute the training residual from the input matrix M (m x n), the model's prediction
+        M_pred and the binary training mask P. Optionally, if positive_flip_fraction ’d’ is set,
+        a fraction ’d’ of the positive entries (ones) in M (where P is 1) is flipped to 0,
+        yielding a modified label matrix L. Otherwise, L = M.
+
+        The training residual R is computed as:
+            R = (M_pred - L) ∘ P
+        where ∘ denotes elementwise multiplication to consider only training entries.
+
+        Returns:
+            np.ndarray: The residual matrix R (m x n).
+        """
+        if (
+            self.positive_flip_fraction is not None
+            and self.flip_iteration % self.flip_frequency == 0
+        ):
+            labels = self.matrix.copy()
+            selected_indices = np.random.choice(
+                self.positive_flip_n_ones,
+                size=self.positive_flip_n_to_zero,
+                replace=False,
+            )
+            coords_to_zero = self.positive_flip_ones_indices[selected_indices]
+            labels[coords_to_zero[:, 0], coords_to_zero[:, 1]] = 0
+            self.tmp_labels = labels
+            self.flip_iteration += 1
+        elif self.positive_flip_fraction is not None:
+            labels = self.tmp_labels
+            self.flip_iteration += 1
+        else:
+            labels = self.matrix
+        residual = self.predict_all() - labels
+        residual[~self.train_mask] = 0
+        return residual
+
     def calculate_loss(self) -> float:
         """
         Computes the loss function value for the training data.
@@ -179,114 +262,41 @@ class MatrixCompletionSession:
         Returns:
             float: The computed loss value.
         """
-        residual = (self.matrix - self.predict_all())
-        residual[~self.train_mask] = 0
-        return 0.5 * np.linalg.norm(residual, ord='fro') ** 2
+        residuals = self.calculate_training_residual()
+        return 0.5 * np.linalg.norm(residuals, ord="fro") ** 2
 
-    def calculate_rmse(self) -> float:
+    def calculate_rmse(self, mask: np.ndarray) -> float:
         """
-        Computes the Root Mean Square Error (RMSE) for the test data.
+        Computes the Root Mean Square Error (RMSE).
 
         The RMSE measures the average deviation between the predicted matrix
-        and the test matrix, considering only the observed entries.
+        and the ground truth matrix, considering only the observed entries.
 
         Formula for RMSE:
-            RMSE = sqrt( (1 / |Omega|) * sum( (M_test[i, j] - M_pred[i, j])^2 ) )
+            RMSE = sqrt( (1 / |Omega|) * sum( (M[i, j] - M_pred[i, j])^2 ) )
 
         Where:
-            - Omega: The set of observed indices in `test_mask`.
-            - M_test: The test matrix containing actual values.
+            - Omega: The set of observed indices in `mask`.
+            - M: The matrix containing actual values.
             - M_pred: The predicted matrix (low-rank approximation).
 
         Process:
-        1. Extract the observed entries from both the test matrix (`M_test`)
-           and the predicted matrix (`M_pred`) using the `test_mask`.
+        1. Extract the observed entries from both the matrix (`M`)
+           and the predicted matrix (`M_pred`) using the `mask`.
         2. Compute the squared differences for the observed entries.
         3. Calculate the mean of these squared differences.
         4. Take the square root of the mean to obtain the RMSE.
 
         Returns:
             float: The computed RMSE value, representing the prediction error
-                   on the observed test entries.
+                   on the observed entries.
         """
-        mask = self.test_mask & (self.matrix == 1)
-        test_values_actual = self.matrix[mask]
-        test_predictions = self.predict_all()[mask]
+        actual_values = self.matrix[mask]
+        predictions = self.predict_all()[mask]
 
         # Compute RMSE
-        rmse = np.sqrt(metrics.mean_squared_error(test_values_actual, test_predictions))
+        rmse = np.sqrt(metrics.mean_squared_error(actual_values, predictions))
         return rmse
-
-    def calculate_auc_bedroc(self, alpha: float = 160.9) -> tuple[float, float, float]:
-        """
-        Computes the Area Under the Curve (AUC-ROC), Average Precision (AP),
-        and the Boltzmann-Enhanced Discrimination of ROC (BEDROC) score for the test data.
-
-        - AUC-ROC measures the model's ability to rank positive instances
-        higher than negative ones, capturing its overall classification performance.
-
-        - Average Precision (AP) represents the weighted mean of precisions
-        at different thresholds, considering both precision and recall.
-
-        - BEDROC extends AUC-ROC by emphasizing early retrieval, making it
-        particularly useful for ranking problems where top predictions matter most.
-
-        Formula for AUC-ROC:
-            AUC = ∫ TPR(FPR) d(FPR)
-
-        Formula for AP:
-            AP = sum( (R_n - R_{n-1}) * P_n )
-
-        Formula for BEDROC:
-            BEDROC = (1 / N) * sum(exp(-alpha * rank(y_i))) * normalization_factor
-
-        Where:
-            - TPR: True Positive Rate.
-            - FPR: False Positive Rate.
-            - N: Number of positive samples.
-            - rank(y_i): Rank of the positive sample in the sorted predictions.
-            - alpha: Controls the early recognition emphasis.
-            - R_n: Recall at threshold n.
-            - P_n: Precision at threshold n.
-
-        Process:
-        1. Extract the observed entries from both the test matrix (`M_test`) and
-        the predicted matrix (`M_pred`) using `test_mask`.
-        2. Compute AUC-ROC using `roc_auc_score`.
-        3. Compute Average Precision (AP) using `average_precision_score`.
-        4. Compute BEDROC using an exponential weighting scheme.
-        5. Return all three scores.
-
-        Args:
-            alpha (float): The alpha value for the bedroc metric.
-                Default to 160.9.
-
-        Returns:
-            tuple[float, float, float]: A tuple containing:
-                - AUC-ROC score: Measures overall ranking performance.
-                - Average Precision (AP) score: Reflects precision-recall trade-off.
-                - BEDROC score: Emphasizes early recognition quality.
-        """
-        # Extract observed test values and corresponding predictions
-        test_values_actual = self.matrix[self.test_mask]
-        test_predictions = self.predict_all()[self.test_mask]
-
-        # Compute AUC-ROC
-        auc = metrics.roc_auc_score(test_values_actual, test_predictions)
-
-        # Compute Average Precision (AP)
-        avg_precision = metrics.average_precision_score(
-            test_values_actual, test_predictions
-        )
-
-        # Compute BEDROC
-        bedroc = bedroc_score(
-            y_true=test_values_actual,
-            y_pred=test_predictions,
-            decreasing=True,
-            alpha=alpha,
-        )
-        return auc, avg_precision, bedroc
 
     def substep(
         self,
@@ -418,7 +428,7 @@ class MatrixCompletionSession:
         # Initialize loss and RMSE history
         res_norm = self.calculate_loss()
         training_loss = res_norm / nb_elements
-        testing_loss = self.calculate_rmse()
+        testing_loss = self.calculate_rmse(self.test_mask)
         loss = [training_loss]
         rmse = [testing_loss]
 
@@ -450,8 +460,7 @@ class MatrixCompletionSession:
                 loss[-1],
             )
             # Compute gradients for h1 and h2
-            residual = (self.predict_all() - self.matrix)
-            residual[~self.train_mask] = 0
+            residual = self.calculate_training_residual()
 
             grad_u = residual @ self.h2.T + self.regularization_parameter * self.h1
             grad_v = residual.T @ self.h1 + self.regularization_parameter * self.h2.T
@@ -471,13 +480,19 @@ class MatrixCompletionSession:
             if self.writer is not None and ith_iteration % log_freq == 0:
                 try:
                     with self.writer.as_default():
+                        training_rmse = self.calculate_rmse(self.train_mask)
                         tf.summary.scalar(
-                            name="training_loss", data=training_loss, step=ith_iteration
+                            name="training_loss", data=training_rmse, step=ith_iteration
                         )
                         tf.summary.scalar(
                             name="testing_loss", data=testing_loss, step=ith_iteration
                         )
-                        auc, avg_precision, bedroc = self.calculate_auc_bedroc()
+                        # Extract observed test values and corresponding predictions
+                        test_values_actual = self.matrix[self.test_mask]
+                        test_predictions = self.predict_all()[self.test_mask]
+                        auc, avg_precision, bedroc = calculate_auc_bedroc(
+                            test_values_actual, test_predictions
+                        )
                         tf.summary.scalar(name="auc", data=auc, step=ith_iteration)
                         tf.summary.scalar(
                             name="average precision",
@@ -542,7 +557,7 @@ class MatrixCompletionSession:
             step_size = (1 + self.symmetry_parameter) / self.smoothness_parameter
 
             training_loss = res_norm_next_it / nb_elements
-            testing_loss = self.calculate_rmse()
+            testing_loss = self.calculate_rmse(self.test_mask)
             loss.append(training_loss)
             rmse.append(testing_loss)
             res_norm = res_norm_next_it

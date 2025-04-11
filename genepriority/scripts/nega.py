@@ -74,6 +74,7 @@ def train_eval(
     rank: int,
     iterations: int,
     threshold: int,
+    positive_flip_fraction: float,
     seed: int,
     regularization_parameter: float,
     symmetry_parameter: float,
@@ -96,6 +97,8 @@ def train_eval(
         rank (int): Model rank (number of latent factors).
         iterations (int): Number of training iterations.
         threshold (int): Threshold parameter for the model.
+        positive_flip_fraction (float): Fraction of observed positive training entries
+            to flip to negatives (zeros) to simulate label noise. Must be between 0 and 1.
         seed (int): Random seed for reproducibility.
         regularization_parameter (float): Regularization parameter for training.
         symmetry_parameter (float): Symmetry parameter for training.
@@ -112,6 +115,7 @@ def train_eval(
         seed=seed,
         iterations=iterations,
         threshold=threshold,
+        positive_flip_fraction=positive_flip_fraction,
         regularization_parameter=regularization_parameter,
         symmetry_parameter=symmetry_parameter,
         smoothness_parameter=smoothness_parameter,
@@ -200,6 +204,7 @@ def nega(args: argparse.Namespace):
             rank=args.rank,
             iterations=args.iterations,
             threshold=args.threshold,
+            positive_flip_fraction=args.positive_flip_fraction,
             seed=args.seed,
             regularization_parameter=regularization_parameter,
             symmetry_parameter=symmetry_parameter,

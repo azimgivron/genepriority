@@ -209,6 +209,16 @@ def parse_nega(subparsers: argparse._SubParsersAction):
             help="Threshold parameter for the model (default: %(default)s).",
         )
         subparser.add_argument(
+            "--positive_flip_fraction",
+            type=float,
+            default=None,
+            help=(
+                "Fraction of observed positive training entries "
+                "to flip to negatives (zeros) to simulate label noise."
+                "Must be between 0 and 1. (default: %(default)s)."
+            ),
+        )
+        subparser.add_argument(
             "--validation-size",
             type=float,
             default=0.1,
