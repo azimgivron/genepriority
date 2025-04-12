@@ -1,7 +1,3 @@
-Below is a revamped version of your README with a more relaxed, cool vibe and plenty of fun emojis while keeping all the essential info intact:
-
----
-
 # genepriority 🚀
 
 [![codecov](https://codecov.io/gh/azimgivron/genepriority/branch/main/graph/badge.svg?token=QSAKYRC4EH)](https://codecov.io/gh/azimgivron/genepriority)
