@@ -29,7 +29,7 @@ We’re using two awesome methods:
 
 ### What’s the Deal?
 
-We tackle gene prioritization as a **matrix completion** challenge. In simple terms, we fill in the missing pieces in a giant gene-disease puzzle using side information. Neat, right?
+We tackle gene prioritization as a **matrix completion** challenge. In simple terms, we fill in the missing pieces in a giant gene-disease puzzle. Neat, right?
 
 ### Objective Function 🎯
 
@@ -76,9 +76,24 @@ This formulation keeps the update step convex and ensures we gradually converge 
 
 ---
 
-## NEGA with Side Info
+## NEGA with Side Info 🤩
 
-We even have a cool twist where we toss in additional genomic and phenotypic data to boost prioritization performance. Next-level gene hunting! 🔬
+We've taken NEGA to the next level by adding some extra flavor – incorporating genomic and phenotypic side info! This upgrade means our model not only leverages the primary association matrix but also taps into additional gene and disease characteristics to boost prioritization performance. 🚀
+
+The updated objective function now becomes:
+
+$$
+\min_{W, H} \quad \frac{1}{2}\Bigl\|B \odot \Bigl(R - X W H^T Y^T\Bigr)\Bigr\|^2_2 + \lambda_1 \|W\|_F^2 + \lambda_2 \|H\|_F^2
+$$
+
+where:  
+- **X** is the gene feature matrix – representing the genomic side info.  
+- **Y** is the disease feature matrix – bringing in the phenotypic details.
+
+This enhancement helps the model pick up on subtle cues, ultimately leading to smarter gene prioritization! 🔬
+
+This formulation from:
+- Nagarajan Natarajan, Inderjit S. Dhillon, Inductive matrix completion for predicting gene–disease associations, Bioinformatics, Volume 30, Issue 12, June 2014, Pages i60–i68, https://doi.org/10.1093/bioinformatics/btu269
 
 ---
 
