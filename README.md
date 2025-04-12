@@ -40,7 +40,7 @@ We tackle gene prioritization as a **matrix completion** challenge. In simple te
 Our goal is to optimize:
 
 $$
-\min_{W,\, H} \quad \frac{1}{2}\bigl\|B \odot (R - W H^T)\bigr\|^2_2 + \lambda_1 \|W\|_F^2 + \lambda_2 \|H\|_F^2,
+\min_{W, H} \quad \frac{1}{2}\bigl\|B \odot (R - W H^T)\bigr\|^2_2 + \lambda_1 \|W\|_F^2 + \lambda_2 \|H\|_F^2,
 $$
 
 where:  
@@ -59,13 +59,13 @@ To overcome these issues, NEGA uses **relative smoothness**. That means we compa
 We say a function $f$ is $L_f$-smooth relative to a kernel $h$ if:
 
 $$
-\left| f(x) - f(y) - \langle \nabla f(y),\, x-y \rangle \right| \leq L_f\, \mathcal{D}_h(x,y),
+\left| f(x) - f(y) - \langle \nabla f(y), x-y \rangle \right| \leq L_f \mathcal{D}_h(x,y),
 $$
 
 with the Bregman distance defined as:
 
 $$
-\mathcal{D}_h(x,y) = h(x) - h(y) - \langle \nabla h(y),\, x-y \rangle.
+\mathcal{D}_h(x,y) = h(x) - h(y) - \langle \nabla h(y), x-y \rangle.
 $$
 
 #### How It Works 🤖
@@ -73,7 +73,7 @@ $$
 The NEGA update rule is:
 
 $$
-x^{k+1} = \arg\min_x \, \{ \, \langle \nabla f(x^k),\, x - x^k \rangle + \frac{1}{\alpha_k}\, \mathcal{D}_h(x,x^k) \, \},
+x^{k+1} = \arg\min_x  \{  \langle \nabla f(x^k), x - x^k \rangle + \frac{1}{\alpha_k} \mathcal{D}_h(x,x^k)  \},
 $$
 
 This formulation keeps the update step convex and ensures we gradually converge to a local optimum—even when the gradient isn’t exactly well-behaved.
