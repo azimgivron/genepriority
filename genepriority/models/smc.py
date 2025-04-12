@@ -374,7 +374,7 @@ class BaseMatrixCompletion(metaclass=abc.ABCMeta):
                f(W_{k+1}) <= f(W_k) + ∇f(W_k).T (W_{k+1} - W_k) + η * D_h(W_{k+1}, W_k, τ),
            where:
                - η is the step size/smoothness adjustment parameter,
-               - D_h is the difference in h-function values.
+               - D_h is the Bregmann distance.
 
         4. Termination:
            Stop when the maximum number of iterations is reached or the loss converges.
