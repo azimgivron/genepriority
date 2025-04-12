@@ -22,8 +22,7 @@ import pytz
 
 from genepriority.scripts.genehound import genehound
 from genepriority.scripts.nega import nega
-from genepriority.scripts.parsers import (parse_genehound, parse_nega,
-                                          parse_post)
+from genepriority.scripts.parsers import parse_genehound, parse_nega, parse_post
 from genepriority.scripts.post import post
 
 

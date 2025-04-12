@@ -1,248 +1,229 @@
-# genepriority
+Below is a revamped version of your README with a more relaxed, cool vibe and plenty of fun emojis while keeping all the essential info intact:
+
+---
+
+# genepriority 🚀
 
 [![codecov](https://codecov.io/gh/azimgivron/genepriority/branch/main/graph/badge.svg?token=QSAKYRC4EH)](https://codecov.io/gh/azimgivron/genepriority)
 
-<p align="center" width="100%">
-    <img width="40%" src=".images/genepriority-logo.png" >
+<p align="center">
+  <img width="40%" src=".images/genepriority-logo.png" alt="genepriority logo">
 </p>
 
-The repository **genepriority** is designed to implement and evaluate matrix completion algorithms on the *Online Mendelian Inheritance in Man* (OMIM) dataset for the task of gene prioritization. The goal is to identify disease-associated genes. Additional genomic and phenotypic side information can optionally be leveraged to increase accuracy. 
-
-Two algorithms are used/implemented:
-1. Non-Euclidean Gradient Algorithm, NEGA, more specifically **NEGA2 algorithm**, as described in the paper *"Non-Euclidean Gradient Methods: Convergence, Complexity, and Applications"*.
-2. Genehound from *"Gene prioritization using Bayesian matrix factorization with genomic and phenotypic side information"* ([Zakeri et al., 2018](https://pubmed.ncbi.nlm.nih.gov/29949967/)). 
-
-**References**
-
-1. Ghaderi, S., Moreau, Y., & Ahookhosh, M. (2022). *Non-Euclidean Gradient Methods: Convergence, Complexity, and Applications*. Journal of Machine Learning Research, 23(2022):1-44.
-2. Zakeri, P., Simm, J., Arany, A., ElShal, S., & Moreau, Y. (2018). *Gene prioritization using Bayesian matrix factorization with genomic and phenotypic side information.* Bioinformatics, 34(13), i447–i456. doi:10.1093/bioinformatics/bty289. PMID: 29949967; PMCID: PMC6022676.
-
-## Overview
-
-[![](https://mermaid.ink/img/pako:eNptlE1P4zAQhv_KyOeC2nxCDiuVlu1WaqhEOW2ag2mG1KJxItvZBVr-O44duoZsDpE9z8wkr2fGR7KrCyQJKQVt9rC633LQzzRbp8s0h4uLH6cNrZoDwlie4MaYJ7l1ku2jjbrHBqmC6MXab7owmGUPgjIOm-bAVO6SefaAUn0ByAu7sO-Z8Vtks7pqWoVwn25uYd4KxkswWfWij5xbV7u5zVY1LWDDCoQlf6pFRRWrOVBewF23O7A3hL9M7eGnqB-Rs1YaYJUuuUShBuGnz_S_spnQQlGHMImQ6pM75O73F2aztMqxsB4yd6WdD80ya-yepYlNJ5kB8HnIDvJ65A2R3yN_iIIeBUMU9igcoqhH0f8LdFbRVeiAqtNKlWA7dBSlE5NrrTW5bWOQ1yPPIFdR6vfIN8hVlAY9CgxyFaVhj0KDXEVp1KPIoC-KvqmZlqXAsqvww17UbamrhJTDukFhOuFf0nUvbmVywvSP9iixyF0Pq3HlmvyhKRiawqEpck3firEyzTuVsq10UzIpuzGZU0WBCju3d9kCeadBjxLlzxJ0b8Mt3e1hrhuZ6l7uJuQ8bdqlS5FiV1GZkxGpUM8CK_Q9cey-uSVqjxVuSaKXBRXPW7Ll79qPtqrevPIdSZRocUTMIZLkiR6k3rVNoX9hzqg-7epsbSj_XdfVZwgWTNUitbeSuZyMC0mO5IUkF17gX0aRF0-uwtAL4nHsjcgrSWL_0pvEkziIAz_249B_H5E3k9W79Pxr7R9ej4Pgyg8i7_0D2xRmHg?type=png)](https://mermaid.live/edit#pako:eNptlE1P4zAQhv_KyOeC2nxCDiuVlu1WaqhEOW2ag2mG1KJxItvZBVr-O44duoZsDpE9z8wkr2fGR7KrCyQJKQVt9rC633LQzzRbp8s0h4uLH6cNrZoDwlie4MaYJ7l1ku2jjbrHBqmC6MXab7owmGUPgjIOm-bAVO6SefaAUn0ByAu7sO-Z8Vtks7pqWoVwn25uYd4KxkswWfWij5xbV7u5zVY1LWDDCoQlf6pFRRWrOVBewF23O7A3hL9M7eGnqB-Rs1YaYJUuuUShBuGnz_S_spnQQlGHMImQ6pM75O73F2aztMqxsB4yd6WdD80ya-yepYlNJ5kB8HnIDvJ65A2R3yN_iIIeBUMU9igcoqhH0f8LdFbRVeiAqtNKlWA7dBSlE5NrrTW5bWOQ1yPPIFdR6vfIN8hVlAY9CgxyFaVhj0KDXEVp1KPIoC-KvqmZlqXAsqvww17UbamrhJTDukFhOuFf0nUvbmVywvSP9iixyF0Pq3HlmvyhKRiawqEpck3firEyzTuVsq10UzIpuzGZU0WBCju3d9kCeadBjxLlzxJ0b8Mt3e1hrhuZ6l7uJuQ8bdqlS5FiV1GZkxGpUM8CK_Q9cey-uSVqjxVuSaKXBRXPW7Ll79qPtqrevPIdSZRocUTMIZLkiR6k3rVNoX9hzqg-7epsbSj_XdfVZwgWTNUitbeSuZyMC0mO5IUkF17gX0aRF0-uwtAL4nHsjcgrSWL_0pvEkziIAz_249B_H5E3k9W79Pxr7R9ej4Pgyg8i7_0D2xRmHg)
-
-1. **Problem Formulation**:  
-   - **Input**: Matrix $O$ of gene-disease associations ($O_{ij} = 1$ for known associations, $O_{ij} = 0$ for unknown or missing associations).  
-   - **Objective**: Predict potential associations $\hat{O}$, where $\hat{O}_{ij}$ are floating-point scores indicating the likelihood of gene-disease associations.
-
-2. **Data Preparation**:  
-   - **Positive Class**: Known gene-disease associations ($O_{ij} = 1$).  
-   - **Negative Class**: Randomly sampled negatives ($O_{ij} = 0$), ensuring no overlap with positives.  
-   - **Unknown Class**: Represented as missing values in the sparse encoding.  
-   - **Procedure**:  
-     - **Generate Negative Samples**: Randomly sample negatives and merge with the positive class to form $O_1$.  
-     - **Create Train-Test Splits**: Split $O_1$ into train and test sets across six random iterations for cross-validation.
-
-3. **Incorporating Side Information**:  
-   - Load side information (e.g., gene or disease features) and normalize using the Frobenius norm.  
-   - Integrate side information into the training process to enhance predictions.
-
-4. **Model Training**:  
-   - Train matrix completion models on the train split of $O_1$, using side information.  
-   - Compute the Root Mean Squared Error (RMSE) during training as a measure of model performance.  
-   - Repeat training across six random splits to yield six independent models, $M_i \quad \forall i \in \set{1,2,3,4,5,6}$.
-
-5. **Matrix Completion**:  
-   - Use the trained models to generate the completed matrix, generating six predicted matrices ($\hat{O_i} \quad \forall i \in \set{1,2,3,4,5,6}$) with floating-point scores.  
-
-6. **Model Testing and Ranking**:  
-   - Flatten the matrices and rank genes based on the predicted scores.  
-   - Assume missing values are zeros for ranking purposes.  
-
-7. **Evaluation and Metrics**:  
-   - Compute ranking metrics to assess the quality of predictions, focusing on the ability of the model to rank true positive associations higher.  
-   - Metrics are aggregated across the six splits.
+Hey there! Welcome to **genepriority** – your go-to repo for rocking matrix completion algorithms on the *Online Mendelian Inheritance in Man* (OMIM) dataset. Our mission? To hunt down disease-associated genes and level up accuracy by throwing in extra genomic and phenotypic info. Let’s dive in! 😎
 
 ---
 
-## Dataset Generation
+## Algorithms in Action
 
-The above procedure describes the general approach. However, the reference paper uses two datasets, OMIM1 and OMIM2, respectively named  $O_1$ and $O_2$. The procedure for $O_2$ differs in the following way:
+We’re using two awesome methods:
 
-- Subset Relationship: $O_2$ is a subset of $O_1$.
-- Model Generation: For $O_2$, models are generated using an N-Fold cross-validation approach, rather than the N random splits used for $O_1$.  
+1. **Non-Euclidean Gradient Algorithm (NEGA2)**  
+   Check out the paper *"Non-Euclidean Gradient Methods: Convergence, Complexity, and Applications"* for all the math magic.
+2. **GeneHound**  
+   Based on *"Gene prioritization using Bayesian matrix factorization with genomic and phenotypic side information"* ([Zakeri et al., 2018](https://pubmed.ncbi.nlm.nih.gov/29949967/)).
 
-### OMIM1 Dataset Construction
-
-**Input**:  
-- Gene-disease DataFrame: $d$  
-- Number of splits: $N$  
-- Sparsity factor $\alpha$, the ratio of 0s to 1s.  
-
-**Output**:  
-- Sparse matrix: $O_{1}$  
-- Splits: $S_{1_{i}} \quad \forall i \in \{1, N\}$  
-
-**Procedure**:  
-1. Convert $d$ into a sparse matrix $O_{1_{1s}}$.  
-2. Sample $N$ zeros to get $O_{1}$ from $O_{1_{1s}}$ using $\alpha$.  
-3. Split $O_{1}$ indices randomly into subsets $S_{1_{i}} \quad \forall i \in \{1, N\}$.  
+### Cool References
+- Ghaderi, S., Moreau, Y., & Ahookhosh, M. (2022). *Non-Euclidean Gradient Methods: Convergence, Complexity, and Applications*. JMLR, 23(2022):1-44.
+- Zakeri, P., Simm, J., Arany, A., ElShal, S., & Moreau, Y. (2018). *Gene prioritization using Bayesian matrix factorization with genomic and phenotypic side information.* Bioinformatics, 34(13), i447–i456. doi:10.1093/bioinformatics/bty289.
 
 ---
 
-### OMIM2 Dataset Construction
+## Overview 🔍
 
-**Input**:  
-- Gene-disease DataFrame: $d$  
-- Number of folds: $N$  
-- Association threshold: $T$  
-- Sparsity factor $\alpha$, the ratio of 0s to 1s.  
+### What’s the Deal?
 
-**Output**:  
-- Sparse matrix: $O_2$
-- Folds: $F_{2_{i}} \quad \forall i \in \{1, N\}$
+We tackle gene prioritization as a **matrix completion** challenge. In simple terms, we fill in the missing pieces in a giant gene-disease puzzle using side information. Neat, right?
 
-**Procedure**:  
-1. Filter diseases with fewer than $T$ associations.  
-2. Convert $d$ into a sparse matrix $O_{2_{1s}}$.  
-5. Sample $N$ zeros to get $O_{2}$ from $O_{2_{1s}}$ using $\alpha$.  
-6. Split $O_{2}$ indices randomly into $N$ folds $F_{2_{i}} \quad \forall i \in \{1, N\}$.  
+### Objective Function 🎯
+
+Our goal is to optimize:
+
+$$
+\min_{W,\, H} \quad \frac{1}{2}\bigl\|B \odot (R - W H^T)\bigr\|^2_2 + \lambda_1 \|W\|_F^2 + \lambda_2 \|H\|_F^2,
+$$
+
+where:  
+- **W** and **H** are the learnable matrices.  
+- **B** is a binary mask.  
+- **R** is our gene-disease association matrix.
+
+This problem is nonconvex (yup, it's a tough nut to crack) due to the quartic term from $W H^T$, and the gradient might not be Lipschitz continuous (so regular step sizes can be tricky).
+
+### NEGA (Non-Euclidean Gradient Algorithm) 😎
+
+To overcome these issues, NEGA uses **relative smoothness**. That means we compare our function to a distance-generating kernel that vibes with the problem’s geometry.
+
+#### Bregman Distance & Relative Smoothness
+
+We say a function \( f \) is \( L_f \)-smooth relative to a kernel \( h \) if:
+
+$$
+\left| f(x) - f(y) - \langle \nabla f(y),\, x-y \rangle \right| \leq L_f\, \mathcal{D}_h(x,y),
+$$
+
+with the Bregman distance defined as:
+
+$$
+\mathcal{D}_h(x,y) = h(x) - h(y) - \langle \nabla h(y),\, x-y \rangle.
+$$
+
+#### How It Works 🤖
+
+The NEGA update rule is:
+
+$$
+x^{k+1} = \arg\min_x \left\{ \langle \nabla f(x^k),\, x - x^k \rangle + \frac{1}{\alpha_k}\, \mathcal{D}_h(x,x^k) \right\},
+$$
+
+This formulation keeps the update step convex and ensures we gradually converge to a local optimum—even when the gradient isn’t exactly well-behaved.
 
 ---
 
-## Installation
+## NEGA with Side Info
 
-You can set up the environment using one of the following methods:
+We even have a cool twist where we toss in additional genomic and phenotypic data to boost prioritization performance. Next-level gene hunting! 🔬
 
-### **Option 1: Using `pip`**
+---
+
+## Experimental Setup 🧪
+
+### Datasets & Info Sources
+
+- **Gene-Disease Association Matrix**:  
+  Extracted from OMIM 2013 and post-processed as per the GeneHound paper.  
+  - **Genes:** 14,196  
+  - **Diseases:** 315  
+  - **Known Positives:** 2,625 (backed by experimental evidence)  
+  - **Association Density:** 0.06%
+
+- **Side Info Sources**:
+  
+  | **Dataset** | **Number of Positive Entries** |
+  |-------------|--------------------------------|
+  | Phen Text   | 66,883                         |
+  | UniProt     | 164,125                        |
+  | InterPro    | 51,499                         |
+  | GO          | 1,365,393                      |
+
+*Note:* Before merging, each genomic data matrix is normalized by its Frobenius norm so no single source dominates.
+
+### Evaluation Strategy 📊
+
+We split the data into:
+- **90%** for on cross-validation
+- **10%** for hyperparameter fine tuning  
+
+Then use five-fold cross-validation on the main split (72% training, 18% testing per fold). We monitor metrics like **RMSE**, **ROC/AUROC**, **BEDROC**, and **PR Curve/AUPRC**. Also, negative sampling (5 negatives per positive) is used to mirror the real-life imbalance in biology.
+
+---
+
+## Installation 🚀
+
+### Option 1: Quick Install with pip
 
 ```bash
 pip install genepriority git+https://github.com/azimgivron/genepriority.git@main
 ```
 
-**Requirements**: [SMURFF](https://smurff.readthedocs.io/en/release-0.17/INSTALL.html)
+**Requirements:** [SMURFF](https://smurff.readthedocs.io/en/release-0.17/INSTALL.html)
 
-4. **Run Scripts**:
-   Use the `genepriority` scripts as described in the [Scripts Usage](#scripts-usage) section.
+### Option 2: Docker for ARM64 🐳
 
-### **Option 2: Using Docker for ARM64 Platform**
-
-Using Docker, two containers are launched: one for the working environment (`nega`) and another for TensorBoard.
-
-1. **Build the Docker Image**:
-   Build the image and set up the containers using the provided `docker-compose.yml`:
+1. **Build the Docker Image:**
    ```bash
    docker compose build
    ```
-
-2. **Start the Containers**:
-   Launch both containers (working environment and TensorBoard):
+2. **Start Up the Containers:**
    ```bash
    docker compose up -d
    ```
-
-3. **Access the Working Environment**:
-   Enter the `nega` container interactively:
+3. **Access the Environment:**
    ```bash
    docker exec -it $(docker ps -q -f "name=nega") zsh
    ```
-   This opens a `zsh` shell in the `nega` container, ready for running scripts and experiments.
+4. **Launch TensorBoard:**
+   Visit [http://localhost:6006](http://localhost:6006)
+5. **Stop the Containers:**
+   ```bash
+   docker compose down
+   ```
 
-4. **Access TensorBoard**:
-   View TensorBoard logs and visualizations by navigating to:
-   [http://localhost:6006](http://localhost:6006)
-
-5. **Stopping the Containers**:
-  To stop the running containers, use:
-  ```bash
-  docker compose down
-  ```
-
-### **Notes**:
-- The Docker image and `docker-compose.yml` are preconfigured to handle permissions issues when working with mounted volumes.
-- The TensorBoard logs are located at `/home/TheGreatestCoder/code/logs` in the container and are accessible to both services.
+*Note:* Docker is preconfigured to handle permission issues, and TensorBoard logs live at `/home/TheGreatestCoder/code/logs` inside the container.
 
 ---
 
 ## Requirements
 
-- Python 3.11  
-- pip (Python package installer)  
-- Virtual environment (venv) module  
+- **Python 3.11**  
+- **pip**  
+- **venv** module (for virtual environments)
 
 ---
 
-## Repository Structure
+## Repository Structure 🗂️
 
-### Root Directory
+### What's Inside?
 
 - **`genepriority/`**: Main modules for preprocessing, matrix operations, and evaluation.
-- **`requirements.txt`**: List of dependencies for the project.
-- **`Dockerfile`**: Configuration for containerized deployment.
-- **`pyproject.toml`**: Project and dependency configuration for building and distribution.
-- **`.gitignore`**: Specifies files to ignore in the repository.
-- **`LICENSE`**: Project license.
+- **`requirements.txt`**: Lists all project dependencies.
+- **`Dockerfile`**: For containerized deployment.
+- **`pyproject.toml`**: Build and dependency info.
+- **`.gitignore`**: Files and directories to ignore.
+- **`LICENSE`**: MIT License details.
 
-### Folder Structure
+### Folder Breakdown
 
 ```bash
 genepriority/
-├── compute_models/
-│   └── # NEGA2 algorithm implementation
-├── evaluation/
-│   └── # Defines `Evaluation` class for managing evaluation metrics
-├── postprocessing/
-│   └── # `ModelEvaluationCollection` class for aggregating and analyzing results
-├── preprocessing/
-│   └── # `DataLoader` class for preprocessing gene-disease association data
+├── models/                # NEGA2 algorithm implementation
+├── evaluation/            # Tools for evaluation metrics
+├── postprocessing/        # Aggregates & analyzes model results
+├── preprocessing/         # DataLoader for gene-disease data
 ├── scripts/
-│   ├── genehound
-│   │   └── # Script for reproducing GeneHound results
-│   ├── nega
-│   │   └── # Script for NEGA2 cross-validation and evaluation
-│   ├── post
-│       └── # Script for post processing
-├── trainer/
-│   └── # Facilitates training and evaluation of predictive models
-├── utils/
-│   └── # Utility functions for supporting operations across the repository
-├── README.md
-│   └── # Documentation for the repository
-├── requirements.txt
-│   └── # Python dependencies for the project
-├── pyproject.toml
-│   └── # Build system and project metadata
+│   ├── genehound          # Reproducing GeneHound results
+│   ├── nega               # NEGA fine-tuning & cross-validation scripts
+│   └── post               # Post-processing scripts
+├── trainer/               # Training and evaluation framework
+├── utils/                 # Utility functions
+├── README.md              # This documentation!
+├── requirements.txt       # Python dependencies
+└── pyproject.toml         # Build & project metadata
 ```
 
 ---
 
-Here’s how you can add a **Scripts Usage** section to your README file, providing detailed guidance on how to use the `genepriority` script:
+## How to Rock the Scripts 🎸
 
----
+### Command Line Usage
 
-### Scripts Usage
-#### `genepriority`
-**Usage**:
 ```bash
-usage: genepriority [-h] {genehound-omim1,genehound-omim2,nega-cv,nega,post} ...
-
-Gene Prioritization Tool
-
-This tool implements matrix completion algorithms for gene prioritization on the OMIM gene-disease matrix. It supports integration of side information, such as gene features and disease phenotypes, to improve prediction accuracy.
-
-Implemented subcommands:
-  1. GeneHound (based on MACAU)
-  2. Non-Euclidean Gradient Algorithm (NEGA)
-  3. Post-processing of evaluation results
-
-positional arguments:
-  {genehound-omim1,genehound-omim2,nega-cv,nega,post}
-    genehound-omim1     Run GeneHound with the OMIM1 dataset (multiple splits).
-    genehound-omim2     Run GeneHound with the filtered OMIM2 dataset (cross-validation).
-    nega-cv             Perform cross-validation for hyperparameter tuning of NEGA.
-    nega                Train and evaluate the NEGA model.
-    post                Perform post-processing of evaluation results.
-
-options:
-  -h, --help            show this help message and exit
+usage: genepriority [-h] {genehound,nega-tuning,nega,post} ...
 ```
+
+**Subcommands:**
+- **genehound:** Run GeneHound with cross-validation on the OMIM dataset.
+- **nega-tuning:** Find the best hyperparameters for NEGA.
+- **nega:** Train and evaluate the NEGA model using cross-validation.
+- **post:** Post-process and analyze the evaluation results.
+
+For more details, run:
+```bash
+genepriority --help
+```
+
+---
 
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+This project is MIT licensed. See the [LICENSE](LICENSE) file for details.
 
 ---
 
-## Contact
+## Got Questions? 🤔
 
-For questions, suggestions, or issues, please open an issue on the repository.
+If you have any questions, suggestions, or issues, feel free to open an issue on GitHub. We love hearing from you!
+
+---
+
+Enjoy the ride and happy gene prioritizing! 🎉  

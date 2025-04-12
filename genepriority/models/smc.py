@@ -1,7 +1,7 @@
 # pylint: disable=C0103,R0913,R0914,R0915,R0902,R0903
 """
-Matrix Completion Module
-========================
+Structured Matrix Completion Module
+====================================
 
 This module implements matrix completion algorithms using adaptive step size optimization.
 The API is designed to be straightforward and intuitive, offering configurable parameters
@@ -32,9 +32,8 @@ import scipy.sparse as sp
 import tensorflow as tf
 from sklearn import metrics
 
-from genepriority.compute_models.flip_labels import FlipLabels
-from genepriority.compute_models.matrix_completion_result import \
-    MatrixCompletionResult
+from genepriority.models.flip_labels import FlipLabels
+from genepriority.models.matrix_completion_result import MatrixCompletionResult
 from genepriority.utils import calculate_auc_bedroc, serialize
 
 
@@ -747,7 +746,11 @@ class StandardMatrixCompletion(BaseMatrixCompletion):
         grad_h2 = residual @ self.h1 + self.regularization_parameter * self.h2
         return np.vstack([grad_h1, grad_h2.T])
 
-MatrixCompletionSessionType = Union["StandardMatrixCompletion", "SideInfoMatrixCompletion"]
+
+MatrixCompletionSessionType = Union[
+    "StandardMatrixCompletion", "SideInfoMatrixCompletion"
+]
+
 
 class MatrixCompletionSession:
     """

@@ -20,8 +20,7 @@ from pathlib import Path
 import yaml
 
 from genepriority.preprocessing.dataloader import DataLoader
-from genepriority.preprocessing.side_information_loader import \
-    SideInformationLoader
+from genepriority.preprocessing.side_information_loader import SideInformationLoader
 from genepriority.scripts.utils import pre_processing
 from genepriority.trainer.macau_trainer import MACAUTrainer
 from genepriority.utils import serialize

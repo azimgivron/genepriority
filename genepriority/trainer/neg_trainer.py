@@ -19,12 +19,10 @@ import pandas as pd
 import scipy.sparse as sp
 import tensorflow as tf
 
-from genepriority.compute_models.matrix_completion_result import \
-    MatrixCompletionResult
-from genepriority.compute_models.smc import MatrixCompletionSession
+from genepriority.models.matrix_completion_result import MatrixCompletionResult
+from genepriority.models.smc import MatrixCompletionSession
 from genepriority.preprocessing.dataloader import DataLoader
-from genepriority.preprocessing.side_information_loader import \
-    SideInformationLoader
+from genepriority.preprocessing.side_information_loader import SideInformationLoader
 from genepriority.preprocessing.train_val_test_mask import TrainValTestMasks
 from genepriority.trainer.base import BaseTrainer
 from genepriority.utils import create_tb_dir

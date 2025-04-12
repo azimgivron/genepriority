@@ -105,46 +105,56 @@ def parse_genehound(subparsers: argparse.ArgumentParser):
 
 def parse_nega(subparsers: argparse._SubParsersAction):
     """
-    Adds subcommands for NEGA to the argument parser.
+    Adds the NEGA subcommand with two subsubcommands: "cv" and "fine-tune".
 
-    Two subcommands are provided:
-      - "nega-tuning": Run hyperparameter tuning.
-      - "nega": Run a single train-evaluation cycle.
+    Subsubcommands:
+      - "cv": Train and evaluate the NEGA model using a cross-validation setting.
+      - "fine-tune": Run hyperparameter tuning for NEGA.
 
     Args:
         subparsers (argparse._SubParsersAction): The subparsers object to which
-            the NEGA commands will be added.
+            the NEGA command will be added.
     """
-    cv_parser = subparsers.add_parser(
-        "nega-tuning", help="Perform search for hyperparameter tuning of NEGA."
+    # Add the main "nega" subcommand
+    nega_parser = subparsers.add_parser(
+        "nega",
+        help="Run NEGA on OMIM dataset.",
     )
-    eval_parser = subparsers.add_parser(
-        "nega", help="Train and evaluate the NEGA model on a cross-validation setting."
+    nega_subparsers = nega_parser.add_subparsers(dest="nega_command", required=True)
+
+    # Subsubcommand for hyperparameter tuning ("fine-tune")
+    fine_tune_parser = nega_subparsers.add_parser(
+        "fine-tune", help="Perform search for hyperparameter tuning of NEGA."
     )
-    eval_parser.add_argument(
+
+    # Subsubcommand for cross-validation ("cv")
+    cv_parser = nega_subparsers.add_parser(
+        "cv", help="Train and evaluate the NEGA model on a cross-validation setting."
+    )
+    cv_parser.add_argument(
         "--num-folds",
         type=int,
         required=True,
         help="Number of folds.",
     )
 
-    for subparser in [cv_parser, eval_parser]:
-        subparser.add_argument(
+    # Add common arguments to both "cv" and "fine-tune"
+    for parser in [fine_tune_parser, cv_parser]:
+        parser.add_argument(
             "--output-path",
             type=str,
             required=True,
             help="Directory to save output result.",
         )
-        subparser.add_argument(
+        parser.add_argument(
             "--zero-sampling-factor",
             type=int,
             required=True,
             help=(
-                "Factor for zero sampling (number of zeros = factor * "
-                "number of ones). "
+                "Factor for zero sampling (number of zeros = factor * number of ones)."
             ),
         )
-        subparser.add_argument(
+        parser.add_argument(
             "--input-path",
             type=str,
             default="/home/TheGreatestCoder/code/data/postprocessed/",
@@ -153,70 +163,71 @@ def parse_nega(subparsers: argparse._SubParsersAction):
                 " (default: %(default)s)."
             ),
         )
-        subparser.add_argument(
+        parser.add_argument(
             "--omim-meta-path",
             type=str,
             default="/home/TheGreatestCoder/code/genepriority/configurations/omim.yaml",
             help="Path to the OMIM metadata file (default: %(default)s).",
         )
-        subparser.add_argument(
+        parser.add_argument(
             "--log-filename",
             type=str,
             default="pipeline.log",
             help="Filename for log output (default: %(default)s).",
         )
-        subparser.add_argument(
+        parser.add_argument(
             "--rank",
             type=int,
             default=40,
             help="Rank (number of latent factors) for the model (default: %(default)s).",
         )
-        subparser.add_argument(
+        parser.add_argument(
             "--iterations",
             type=int,
             default=200,
             help="Number of training iterations (default: %(default)s).",
         )
-        subparser.add_argument(
+        parser.add_argument(
             "--threshold",
             type=int,
             default=10,
             help="Threshold parameter for the model (default: %(default)s).",
         )
-        subparser.add_argument(
+        parser.add_argument(
             "--flip_fraction",
             type=float,
             default=None,
             help=(
-                "Fraction of observed positive training entries "
-                "to flip to negatives (zeros) to simulate label noise."
-                "Must be between 0 and 1. (default: %(default)s)."
+                "Fraction of observed positive training entries to flip to negatives "
+                "(zeros) to simulate label noise. Must be between 0 and 1. (default: %(default)s)."
             ),
         )
-        subparser.add_argument(
+        parser.add_argument(
             "--validation-size",
             type=float,
             default=0.1,
             help="Proportion of data to use for validation (default: %(default)s).",
         )
-        subparser.add_argument(
+        parser.add_argument(
             "--seed",
             type=int,
             default=42,
             help="Random seed for reproducibility (default: %(default)s).",
         )
-    eval_parser.add_argument(
+
+    # Additional arguments specific to the "cv" subcommand
+    cv_parser.add_argument(
         "--side-info",
         action="store_true",
-        help="Include side information for genes and diseases (default: %(default)s).",
+        help="Include side information for genes and diseases.",
     )
-    eval_parser.add_argument(
+    cv_parser.add_argument(
         "--tensorboard-dir",
         type=str,
         default="/home/TheGreatestCoder/code/logs",
         help="Directory for TensorBoard logs (default: %(default)s).",
     )
-    eval_parser.add_argument(
+    cv_parser.add_argument(
         "--config-path",
         type=str,
         default="/home/TheGreatestCoder/code/genepriority/configurations/nega/meta.yaml",
@@ -225,19 +236,21 @@ def parse_nega(subparsers: argparse._SubParsersAction):
             "(default: %(default)s)."
         ),
     )
-    eval_parser.add_argument(
+    cv_parser.add_argument(
         "--results-filename",
         type=str,
         default="results.pickle",
         help="Filename for serialized results (default: %(default)s).",
     )
-    cv_parser.add_argument(
+
+    # Additional arguments specific to the "fine-tune" subcommand
+    fine_tune_parser.add_argument(
         "--n-trials",
         type=int,
         default=100,
         help="Number of trials for hyperparameter tuning (default: %(default)s).",
     )
-    cv_parser.add_argument(
+    fine_tune_parser.add_argument(
         "--timeout",
         type=int,
         default=12,
