@@ -56,7 +56,7 @@ To overcome these issues, NEGA uses **relative smoothness**. That means we compa
 
 #### Bregman Distance & Relative Smoothness
 
-We say a function \( f \) is \( L_f \)-smooth relative to a kernel \( h \) if:
+We say a function $f$ is $L_f$-smooth relative to a kernel $h$ if:
 
 $$
 \left| f(x) - f(y) - \langle \nabla f(y),\, x-y \rangle \right| \leq L_f\, \mathcal{D}_h(x,y),
@@ -73,7 +73,7 @@ $$
 The NEGA update rule is:
 
 $$
-x^{k+1} = \arg\min_x \left\{ \langle \nabla f(x^k),\, x - x^k \rangle + \frac{1}{\alpha_k}\, \mathcal{D}_h(x,x^k) \right\},
+x^{k+1} = \arg\min_x \, \{ \, \langle \nabla f(x^k),\, x - x^k \rangle + \frac{1}{\alpha_k}\, \mathcal{D}_h(x,x^k) \, \},
 $$
 
 This formulation keeps the update step convex and ensures we gradually converge to a local optimum—even when the gradient isn’t exactly well-behaved.
