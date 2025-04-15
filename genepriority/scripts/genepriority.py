@@ -37,7 +37,7 @@ def setup_logger(args: Any):
             - log_filename: The name of the log file.
     """
     output_path = Path(args.output_path).absolute()
-    output_path.mkdir(exist_ok=True)
+    output_path.mkdir(parents=True, exist_ok=True)
 
     log_file = output_path / args.log_filename
 

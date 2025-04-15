@@ -131,15 +131,14 @@ def parse_nega(subparsers: argparse._SubParsersAction):
     cv_parser = nega_subparsers.add_parser(
         "cv", help="Train and evaluate the NEGA model on a cross-validation setting."
     )
-    cv_parser.add_argument(
-        "--num-folds",
-        type=int,
-        required=True,
-        help="Number of folds.",
-    )
-
     # Add common arguments to both "cv" and "fine-tune"
     for parser in [fine_tune_parser, cv_parser]:
+        parser.add_argument(
+            "--num-folds",
+            type=int,
+            required=True,
+            help="Number of folds.",
+        )
         parser.add_argument(
             "--output-path",
             type=str,
@@ -214,13 +213,13 @@ def parse_nega(subparsers: argparse._SubParsersAction):
             default=42,
             help="Random seed for reproducibility (default: %(default)s).",
         )
-
+        parser.add_argument(
+            "--side-info",
+            action="store_true",
+            help="Include side information for genes and diseases.",
+        )
+        
     # Additional arguments specific to the "cv" subcommand
-    cv_parser.add_argument(
-        "--side-info",
-        action="store_true",
-        help="Include side information for genes and diseases.",
-    )
     cv_parser.add_argument(
         "--tensorboard-dir",
         type=str,

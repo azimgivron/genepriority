@@ -302,20 +302,24 @@ class NEGTrainer(BaseTrainer):
             iterations: int,
             threshold: int,
             matrix: sp.csr_matrix,
+            side_info: sp.csr_matrix,
             train_mask: sp.csr_matrix,
             test_mask: sp.csr_matrix,
         ) -> float:
             regularization_parameter = trial.suggest_float(
-                "Regularization parameter for the optimization.", 1e-5, 1e-1, log=True
+                "Regularization parameter for the optimization.", 1e-5, 1e0, log=True
             )
             symmetry_parameter = trial.suggest_float(
                 "Symmetry parameter for the gradient adjustment.",
-                1e-8,
-                1e-0,
+                1e-5,
+                1e0,
                 log=True,
             )
             smoothness_parameter = trial.suggest_float(
-                "Initial smoothness parameter.", 0.001, 0.01, step=0.001
+                "Initial smoothness parameter.", 
+                1e-5,
+                1e0,
+                log=True,
             )
             rho_increase = trial.suggest_float(
                 "Factor for increasing the step size dynamically.", 2.0, 10.0, step=1.0
@@ -333,25 +337,16 @@ class NEGTrainer(BaseTrainer):
                 threshold=threshold,
                 rank=rank,
                 matrix=matrix,
+                side_info=side_info,
                 train_mask=train_mask,
                 test_mask=test_mask,
             )
-            try:
-                training_status = session.run()
-                trial.set_user_attr("rmse on test set", training_status.rmse_history)
-                trial.set_user_attr(
-                    "loss on training set", training_status.loss_history
-                )
-            except ValueError as error_msg:
-                self.logger.error(error_msg)
-                raise optuna.TrialPruned()
-            return training_status.rmse_history[-1]
-
-        if not isinstance(self.dataloader.omim1_masks, TrainValTestMasks):
-            raise TypeError(
-                "No validation set is available. Ensure `omim1_masks` "
-                "is an instance of `TrainValTestMasks`."
+            training_status = session.run()
+            trial.set_user_attr("rmse on test set", training_status.rmse_history)
+            trial.set_user_attr(
+                "loss on training set", training_status.loss_history
             )
+            return training_status.rmse_history[-1]
 
         storage = optuna.storages.JournalStorage(
             optuna.storages.journal.JournalFileBackend(
@@ -363,17 +358,18 @@ class NEGTrainer(BaseTrainer):
             study_name="SMC hyper-parameters optimization",
             direction="minimize",
             storage=storage,
-            **kwargs,
         )
         optuna.logging.enable_propagation()  # Propagate logs to the root logger.
         optuna.logging.disable_default_handler()
         optuna.logging.set_verbosity(optuna.logging.DEBUG)
 
         matrix = self.dataloader.omim
-
-        self.logger.debug("Set `iter_over_validation` to True.")
-
-        train_mask, _, val_mask = next(iter(self.dataloader.splits))
+        train_mask, _, val_mask = next(iter(self.dataloader.omim_masks))
+        side_info = (
+                self.side_info_loader.side_info
+                if self.side_info_loader is not None
+                else None
+            )
 
         study.optimize(
             lambda trial: objective(
@@ -382,6 +378,7 @@ class NEGTrainer(BaseTrainer):
                 self.iterations,
                 self.threshold,
                 matrix,
+                side_info,
                 train_mask,
                 val_mask,
             ),
@@ -390,7 +387,4 @@ class NEGTrainer(BaseTrainer):
             show_progress_bar=True,
             timeout=timeout,
         )
-
-        self.logger.debug("Set `iter_over_validation` to False.")
-
         return study

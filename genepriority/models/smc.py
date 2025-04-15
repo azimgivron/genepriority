@@ -449,46 +449,48 @@ class BaseMatrixCompletion(metaclass=abc.ABCMeta):
                 or ith_iteration == 0
             ):
                 try:
-                    with self.writer.as_default():
-                        training_rmse = self.calculate_rmse(self.train_mask)
-                        tf.summary.scalar(
-                            name="training_loss", data=training_rmse, step=ith_iteration
-                        )
-                        tf.summary.scalar(
-                            name="testing_loss", data=testing_loss, step=ith_iteration
-                        )
-                        # Extract observed test values and corresponding predictions
-                        test_values_actual = self.matrix[self.test_mask]
-                        pred = self.predict_all()
-                        test_predictions = pred[self.test_mask]
-                        auc, avg_precision, bedroc = calculate_auc_bedroc(
-                            test_values_actual, test_predictions
-                        )
-                        tf.summary.scalar(name="auc", data=auc, step=ith_iteration)
-                        tf.summary.scalar(
-                            name="average precision",
-                            data=avg_precision,
-                            step=ith_iteration,
-                        )
-                        tf.summary.scalar(
-                            name="bedroc top1%", data=bedroc, step=ith_iteration
-                        )
-                        tf.summary.histogram(
-                            "Values on test points",
-                            test_predictions,
-                            step=ith_iteration,
-                        )
-                        tf.summary.histogram(
-                            "Values on training points",
-                            pred[self.train_mask],
-                            step=ith_iteration,
-                        )
-                        tf.summary.histogram(
-                            "Gradient f(W^k)", grad_f_W_k.flatten(), step=ith_iteration
-                        )
-                        tf.summary.flush()
+                    if self.writer is not None:
+                        with self.writer.as_default():
+                            training_rmse = self.calculate_rmse(self.train_mask)
+                            tf.summary.scalar(
+                                name="training_loss", data=training_rmse, step=ith_iteration
+                            )
+                            tf.summary.scalar(
+                                name="testing_loss", data=testing_loss, step=ith_iteration
+                            )
+                            # Extract observed test values and corresponding predictions
+                            test_values_actual = self.matrix[self.test_mask]
+                            pred = self.predict_all()
+                            test_predictions = pred[self.test_mask]
+                            auc, avg_precision, bedroc = calculate_auc_bedroc(
+                                test_values_actual, test_predictions
+                            )
+                            tf.summary.scalar(name="auc", data=auc, step=ith_iteration)
+                            tf.summary.scalar(
+                                name="average precision",
+                                data=avg_precision,
+                                step=ith_iteration,
+                            )
+                            tf.summary.scalar(
+                                name="bedroc top1%", data=bedroc, step=ith_iteration
+                            )
+                            tf.summary.histogram(
+                                "Values on test points",
+                                test_predictions,
+                                step=ith_iteration,
+                            )
+                            tf.summary.histogram(
+                                "Values on training points",
+                                pred[self.train_mask],
+                                step=ith_iteration,
+                            )
+                            tf.summary.histogram(
+                                "Gradient f(W^k)", grad_f_W_k.flatten(), step=ith_iteration
+                            )
+                            tf.summary.flush()
                 except ValueError as e:
                     self.logger.warning("Tensorboard logging error: %s", e)
+                    raise
             while not non_euclidean_descent_lemma_cond:
                 flag = 1
                 inner_loop_it += 1
@@ -743,7 +745,7 @@ class StandardMatrixCompletion(BaseMatrixCompletion):
         """
         residual = self.calculate_training_residual()
         grad_h1 = residual @ self.h2.T + self.regularization_parameter * self.h1
-        grad_h2 = residual @ self.h1 + self.regularization_parameter * self.h2
+        grad_h2 = self.h1.T @ residual + self.regularization_parameter * self.h2
         return np.vstack([grad_h1, grad_h2.T])
 
 
