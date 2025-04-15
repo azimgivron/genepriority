@@ -202,6 +202,25 @@ def parse_nega(subparsers: argparse._SubParsersAction):
             ),
         )
         parser.add_argument(
+            "--flip_frequency",
+            type=int,
+            default=None,
+            help=(
+                "The frequency at which to resample the observed positive entries in the training "
+                "mask to be flipped to negatives. (default: %(default)s)."
+            ),
+        )
+        parser.add_argument(
+            "--patience",
+            type=int,
+            default=None,
+            help=(
+                "The number of recent epochs/iterations to consider when evaluating the stopping "
+                "condition. Default is None, meaning no early stopping is used. "
+                "(default: %(default)s)."
+            ),
+        )
+        parser.add_argument(
             "--validation-size",
             type=float,
             default=0.1,
@@ -218,7 +237,7 @@ def parse_nega(subparsers: argparse._SubParsersAction):
             action="store_true",
             help="Include side information for genes and diseases.",
         )
-        
+
     # Additional arguments specific to the "cv" subcommand
     cv_parser.add_argument(
         "--tensorboard-dir",

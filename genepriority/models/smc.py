@@ -32,6 +32,7 @@ import scipy.sparse as sp
 import tensorflow as tf
 from sklearn import metrics
 
+from genepriority.models.early_stopping import EarlyStopping
 from genepriority.models.flip_labels import FlipLabels
 from genepriority.models.matrix_completion_result import MatrixCompletionResult
 from genepriority.utils import calculate_auc_bedroc, serialize
@@ -41,9 +42,15 @@ class BaseMatrixCompletion(metaclass=abc.ABCMeta):
     """
     Manages the configuration, training, and evaluation of a matrix completion model.
 
+    The class is designed for scenarios where the objective is to approximate a
+    partially observed matrix by a low-rank factorization. It handles the conversion
+    of sparse matrices to dense format for internal use, configuration of optimization
+    parameters, and logging of progress. Optional mechanisms for label flipping and
+    early stopping can also be integrated.
+
     Attributes:
-        matrix (np.ndarray): Input matrix to be approximated. Shape: (n, m). With m
-            the number of diseases and n the number of genes.
+        matrix (np.ndarray): Input matrix to be approximated. Shape: (n, m),
+            where n is the number of genes and m is the number of diseases.
         train_mask (np.ndarray): Boolean mask indicating observed entries in `matrix`
             for training. Shape: (n, m).
         test_mask (np.ndarray): Boolean mask indicating observed entries in `matrix`
@@ -52,27 +59,25 @@ class BaseMatrixCompletion(metaclass=abc.ABCMeta):
         regularization_parameter (float): Regularization parameter used in the optimization
             objective.
         iterations (int): Maximum number of optimization iterations.
-        symmetry_parameter (float): Parameter used to adjust gradient symmetry in the
-            optimization process.
-        smoothness_parameter (float): Initial smoothness parameter for the optimization
-            steps.
-        rho_increase (float): Factor used to increase the optimization step size dynamically.
-        rho_decrease (float): Factor used to decrease the optimization step size dynamically.
+        symmetry_parameter (float): Parameter used to adjust gradient symmetry during
+            the optimization process.
+        smoothness_parameter (float): Initial smoothness parameter for the optimization steps.
+        rho_increase (float): Factor used to dynamically increase the optimization step size.
+        rho_decrease (float): Factor used to dynamically decrease the optimization step size.
         threshold (int): Maximum iterations allowed for the inner optimization loop.
-        h1 (np.ndarray): Left factor matrix in the low-rank approximation (shape: n x rank).
-            With the gene feature vector size.
-        h2 (np.ndarray): Right factor matrix in the low-rank approximation (shape: rank x m).
-            With the disease feature vector size.
-        logger (logging.Logger): Logger instance for debugging and progress monitoring.
-        writer (tf.summary.SummaryWriter): TensorFlow summary writer for logging training
-            summaries.
+        h1 (np.ndarray): Left factor matrix in the low-rank approximation (shape: n x rank),
+            representing gene features.
+        h2 (np.ndarray): Right factor matrix in the low-rank approximation (shape: rank x m),
+            representing disease features.
+        logger (logging.Logger): Logger instance for debugging and monitoring training progress.
+        writer (tf.summary.SummaryWriter): TensorFlow summary writer for logging training summaries.
         seed (int): Seed for reproducible random initialization.
         save_name (str or pathlib.Path or None): File path where the model will be saved.
             If None, the model will not be saved after training.
-        flip_labels (FlipLabels or None): The fraction of observed positive entries
-            (ones) in the training mask that will be flipped to negatives (zeros) to simulate
-            label noise. Must be between 0 and 1. Default is None, meaning no label flipping
-            is performed.
+        flip_labels (FlipLabels or None): Object that simulates label noise by randomly flipping
+            a fraction of positive (1) entries to negatives (0) in the training mask.
+        early_stopping (EarlyStopping or None): Mechanism for monitoring training loss and triggering
+            early termination of training if the performance does not improve.
     """
 
     def __init__(
@@ -91,40 +96,38 @@ class BaseMatrixCompletion(metaclass=abc.ABCMeta):
         writer: tf.summary.SummaryWriter = None,
         seed: int = 123,
         save_name: str = None,
-        flip_fraction: float = None,
-        flip_frequency: int = 5,
+        flip_labels: FlipLabels = None,
+        early_stopping: EarlyStopping = None,
     ):
         """
-        Initializes the MatrixCompletionSession instance.
+        Initializes the BaseMatrixCompletion instance with the provided configuration
+        parameters for matrix approximation.
 
         Args:
-            matrix (sp.csr_matrix): Input matrix to be approximated. Shape: (n, m). With m
-                the number of diseases and n the number of genes.
+            matrix (sp.csr_matrix): Input matrix to be approximated. Shape: (n, m),
+                where n is the number of genes and m is the number of diseases.
             train_mask (sp.csr_matrix): Mask indicating observed entries in `matrix` for training.
-                Shape: (m, n).
-            test_mask (sp.csr_matrix): Mask indicating observed entries in
-                `matrix` for test. Shape: (m, n).
+                Shape: (n, m).
+            test_mask (sp.csr_matrix): Mask indicating observed entries in `matrix` for testing.
+                Shape: (n, m).
             rank (int): Desired rank for the low-rank approximation.
-            regularization_parameter (float): Regularization parameter for the optimization.
+            regularization_parameter (float): Regularization parameter for the optimization objective.
             iterations (int): Maximum number of optimization iterations.
-            symmetry_parameter (float): The symmetry parameter.
-            smoothness_parameter (float): Initial smoothness parameter.
-            rho_increase (float): Multiplicative factor to increase step size dynamically.
-            rho_decrease (float): Multiplicative factor to decrease step size dynamically.
-            threshold (int): Maximum number of iterations for the inner loop.
-            writer (tf.summary.SummaryWriter, optional): Tensorflow summary writer.
-                Default is `None`.
-            seed (int, optional): Seed for reproducible random initialization.
-                Default is 123.
-            save_name (str, optional): The file path where the model will be saved.
-                If set to None, the model will not be saved after training.  Defaults to None.
-            flip_fraction (float, optional): The fraction of observed positive entries
-                (ones) in the training mask that will be flipped to negatives (zeros) to simulate
-                label noise. Must be between 0 and 1. Default is None, meaning no label flipping
-                is performed.
-            flip_frequency (int, optional): The frequency at which to resample the observed positive
-                entries in the training mask to be flipped to negatives. Default to 5.
-
+            symmetry_parameter (float): Parameter for adjusting gradient symmetry during optimization.
+            smoothness_parameter (float): Initial smoothness parameter for optimization steps.
+            rho_increase (float): Multiplicative factor to dynamically increase the optimization step size.
+            rho_decrease (float): Multiplicative factor to dynamically decrease the optimization step size.
+            threshold (int): Maximum number of iterations for the inner optimization loop.
+            writer (tf.summary.SummaryWriter, optional): TensorFlow summary writer for logging training summaries.
+                Defaults to None.
+            seed (int, optional): Seed for reproducible random initialization. Defaults to 123.
+            save_name (str or pathlib.Path, optional): File path where the model will be saved.
+                If set to None, the model will not be saved after training. Defaults to None.
+            flip_labels (FlipLabels, optional): Object that simulates label noise by randomly flipping
+                a fraction of positive (1) entries to negatives (0) in the training mask.
+            early_stopping (EarlyStopping, optional): Early stopping object that implements
+                a mechanism for monitoring the validation loss and triggering early termination
+                if performance does not improve.
         """
         self.matrix = matrix.toarray()
         self.train_mask = train_mask.toarray().astype(bool)
@@ -139,12 +142,8 @@ class BaseMatrixCompletion(metaclass=abc.ABCMeta):
         self.threshold = threshold
         self.h1 = None
         self.h2 = None
-
-        if flip_fraction is None:
-            self.flip_labels = None
-        else:
-            ones_indices = np.argwhere((self.matrix * self.train_mask) == 1)
-            self.flip_labels = FlipLabels(flip_fraction, flip_frequency, ones_indices)
+        self.flip_labels = flip_labels
+        self.early_stopping = early_stopping
 
         if save_name is None:
             # If save_name is None, set self.save_name to None (no saving)
@@ -343,6 +342,66 @@ class BaseMatrixCompletion(metaclass=abc.ABCMeta):
         res_norm_next_it = self.calculate_loss()
         return W_k_next, res_norm_next_it
 
+    def tb_log(
+        self, ith_iteration: int, testing_loss: np.ndarray, grad_f_W_k: np.ndarray
+    ):
+        """
+        Logs training and evaluation metrics to Tensorboard for the current iteration.
+
+        This method gathers various performance metrics during the optimization process and logs
+        them to Tensorboard. It computes the training RMSE, logs the testing loss, and also logs
+        histograms and scalar summaries for different evaluation metrics including AUC, average
+        precision, and BEDROC. In addition, it logs histograms of the predicted values on both
+        the training and  testing sets, as well as the flattened gradient values.
+
+        Args:
+            ith_iteration (int): The current iteration index at which the logging is performed.
+            testing_loss (np.ndarray): The computed loss value for the testing dataset at the
+                current iteration.
+            grad_f_W_k (np.ndarray): The gradient of the loss with respect to the model weights
+                at the current iteration.
+        """
+        try:
+            with self.writer.as_default():
+                training_rmse = self.calculate_rmse(self.train_mask)
+                tf.summary.scalar(
+                    name="training_loss", data=training_rmse, step=ith_iteration
+                )
+                tf.summary.scalar(
+                    name="testing_loss", data=testing_loss, step=ith_iteration
+                )
+                # Extract observed test values and corresponding predictions
+                test_values_actual = self.matrix[self.test_mask]
+                pred = self.predict_all()
+                test_predictions = pred[self.test_mask]
+                auc, avg_precision, bedroc = calculate_auc_bedroc(
+                    test_values_actual, test_predictions
+                )
+                tf.summary.scalar(name="auc", data=auc, step=ith_iteration)
+                tf.summary.scalar(
+                    name="average precision",
+                    data=avg_precision,
+                    step=ith_iteration,
+                )
+                tf.summary.scalar(name="bedroc top1%", data=bedroc, step=ith_iteration)
+                tf.summary.histogram(
+                    "Values on test points",
+                    test_predictions,
+                    step=ith_iteration,
+                )
+                tf.summary.histogram(
+                    "Values on training points",
+                    pred[self.train_mask],
+                    step=ith_iteration,
+                )
+                tf.summary.histogram(
+                    "Gradient f(W^k)", grad_f_W_k.flatten(), step=ith_iteration
+                )
+                tf.summary.flush()
+        except ValueError as e:
+            self.logger.warning("Tensorboard logging error: %s", e)
+            raise
+
     def run(self, log_freq: int = 10) -> MatrixCompletionResult:
         """
         Performs matrix completion using adaptive step size optimization.
@@ -443,54 +502,10 @@ class BaseMatrixCompletion(metaclass=abc.ABCMeta):
                 res_norm_next_it
                 <= res_norm + linear_approx + self.smoothness_parameter * bregman
             )
-            if (
-                self.writer is not None
-                and (ith_iteration + 1) % log_freq == 0
-                or ith_iteration == 0
+            if self.writer is not None and (
+                (ith_iteration + 1) % log_freq == 0 or ith_iteration == 0
             ):
-                try:
-                    if self.writer is not None:
-                        with self.writer.as_default():
-                            training_rmse = self.calculate_rmse(self.train_mask)
-                            tf.summary.scalar(
-                                name="training_loss", data=training_rmse, step=ith_iteration
-                            )
-                            tf.summary.scalar(
-                                name="testing_loss", data=testing_loss, step=ith_iteration
-                            )
-                            # Extract observed test values and corresponding predictions
-                            test_values_actual = self.matrix[self.test_mask]
-                            pred = self.predict_all()
-                            test_predictions = pred[self.test_mask]
-                            auc, avg_precision, bedroc = calculate_auc_bedroc(
-                                test_values_actual, test_predictions
-                            )
-                            tf.summary.scalar(name="auc", data=auc, step=ith_iteration)
-                            tf.summary.scalar(
-                                name="average precision",
-                                data=avg_precision,
-                                step=ith_iteration,
-                            )
-                            tf.summary.scalar(
-                                name="bedroc top1%", data=bedroc, step=ith_iteration
-                            )
-                            tf.summary.histogram(
-                                "Values on test points",
-                                test_predictions,
-                                step=ith_iteration,
-                            )
-                            tf.summary.histogram(
-                                "Values on training points",
-                                pred[self.train_mask],
-                                step=ith_iteration,
-                            )
-                            tf.summary.histogram(
-                                "Gradient f(W^k)", grad_f_W_k.flatten(), step=ith_iteration
-                            )
-                            tf.summary.flush()
-                except ValueError as e:
-                    self.logger.warning("Tensorboard logging error: %s", e)
-                    raise
+                self.tb_log(ith_iteration, testing_loss, grad_f_W_k)
             while not non_euclidean_descent_lemma_cond:
                 flag = 1
                 inner_loop_it += 1
@@ -547,7 +562,14 @@ class BaseMatrixCompletion(metaclass=abc.ABCMeta):
             loss.append(training_loss)
             rmse.append(testing_loss)
             res_norm = res_norm_next_it
-
+            if self.early_stopping is not None and self.early_stopping(
+                testing_loss, self.h1, self.h2
+            ):
+                self.h1, self.h2 = self.early_stopping.best_weights
+                self.logger.debug("[Early Stopping] Training interrupted.")
+                if ith_iteration % log_freq != 0:
+                    self.tb_log(ith_iteration, testing_loss, grad_f_W_k)
+                break
         # Compute runtime
         runtime = time.time() - start_time
         self.logger.debug(

@@ -173,7 +173,7 @@ class BaseTrainer(metaclass=ABCMeta):
             Evaluation: Aggregated evaluation results across all splits.
         """
         results = []
-        for i, (train_mask, test_mask, _) in tqdm(
+        for i, (train_mask, test_mask, validation_mask, _) in tqdm(
             enumerate(self.dataloader.omim_masks), desc="Fold", leave=False
         ):
             self.logger.debug("Initiating training on fold %d", i + 1)
@@ -184,7 +184,7 @@ class BaseTrainer(metaclass=ABCMeta):
                 else None
             )
             session = self.create_session(
-                i, train_mask, test_mask, num_latent, save_name, side_info
+                i, train_mask, validation_mask, num_latent, save_name, side_info
             )
 
             run_name = f"fold{i+1}-latent{num_latent}"

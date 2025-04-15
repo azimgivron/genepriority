@@ -19,11 +19,12 @@ import pandas as pd
 import scipy.sparse as sp
 import tensorflow as tf
 
+from genepriority.models.early_stopping import EarlyStopping
+from genepriority.models.flip_labels import FlipLabels
 from genepriority.models.matrix_completion_result import MatrixCompletionResult
 from genepriority.models.smc import MatrixCompletionSession
 from genepriority.preprocessing.dataloader import DataLoader
 from genepriority.preprocessing.side_information_loader import SideInformationLoader
-from genepriority.preprocessing.train_val_test_mask import TrainValTestMasks
 from genepriority.trainer.base import BaseTrainer
 from genepriority.utils import create_tb_dir
 
@@ -47,10 +48,13 @@ class NEGTrainer(BaseTrainer):
         rho_increase (float): Factor for increasing step size dynamically.
         rho_decrease (float): Factor for decreasing step size dynamically.
         threshold (int): Maximum number of iterations allowed for the inner loop.
-        flip_fraction (float, optional): The fraction of observed positive entries
+        flip_fraction (float): The fraction of observed positive entries
             (ones) in the training mask that will be flipped to negatives (zeros) to simulate
-            label noise. Must be between 0 and 1. Default is None, meaning no label flipping
-            is performed.
+            label noise. Must be between 0 and 1. If None, no label flipping is performed.
+        flip_frequency (int): The frequency at which to resample the observed
+            positive entries in the training mask to be flipped to negatives.
+        patience (int): The number of recent epochs/iterations to consider when
+            evaluating the stopping condition. If None, no early stopping is used.
         seed (int): Random seed for reproducibility.
         side_info_loader (SideInformationLoader): Loader for additional side information.
         logger (logging.Logger): Logger instance for tracking progress and debugging.
@@ -72,6 +76,8 @@ class NEGTrainer(BaseTrainer):
         rho_decrease: float = None,
         threshold: int = None,
         flip_fraction: float = None,
+        flip_frequency: int = None,
+        patience: int = None,
         side_info_loader: SideInformationLoader = None,
         tensorboard_dir: Path = None,
     ):
@@ -101,6 +107,11 @@ class NEGTrainer(BaseTrainer):
                 (ones) in the training mask that will be flipped to negatives (zeros) to simulate
                 label noise. Must be between 0 and 1. Default is None, meaning no label flipping
                 is performed.
+            flip_frequency (int, optional): The frequency at which to resample the observed
+                positive entries in the training mask to be flipped to negatives. Defaults to None.
+            patience (int, optional): The number of recent epochs/iterations to consider when
+                evaluating the stopping condition. Default is None, meaning no early stopping
+                is used.
             side_info_loader (SideInformationLoader, optional): Loader for additional side
                 information. Defaults to None.
            tensorboard_dir (Path, optional): The base directory path where
@@ -122,6 +133,8 @@ class NEGTrainer(BaseTrainer):
         self.rho_decrease = rho_decrease
         self.threshold = threshold
         self.flip_fraction = flip_fraction
+        self.flip_frequency = flip_frequency
+        self.patience = patience
         self.tensorboard_dir = tensorboard_dir
         self.writer = None
 
@@ -143,7 +156,6 @@ class NEGTrainer(BaseTrainer):
             "rho_increase": self.rho_increase,
             "rho_decrease": self.rho_decrease,
             "threshold": self.threshold,
-            "flip_fraction": self.flip_fraction,
         }
 
     def predict(
@@ -189,8 +201,16 @@ class NEGTrainer(BaseTrainer):
         Returns:
             MatrixCompletionSession: A configured session object for model training and evaluation.
         """
+        kwargs = self.neg_session_kwargs
+        if self.flip_fraction is not None:
+            ones_indices = np.argwhere((self.matrix * self.train_mask) == 1)
+            kwargs["flip_labels"] = FlipLabels(
+                self.flip_fraction, self.flip_frequency, ones_indices
+            )
+        if self.patience is not None:
+            kwargs["early_stopping"] = EarlyStopping(self.patience)
         return MatrixCompletionSession(
-            **self.neg_session_kwargs,
+            **kwargs,
             rank=num_latent,
             matrix=self.dataloader.omim,
             train_mask=train_mask,
@@ -316,7 +336,7 @@ class NEGTrainer(BaseTrainer):
                 log=True,
             )
             smoothness_parameter = trial.suggest_float(
-                "Initial smoothness parameter.", 
+                "Initial smoothness parameter.",
                 1e-5,
                 1e0,
                 log=True,
@@ -343,9 +363,7 @@ class NEGTrainer(BaseTrainer):
             )
             training_status = session.run()
             trial.set_user_attr("rmse on test set", training_status.rmse_history)
-            trial.set_user_attr(
-                "loss on training set", training_status.loss_history
-            )
+            trial.set_user_attr("loss on training set", training_status.loss_history)
             return training_status.rmse_history[-1]
 
         storage = optuna.storages.JournalStorage(
@@ -364,12 +382,12 @@ class NEGTrainer(BaseTrainer):
         optuna.logging.set_verbosity(optuna.logging.DEBUG)
 
         matrix = self.dataloader.omim
-        train_mask, _, val_mask = next(iter(self.dataloader.omim_masks))
+        train_mask, _, _, val_mask = next(iter(self.dataloader.omim_masks))
         side_info = (
-                self.side_info_loader.side_info
-                if self.side_info_loader is not None
-                else None
-            )
+            self.side_info_loader.side_info
+            if self.side_info_loader is not None
+            else None
+        )
 
         study.optimize(
             lambda trial: objective(

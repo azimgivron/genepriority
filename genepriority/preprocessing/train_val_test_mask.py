@@ -31,8 +31,10 @@ class TrainValTestMasks:
     Attributes:
         training_masks (List[sp.csr_matrix]): A list of sparse matrices, each representing
             a training mask for one fold of the k-fold split.
-        validation_mask (sp.csr_matrix): A sparse matrix representing the validation mask,
-            which is fixed across all folds.
+        validation_mask (sp.csr_matrix): A sparse matrix representing the validation mask
+            used for error estimation during training, which is fixed across all folds.
+        validation_finetuning_mask (sp.csr_matrix): A sparse matrix representing the validation
+            mask used for fine tuning, which is fixed across all folds.
         testing_masks (List[sp.csr_matrix]): A list of sparse matrices, each representing
             a testing mask corresponding to one fold of the k-fold split.
         seed (int): The random seed used to ensure reproducibility of the dataset splits.
@@ -75,6 +77,22 @@ class TrainValTestMasks:
             train_size=validation_size,
             random_state=self.seed,
             shuffle=True,
+        )
+        validation_row_indices, validation_finetuning_row_indices = train_test_split(
+            np.arange(len(validation_row_indices)),
+            train_size=0.5,
+            random_state=self.seed,
+            shuffle=True,
+        )
+        self.validation_finetuning_mask = sp.csr_matrix(
+            (
+                values[validation_finetuning_row_indices],
+                (
+                    row_indices[validation_finetuning_row_indices],
+                    col_indices[validation_finetuning_row_indices],
+                ),
+            ),
+            shape=nnz_mask.shape,
         )
         self.validation_mask = sp.csr_matrix(
             (
@@ -128,10 +146,23 @@ class TrainValTestMasks:
                 A tuple containing:
                     - A training mask (sp.csr_matrix) for the current fold.
                     - A testing mask (sp.csr_matrix) for the current fold.
-                    - The validation mask (sp.csr_matrix), which is identical for all folds.
+                    - The validation mask (sp.csr_matrix), for error estimation
+                    during training, which is identical all folds.
+                    - The validation mask (sp.csr_matrix), for finetuning,
+                    which is identical for all folds.
         """
         # Create a list of validation masks that matches the number of k-folds.
         validation_masks = [
             self.validation_mask for _ in range(len(self.training_masks))
         ]
-        return iter(zip(self.training_masks, self.testing_masks, validation_masks))
+        validation_finetuning_mask = [
+            self.validation_finetuning_mask for _ in range(len(self.training_masks))
+        ]
+        return iter(
+            zip(
+                self.training_masks,
+                self.testing_masks,
+                validation_masks,
+                validation_finetuning_mask,
+            )
+        )

@@ -146,6 +146,14 @@ class DataLoader:
             train_size * 100,
             (1 - train_size - self.validation_size) * 100,
         )
+        self.logger.debug(
+            "%.2ipts for training (avg), %.2ipts for validation, "
+            "%.2ipts for finetuning, %.2ipts for testing (avg).",
+            np.mean([len(mask.data) for mask in self.omim_masks.training_masks]),
+            len(self.omim_masks.validation_mask.data),
+            len(self.omim_masks.validation_finetuning_mask.data),
+            np.mean([len(mask.data) for mask in self.omim_masks.testing_masks]),
+        )
 
         self.logger.debug("Processed OMIM dataset. Shape: %s", self.omim.shape)
         counts = compute_statistics(self.omim, self.omim_masks)

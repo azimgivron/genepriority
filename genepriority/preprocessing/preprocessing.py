@@ -114,7 +114,7 @@ def compute_statistics(
             across all splits.
     """
     counts = []
-    for _, test_mask, _ in folds:
+    for _, test_mask, _, _ in folds:
         data = sp.find(sparse_matrix.multiply(test_mask))[1]
         counts.append(len(set(data)))
     average_count = np.mean(counts)

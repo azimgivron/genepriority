@@ -31,6 +31,9 @@ def finetune(
     rank: int,
     iterations: int,
     threshold: int,
+    flip_fraction: float,
+    flip_frequency: int,
+    patience: int,
     seed: int,
     n_trials: int,
     timeout: float,
@@ -47,6 +50,10 @@ def finetune(
         rank (int): Model rank (number of latent factors).
         iterations (int): Number of training iterations.
         threshold (int): Threshold parameter for the model.
+        flip_fraction (float): Fraction (0 to 1) of positive training entries to flip,
+            simulating label noise.
+        flip_frequency (int): How often to resample positive training entries for flipping.
+        patience (int): Number of recent epochs/iterations considered for early stopping.
         seed (int): Random seed for reproducibility.
         n_trials (int): Number of trials for the hyperparameter search.
         timeout (float, optional): Time out in hours.
@@ -59,6 +66,9 @@ def finetune(
         seed=seed,
         iterations=iterations,
         threshold=threshold,
+        flip_fraction=flip_fraction,
+        flip_frequency=flip_frequency,
+        patience=patience,
     )
     timeout_seconds = pint.Quantity(timeout, "h").to("s").m
     optuna_study = trainer.fine_tune(
@@ -85,6 +95,8 @@ def train_eval(
     iterations: int,
     threshold: int,
     flip_fraction: float,
+    flip_frequency: int,
+    patience: int,
     seed: int,
     regularization_parameter: float,
     symmetry_parameter: float,
@@ -109,8 +121,10 @@ def train_eval(
         rank (int): Model rank (number of latent factors).
         iterations (int): Number of training iterations.
         threshold (int): Threshold parameter for the model.
-        flip_fraction (float): Fraction of observed positive training entries
-            to flip to negatives (zeros) to simulate label noise. Must be between 0 and 1.
+        flip_fraction (float): Fraction (0 to 1) of positive training entries to flip,
+            simulating label noise.
+        flip_frequency (int): How often to resample positive training entries for flipping.
+        patience (int): Number of recent epochs/iterations considered for early stopping.
         seed (int): Random seed for reproducibility.
         regularization_parameter (float): Regularization parameter for training.
         symmetry_parameter (float): Symmetry parameter for training.
@@ -129,6 +143,8 @@ def train_eval(
         iterations=iterations,
         threshold=threshold,
         flip_fraction=flip_fraction,
+        flip_frequency=flip_frequency,
+        patience=patience,
         regularization_parameter=regularization_parameter,
         symmetry_parameter=symmetry_parameter,
         smoothness_parameter=smoothness_parameter,
@@ -188,6 +204,9 @@ def nega(args: argparse.Namespace):
             iterations=args.iterations,
             threshold=args.threshold,
             seed=args.seed,
+            flip_fraction=args.flip_fraction,
+            flip_frequency=args.flip_frequency,
+            patience=args.patience,
             n_trials=args.n_trials,
             timeout=args.timeout,
         )
@@ -217,6 +236,8 @@ def nega(args: argparse.Namespace):
             iterations=args.iterations,
             threshold=args.threshold,
             flip_fraction=args.flip_fraction,
+            flip_frequency=args.flip_frequency,
+            patience=args.patience,
             seed=args.seed,
             regularization_parameter=regularization_parameter,
             symmetry_parameter=symmetry_parameter,
