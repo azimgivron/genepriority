@@ -383,7 +383,7 @@ class NEGTrainer(BaseTrainer):
                 val_mask,
             ),
             n_trials=n_trials,
-            n_jobs=-1,
+            n_jobs=1,
             show_progress_bar=True,
             timeout=timeout,
         )

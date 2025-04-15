@@ -738,7 +738,7 @@ class StandardMatrixCompletion(BaseMatrixCompletion):
 
         where:
         - ∇_h1 = (mask ⊙ (h1 @ h2 - M)) @ h2.T + mu * h1,
-        - ∇_h2 = (mask ⊙ (h1 @ h2 - M)) @ h1 + mu * h2
+        - ∇_h2 = h1.T @ (mask ⊙ (h1 @ h2 - M)) + mu * h2
 
         Returns:
             np.ndarray: The gradient of the latents (n+m x rank)
