@@ -24,7 +24,6 @@ Features:
 import abc
 import logging
 import time
-from pathlib import Path
 from typing import Tuple, Union
 
 import numpy as np
@@ -35,6 +34,7 @@ from sklearn import metrics
 from genepriority.models.early_stopping import EarlyStopping
 from genepriority.models.flip_labels import FlipLabels
 from genepriority.models.matrix_completion_result import MatrixCompletionResult
+from genepriority.models.utils import check_save_name, tsne_plot_to_tensor
 from genepriority.utils import calculate_auc_bedroc, serialize
 
 
@@ -65,19 +65,18 @@ class BaseMatrixCompletion(metaclass=abc.ABCMeta):
         rho_increase (float): Factor used to dynamically increase the optimization step size.
         rho_decrease (float): Factor used to dynamically decrease the optimization step size.
         threshold (int): Maximum iterations allowed for the inner optimization loop.
-        h1 (np.ndarray): Left factor matrix in the low-rank approximation (shape: n x rank),
-            representing gene features.
-        h2 (np.ndarray): Right factor matrix in the low-rank approximation (shape: rank x m),
-            representing disease features.
+        h1 (np.ndarray): Left factor matrix in the low-rank approximation.
+        h2 (np.ndarray): Right factor matrix in the low-rank approximation.
         logger (logging.Logger): Logger instance for debugging and monitoring training progress.
-        writer (tf.summary.SummaryWriter): TensorFlow summary writer for logging training summaries.
+        writer (tf.summary.SummaryWriter): TensorFlow summary writer for logging training
+            summaries.
         seed (int): Seed for reproducible random initialization.
         save_name (str or pathlib.Path or None): File path where the model will be saved.
             If None, the model will not be saved after training.
         flip_labels (FlipLabels or None): Object that simulates label noise by randomly flipping
             a fraction of positive (1) entries to negatives (0) in the training mask.
-        early_stopping (EarlyStopping or None): Mechanism for monitoring training loss and triggering
-            early termination of training if the performance does not improve.
+        early_stopping (EarlyStopping or None): Mechanism for monitoring training loss and
+            triggering early termination of training if the performance does not improve.
     """
 
     def __init__(
@@ -111,20 +110,24 @@ class BaseMatrixCompletion(metaclass=abc.ABCMeta):
             test_mask (sp.csr_matrix): Mask indicating observed entries in `matrix` for testing.
                 Shape: (n, m).
             rank (int): Desired rank for the low-rank approximation.
-            regularization_parameter (float): Regularization parameter for the optimization objective.
+            regularization_parameter (float): Regularization parameter for the optimization
+                objective.
             iterations (int): Maximum number of optimization iterations.
-            symmetry_parameter (float): Parameter for adjusting gradient symmetry during optimization.
+            symmetry_parameter (float): Parameter for adjusting gradient symmetry during
+                optimization.
             smoothness_parameter (float): Initial smoothness parameter for optimization steps.
-            rho_increase (float): Multiplicative factor to dynamically increase the optimization step size.
-            rho_decrease (float): Multiplicative factor to dynamically decrease the optimization step size.
+            rho_increase (float): Multiplicative factor to dynamically increase the optimization
+                step size.
+            rho_decrease (float): Multiplicative factor to dynamically decrease the optimization
+                step size.
             threshold (int): Maximum number of iterations for the inner optimization loop.
-            writer (tf.summary.SummaryWriter, optional): TensorFlow summary writer for logging training summaries.
-                Defaults to None.
+            writer (tf.summary.SummaryWriter, optional): TensorFlow summary writer for logging
+                training summaries. Defaults to None.
             seed (int, optional): Seed for reproducible random initialization. Defaults to 123.
             save_name (str or pathlib.Path, optional): File path where the model will be saved.
                 If set to None, the model will not be saved after training. Defaults to None.
-            flip_labels (FlipLabels, optional): Object that simulates label noise by randomly flipping
-                a fraction of positive (1) entries to negatives (0) in the training mask.
+            flip_labels (FlipLabels, optional): Object that simulates label noise by randomly
+                flipping a fraction of positive (1) entries to negatives (0) in the training mask.
             early_stopping (EarlyStopping, optional): Early stopping object that implements
                 a mechanism for monitoring the validation loss and triggering early termination
                 if performance does not improve.
@@ -145,28 +148,7 @@ class BaseMatrixCompletion(metaclass=abc.ABCMeta):
         self.flip_labels = flip_labels
         self.early_stopping = early_stopping
 
-        if save_name is None:
-            # If save_name is None, set self.save_name to None (no saving)
-            self.save_name = None
-        elif isinstance(save_name, str):
-            # If save_name is a string, convert it to an absolute Path
-            self.save_name = Path(save_name).absolute()
-        elif isinstance(save_name, Path):
-            # If save_name is already a Path object, ensure it's absolute
-            self.save_name = save_name.absolute()
-        else:
-            # Raise a TypeError for unsupported types
-            raise TypeError(
-                "`save_name` must be either of type str or Path. "
-                f"Provided `save_name` of type {type(save_name)} is not supported."
-            )
-
-        # Additional check to ensure the path's parent directory exists
-        if self.save_name is not None and not self.save_name.parent.exists():
-            raise FileNotFoundError(
-                f"The directory {self.save_name.parent} does not exist. "
-                "Please provide a valid path for `save_name`."
-            )
+        self.save_name = check_save_name(save_name)
 
         # Set random seed for reproducibility
         np.random.seed(seed)
@@ -370,20 +352,24 @@ class BaseMatrixCompletion(metaclass=abc.ABCMeta):
                 tf.summary.scalar(
                     name="testing_loss", data=testing_loss, step=ith_iteration
                 )
+
                 # Extract observed test values and corresponding predictions
                 test_values_actual = self.matrix[self.test_mask]
                 pred = self.predict_all()
                 test_predictions = pred[self.test_mask]
-                auc, avg_precision, bedroc = calculate_auc_bedroc(
-                    test_values_actual, test_predictions
-                )
-                tf.summary.scalar(name="auc", data=auc, step=ith_iteration)
-                tf.summary.scalar(
-                    name="average precision",
-                    data=avg_precision,
-                    step=ith_iteration,
-                )
-                tf.summary.scalar(name="bedroc top1%", data=bedroc, step=ith_iteration)
+                if (self.matrix[self.test_mask] == 0).any():
+                    auc, avg_precision, bedroc = calculate_auc_bedroc(
+                        test_values_actual, test_predictions
+                    )
+                    tf.summary.scalar(name="auc", data=auc, step=ith_iteration)
+                    tf.summary.scalar(
+                        name="average precision",
+                        data=avg_precision,
+                        step=ith_iteration,
+                    )
+                    tf.summary.scalar(
+                        name="bedroc top1%", data=bedroc, step=ith_iteration
+                    )
                 tf.summary.histogram(
                     "Values on test points",
                     test_predictions,
@@ -397,6 +383,14 @@ class BaseMatrixCompletion(metaclass=abc.ABCMeta):
                 tf.summary.histogram(
                     "Gradient f(W^k)", grad_f_W_k.flatten(), step=ith_iteration
                 )
+                fig_h1 = tsne_plot_to_tensor(
+                    self.h1, color="#E69F00"
+                )  # shape: (N x rank) or (g x rank)
+                tf.summary.image("t-SNE: Gene embedding", fig_h1, step=ith_iteration)
+                fig_h2 = tsne_plot_to_tensor(
+                    self.h2.T, color="#009E73"
+                )  # shape: (M x rank) or (d x rank)
+                tf.summary.image("t-SNE: Disease embedding", fig_h2, step=ith_iteration)
                 tf.summary.flush()
         except ValueError as e:
             self.logger.warning("Tensorboard logging error: %s", e)
@@ -566,6 +560,7 @@ class BaseMatrixCompletion(metaclass=abc.ABCMeta):
                 testing_loss, self.h1, self.h2
             ):
                 self.h1, self.h2 = self.early_stopping.best_weights
+                self.early_stopping.clear()
                 self.logger.debug("[Early Stopping] Training interrupted.")
                 if ith_iteration % log_freq != 0:
                     self.tb_log(ith_iteration, testing_loss, grad_f_W_k)
@@ -708,11 +703,11 @@ class SideInfoMatrixCompletion(BaseMatrixCompletion):
         """
         residual = self.calculate_training_residual()
         grad_h1 = (
-            self.gene_side_info.T @ residual @ (self.disease_side_info @ self.h2.T)
+            self.gene_side_info.T @ (residual @ (self.disease_side_info @ self.h2.T))
             + self.regularization_parameter * self.h1
         )
         grad_h2 = (
-            (self.gene_side_info @ self.h1).T @ residual
+            ((self.gene_side_info @ self.h1).T @ residual)
         ) @ self.disease_side_info + self.regularization_parameter * self.h2
         return np.vstack([grad_h1, grad_h2.T])
 

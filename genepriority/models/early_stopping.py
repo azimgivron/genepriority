@@ -38,6 +38,11 @@ class EarlyStopping:
         self.losses = deque(maxlen=patience + 1)
         self.weights = deque(maxlen=patience)
 
+    def clear(self):
+        """Clear the queues."""
+        self.losses.clear()
+        self.weights.clear()
+
     def __call__(self, loss: float, h1: np.ndarray, h2: np.ndarray) -> bool:
         """
         Update the early stopping criteria with a new loss and model weights.

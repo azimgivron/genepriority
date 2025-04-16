@@ -190,7 +190,6 @@ class NEGTrainer(BaseTrainer):
 
         Args:
             iteration (int): The current iteration or fold index.
-            matrix (sp.csr_matrix): The data matrix.
             train_mask (sp.csr_matrix): The training mask.
             test_mask (sp.csr_matrix): The test mask.
             num_latent (int): The number of latent dimensions for the model.
@@ -297,7 +296,7 @@ class NEGTrainer(BaseTrainer):
                 )
                 tf.summary.flush()
 
-    def fine_tune(self, n_trials: int, timeout: float, num_latent: int, **kwargs):
+    def fine_tune(self, n_trials: int, timeout: float, num_latent: int, **_):
         """
         Fine-tunes the hyperparameters for sparse matrix completion using Optuna.
 

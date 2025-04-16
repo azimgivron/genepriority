@@ -220,6 +220,19 @@ def nega(args: argparse.Namespace):
         logger.debug("Loading configuration file: %s", config_path)
         with config_path.open("r", encoding="utf-8") as stream:
             config = yaml.safe_load(stream)
+        if "side_info" in args and args.side_info is not None and args.side_info:
+            config = config["side-info"]
+            logger.debug("‘side-info‘ configuration loaded.")
+        elif (
+            "zero_sampling_factor" in args
+            and args.zero_sampling_factor is not None
+            and args.zero_sampling_factor > 0
+        ):
+            config = config["0s"]
+            logger.debug("‘0s‘ configuration loaded.")
+        else:
+            config = config["1s"]
+            logger.debug("‘1s‘ configuration loaded.")
 
         regularization_parameter = config.get("regularization_parameter")
         symmetry_parameter = config.get("symmetry_parameter")

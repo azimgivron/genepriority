@@ -161,7 +161,6 @@ class MACAUTrainer(BaseTrainer):
 
         Args:
             iteration (int): The current iteration or fold index.
-            matrix (sp.csr_matrix): The data matrix.
             train_mask (sp.csr_matrix): The training mask.
             test_mask (sp.csr_matrix): The test mask.
             num_latent (int): The number of latent dimensions for the model.

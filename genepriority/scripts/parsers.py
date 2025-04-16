@@ -276,6 +276,84 @@ def parse_nega(subparsers: argparse._SubParsersAction):
     )
 
 
+def parse_baseline(subparsers: argparse.ArgumentParser):
+    """
+    Parses command-line arguments for the Baseline model.
+
+    Args:
+        parser (argparse.ArgumentParser): The parser for genehound.
+    """
+    parser = subparsers.add_parser(
+        "baseline",
+        help="Run Baseline on OMIM dataset in the cross-validation setting.",
+    )
+    parser.add_argument(
+        "--num-folds",
+        type=int,
+        required=True,
+        help="Number of folds for cross-validation.",
+    )
+    parser.add_argument(
+        "--output-path",
+        type=str,
+        required=True,
+        help="Directory to save output results.",
+    )
+    parser.add_argument(
+        "--zero-sampling-factor",
+        type=int,
+        required=True,
+        help=(
+            "Factor for zero sampling (number of zeros = factor * " "number of ones). "
+        ),
+    )
+    parser.add_argument(
+        "--input-path",
+        type=str,
+        default="/home/TheGreatestCoder/code/data/postprocessed/",
+        help="Directory containing input data files (default: %(default)s).",
+    )
+    parser.add_argument(
+        "--omim-meta-path",
+        type=str,
+        default="/home/TheGreatestCoder/code/genepriority/configurations/omim.yaml",
+        help="Path to the OMIM metadata file (default: %(default)s).",
+    )
+    parser.add_argument(
+        "--log-filename",
+        type=str,
+        default="pipeline.log",
+        help="Filename for log output (default: %(default)s).",
+    )
+    parser.add_argument(
+        "--results-filename",
+        type=str,
+        default="results.pickle",
+        help="Filename for serialized results (default: %(default)s).",
+    )
+    parser.add_argument(
+        "--latent-dimension",
+        type=int,
+        default=40,
+        help="Size of the latent dimension (default: %(default)s).",
+    )
+    parser.add_argument(
+        "--validation-size",
+        type=float,
+        default=0.1,
+        help=(
+            "Proportion of data for validation (unused for comparison with NEGA)"
+            " (default: %(default)s)."
+        ),
+    )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=42,
+        help="Random seed for reproducibility (default: %(default)s).",
+    )
+
+
 def parse_post(subparsers: argparse._SubParsersAction):
     """
     Adds the 'post' subcommand to the parser for post-processing evaluation results.
