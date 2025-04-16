@@ -5,9 +5,78 @@ Utils module
 This module defines the utility functions.
 """
 import pickle
+from pathlib import Path
 from typing import Any
 
+import numpy as np
 import scipy.sparse as sp
+import tensorflow as tf
+from sklearn import metrics
+
+
+def calculate_auc_bedroc(
+    labels: np.ndarray, predictions: np.ndarray, alpha: float = 160.9
+) -> tuple[float, float, float]:
+    """
+    Computes the Area Under the Curve (AUC-ROC), Average Precision (AP),
+    and the Boltzmann-Enhanced Discrimination of ROC (BEDROC) score for the test data.
+
+    - AUC-ROC measures the model's ability to rank positive instances
+    higher than negative ones, capturing its overall classification performance.
+
+    - Average Precision (AP) represents the weighted mean of precisions
+    at different thresholds, considering both precision and recall.
+
+    - BEDROC extends AUC-ROC by emphasizing early retrieval, making it
+    particularly useful for ranking problems where top predictions matter most.
+
+    Formula for AUC-ROC:
+        AUC = ∫ TPR(FPR) d(FPR)
+
+    Formula for AP:
+        AP = sum( (R_n - R_{n-1}) * P_n )
+
+    Formula for BEDROC:
+        BEDROC = (1 / N) * sum(exp(-alpha * rank(y_i))) * normalization_factor
+
+    Where:
+        - TPR: True Positive Rate.
+        - FPR: False Positive Rate.
+        - N: Number of positive samples.
+        - rank(y_i): Rank of the positive sample in the sorted predictions.
+        - alpha: Controls the early recognition emphasis.
+        - R_n: Recall at threshold n.
+        - P_n: Precision at threshold n.
+
+    Args:
+        labels (np.ndarray): The labels.
+        predictions (np.ndarray): The model predictions.
+        alpha (float): The alpha value for the bedroc metric.
+            Default to 160.9.
+
+    Returns:
+        tuple[float, float, float]: A tuple containing:
+            - AUC-ROC score: Measures overall ranking performance.
+            - Average Precision (AP) score: Reflects precision-recall trade-off.
+            - BEDROC score: Emphasizes early recognition quality.
+    """
+    # pylint: disable=C0415
+    from genepriority.evaluation.metrics import bedroc_score
+
+    # Compute AUC-ROC
+    auc = metrics.roc_auc_score(labels, predictions)
+
+    # Compute Average Precision (AP)
+    avg_precision = metrics.average_precision_score(labels, predictions)
+
+    # Compute BEDROC
+    bedroc = bedroc_score(
+        y_true=labels,
+        y_pred=predictions,
+        decreasing=True,
+        alpha=alpha,
+    )
+    return auc, avg_precision, bedroc
 
 
 def serialize(object_instance: Any, output_path: str):
@@ -47,3 +116,22 @@ def mask_sparse_containing_0s(
     # Restore explicit 0s
     result.data[result.data == -1] = 0
     return result
+
+
+def create_tb_dir(run_log_dir: Path) -> "tf.SummaryWriter":
+    """
+    Create and return a TensorFlow SummaryWriter for the specified log directory.
+
+    Args:
+        run_log_dir (Path): The path to the directory where TensorBoard logs will be stored.
+
+    Returns:
+        tf.SummaryWriter: A TensorFlow SummaryWriter configured to write logs to the
+            specified directory.
+    """
+    if run_log_dir.exists() and any(run_log_dir.iterdir()):
+        for item in run_log_dir.iterdir():
+            if item.is_file() or item.is_symlink():
+                item.unlink()  # Remove the current log
+    run_log_dir.mkdir(parents=True, exist_ok=True)
+    return tf.summary.create_file_writer(str(run_log_dir))

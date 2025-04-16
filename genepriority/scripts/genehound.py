@@ -16,7 +16,6 @@ Dependencies:
 import argparse
 import logging
 from pathlib import Path
-from typing import List
 
 import yaml
 
@@ -33,10 +32,9 @@ def run(
     output_path: Path,
     tensorboard_dir: Path,
     seed: int,
-    latent_dimensions: List[int],
+    latent_dimension: int,
     results_filename: str,
     config_path: Path,
-    is_omim1: bool,
 ):
     """
     Configures and runs the MACAU training session.
@@ -52,11 +50,9 @@ def run(
         output_path (Path): Directory where training outputs will be saved.
         tensorboard_dir (Path): Directory for TensorBoard logs.
         seed (int): Seed for reproducibility.
-        latent_dimensions (List[int]): List of latent dimensions for model training.
+        latent_dimension (int): Latent dimension of model.
         results_filename (str): Filename to use for saving results.
         config_path (Path): Path to the YAML configuration file.
-        is_omim1 (bool): True if using OMIM1 (multiple splits), False if using OMIM2
-            (cross-validation).
     """
     logger = logging.getLogger("run")
     logger.debug("Loading configuration file: %s", config_path)
@@ -83,22 +79,19 @@ def run(
         verbose=0,
         tensorboard_dir=tensorboard_dir,
     )
-    train_method = (
-        trainer.train_test_splits if is_omim1 else trainer.train_test_cross_validation
-    )
 
-    for latent in latent_dimensions:
-        results_path = output_path / str(latent)
-        results_path.mkdir(parents=True, exist_ok=True)
-        trainer.path = results_path
-        result = train_method(
-            num_latent=latent,
-            save_name=f"latent={latent}:model-omim{int(not is_omim1) + 1}.hdf5",
-        )
-        serialize(result, results_path / results_filename)
-        logger.debug(
-            "Serialized results for latent dimension %s saved successfully.", latent
-        )
+    results_path = output_path / str(latent_dimension)
+    results_path.mkdir(parents=True, exist_ok=True)
+    trainer.path = results_path
+    result = trainer.train_test_cross_validation(
+        num_latent=latent_dimension,
+        save_name=f"genehound:latent={latent_dimension}.hdf5",
+    )
+    serialize(result, results_path / results_filename)
+    logger.debug(
+        "Serialized results for latent dimension %s saved successfully.",
+        latent_dimension,
+    )
 
 
 def genehound(args: argparse.Namespace):
@@ -118,8 +111,6 @@ def genehound(args: argparse.Namespace):
     """
     output_path = Path(args.output_path).absolute()
     output_path.mkdir(parents=True, exist_ok=True)
-
-    latent_dimensions = args.latent_dimensions
 
     tensorboard_dir = Path(args.tensorboard_dir).absolute()
     tensorboard_dir.mkdir(parents=True, exist_ok=True)
@@ -143,10 +134,8 @@ def genehound(args: argparse.Namespace):
         seed=seed,
         omim_meta_path=omim_meta_path,
         side_info=args.side_info,
-        num_splits=args.num_splits if "num_splits" in args else None,
         zero_sampling_factor=args.zero_sampling_factor,
-        num_folds=args.num_folds if "num_folds" in args else None,
-        train_size=args.train_size,
+        num_folds=args.num_folds,
         validation_size=args.validation_size,
     )
     run(
@@ -155,8 +144,7 @@ def genehound(args: argparse.Namespace):
         output_path=output_path,
         tensorboard_dir=tensorboard_dir,
         seed=seed,
-        latent_dimensions=latent_dimensions,
+        latent_dimension=args.latent_dimension,
         results_filename=args.results_filename,
         config_path=config_path,
-        is_omim1=args.algorithm_command == "genehound-omim1",
     )

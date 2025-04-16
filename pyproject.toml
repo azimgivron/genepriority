@@ -20,7 +20,7 @@ packages = [
     "genepriority.postprocessing",
     "genepriority.preprocessing",
     "genepriority.trainer",
-    "genepriority.compute_models",
+    "genepriority.models",
     "genepriority.scripts"
 ]
 

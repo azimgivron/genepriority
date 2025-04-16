@@ -8,7 +8,7 @@ into sparse matrix representations. The module includes methods for handling gen
 disease-related data, adding implicit information, and converting datasets to COO sparse matrices.
 """
 import logging
-from typing import List
+from typing import List, Tuple
 
 import numpy as np
 import pandas as pd
@@ -54,11 +54,12 @@ class SideInformationLoader:
         self.disease_side_info = None
 
     @property
-    def side_info(self) -> List[sp.csr_matrix]:
+    def side_info(self) -> Tuple[sp.csr_matrix, sp.csr_matrix]:
         """Getter of the side information for each dimensions.
 
         Returns:
-            List[sp.csr_matrix]: The side information list.
+            Tuple[sp.csr_matrix, sp.csr_matrix]: The side information
+                for both genes and diseases.
         """
         return [self.gene_side_info, self.disease_side_info]
 

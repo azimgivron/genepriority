@@ -15,21 +15,23 @@ from genepriority.preprocessing.dataloader import DataLoader
 from genepriority.preprocessing.side_information_loader import SideInformationLoader
 
 
-def load_omim_meta(omim_meta_path: Path) -> Tuple[int, int, int]:
+def load_omim_meta(omim_meta_path: Path) -> Tuple[int, int]:
     """Load OMIM meta data.
 
     Args:
-        omim_meta_path (Path): _description_
+        omim_meta_path (Path): The path to the meta data of the
+            OMIM dataset.
 
     Returns:
-        _type_: _description_
+        Tuple[int, int]: The number of genes and the number of diseases
+            in OMIM matrix.
     """
     logger = logging.getLogger("load_omim_meta")
     logger.debug("Loading OMIM meta data: %s", omim_meta_path)
     with omim_meta_path.open("r", encoding="utf-8") as stream:
         config = yaml.safe_load(stream)
 
-    for key in ["nb_genes", "nb_diseases", "min_associations"]:
+    for key in ["nb_genes", "nb_diseases"]:
         if key not in config:
             raise KeyError(
                 f"{key} not found in configuration file. "
@@ -38,8 +40,7 @@ def load_omim_meta(omim_meta_path: Path) -> Tuple[int, int, int]:
 
     nb_genes = config["nb_genes"]
     nb_diseases = config["nb_diseases"]
-    min_associations = config["min_associations"]
-    return nb_genes, nb_diseases, min_associations
+    return nb_genes, nb_diseases
 
 
 def pre_processing(
@@ -47,10 +48,8 @@ def pre_processing(
     seed: int,
     omim_meta_path: Path,
     side_info: bool,
-    num_splits: int,
     zero_sampling_factor: int,
     num_folds: int,
-    train_size: float,
     validation_size: float,
 ) -> Tuple[DataLoader, SideInformationLoader]:
     """
@@ -66,10 +65,8 @@ def pre_processing(
         seed (int): Seed for reproducibility.
         omim_meta_path (Path): Path to the OMIM metadata file.
         side_info (bool): Whether to load side information.
-        num_splits (int): Number of splits for OMIM1; use None if not applicable.
         zero_sampling_factor (int): Factor for zero sampling.
         num_folds (int): Number of folds for OMIM2; use None if not applicable.
-        train_size (float): Fraction of data to use for training.
         validation_size (float): Fraction of data for validation
             (unused data for comparison with NEGA).
 
@@ -79,7 +76,7 @@ def pre_processing(
     """
     logger = logging.getLogger("pre_processing")
     logger.debug("Loading OMIM metadata.")
-    nb_genes, nb_diseases, min_associations = load_omim_meta(omim_meta_path)
+    nb_genes, nb_diseases = load_omim_meta(omim_meta_path)
 
     # Load gene–disease association data.
     dataloader = DataLoader(
@@ -87,14 +84,10 @@ def pre_processing(
         nb_diseases=nb_diseases,
         path=input_path / "gene-disease.csv",
         seed=seed,
-        num_splits=num_splits,
         zero_sampling_factor=zero_sampling_factor,
         num_folds=num_folds,
-        train_size=train_size,
-        min_associations=min_associations,
         validation_size=validation_size,
     )
-    dataloader(filter_column="Disease ID")
 
     # Load side information if requested.
     side_info_loader = None

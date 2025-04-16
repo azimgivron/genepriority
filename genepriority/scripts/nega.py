@@ -17,32 +17,43 @@ import pint
 import yaml
 
 from genepriority.preprocessing.dataloader import DataLoader
+from genepriority.preprocessing.side_information_loader import SideInformationLoader
 from genepriority.scripts.utils import pre_processing
 from genepriority.trainer.neg_trainer import NEGTrainer
 from genepriority.utils import serialize
 
 
-def cross_validation(
+def finetune(
     logger: logging.Logger,
     output_path: Path,
     dataloader: DataLoader,
+    side_info_loader: SideInformationLoader,
     rank: int,
     iterations: int,
     threshold: int,
+    flip_fraction: float,
+    flip_frequency: int,
+    patience: int,
     seed: int,
     n_trials: int,
     timeout: float,
 ):
     """
-    Runs cross-validation (using Optuna) for hyperparameter tuning of the NEGA model.
+    Search for hyperparameter tuning of the NEGA model.
 
     Args:
         logger (logging.Logger): Logger for output messages.
         output_path (Path): Directory where output results will be saved.
         dataloader (DataLoader): Preprocessed DataLoader with gene–disease data.
+        side_info_loader (SideInformationLoader): The loader for side information,
+            if available.
         rank (int): Model rank (number of latent factors).
         iterations (int): Number of training iterations.
         threshold (int): Threshold parameter for the model.
+        flip_fraction (float): Fraction (0 to 1) of positive training entries to flip,
+            simulating label noise.
+        flip_frequency (int): How often to resample positive training entries for flipping.
+        patience (int): Number of recent epochs/iterations considered for early stopping.
         seed (int): Random seed for reproducibility.
         n_trials (int): Number of trials for the hyperparameter search.
         timeout (float, optional): Time out in hours.
@@ -50,30 +61,42 @@ def cross_validation(
     """
     trainer = NEGTrainer(
         dataloader=dataloader,
+        side_info_loader=side_info_loader,
         path=output_path,
         seed=seed,
         iterations=iterations,
         threshold=threshold,
+        flip_fraction=flip_fraction,
+        flip_frequency=flip_frequency,
+        patience=patience,
     )
     timeout_seconds = pint.Quantity(timeout, "h").to("s").m
     optuna_study = trainer.fine_tune(
-        load_if_exists=False,
         n_trials=n_trials,
         timeout=timeout_seconds,
         num_latent=rank,
     )
-    study_file = output_path / f"nega-cv-rank{rank}-it{iterations}.pickle"
+    filename = f"nega-finetune-rank{rank}"
+    if side_info_loader is None:
+        filename += "-no-side-info"
+    if not dataloader.zero_sampling_factor > 0:
+        filename += "-no-0s"
+    study_file = output_path / f"{filename}.pickle"
     serialize(optuna_study, study_file)
-    logger.info("Cross-validation completed. Results saved at %s", study_file)
+    logger.info("Fine tuning completed. Results saved at %s", study_file)
 
 
 def train_eval(
     logger: logging.Logger,
     output_path: Path,
     dataloader: DataLoader,
+    side_info_loader: SideInformationLoader,
     rank: int,
     iterations: int,
     threshold: int,
+    flip_fraction: float,
+    flip_frequency: int,
+    patience: int,
     seed: int,
     regularization_parameter: float,
     symmetry_parameter: float,
@@ -93,9 +116,15 @@ def train_eval(
         logger (logging.Logger): Logger for output messages.
         output_path (Path): Directory to save output results.
         dataloader (DataLoader): Preprocessed DataLoader with gene–disease data.
+        side_info_loader (SideInformationLoader): The loader for side information,
+            if available.
         rank (int): Model rank (number of latent factors).
         iterations (int): Number of training iterations.
         threshold (int): Threshold parameter for the model.
+        flip_fraction (float): Fraction (0 to 1) of positive training entries to flip,
+            simulating label noise.
+        flip_frequency (int): How often to resample positive training entries for flipping.
+        patience (int): Number of recent epochs/iterations considered for early stopping.
         seed (int): Random seed for reproducibility.
         regularization_parameter (float): Regularization parameter for training.
         symmetry_parameter (float): Symmetry parameter for training.
@@ -108,10 +137,14 @@ def train_eval(
     """
     trainer = NEGTrainer(
         dataloader=dataloader,
+        side_info_loader=side_info_loader,
         path=output_path,
         seed=seed,
         iterations=iterations,
         threshold=threshold,
+        flip_fraction=flip_fraction,
+        flip_frequency=flip_frequency,
+        patience=patience,
         regularization_parameter=regularization_parameter,
         symmetry_parameter=symmetry_parameter,
         smoothness_parameter=smoothness_parameter,
@@ -122,9 +155,9 @@ def train_eval(
     results_path = output_path / str(rank)
     results_path.mkdir(parents=True, exist_ok=True)
     trainer.path = results_path
-    result = trainer.train_test_splits(
+    result = trainer.train_test_cross_validation(
         rank,
-        save_name=f"latent={rank}:model-omim1.pickle",
+        save_name=f"nega:latent={rank}.pickle",
     )
     serialize(result, results_path / results_filename)
     logger.debug("Serialized results for latent dimension %s saved successfully.", rank)
@@ -151,31 +184,33 @@ def nega(args: argparse.Namespace):
     if not omim_meta_path.exists():
         raise FileNotFoundError(f"OMIM metadata path does not exist: {omim_meta_path}")
 
-    dataloader, _ = pre_processing(
+    dataloader, side_info_loader = pre_processing(
         input_path=input_path,
         seed=args.seed,
         omim_meta_path=omim_meta_path,
-        side_info=False,
-        num_splits=args.num_splits if "num_splits" in args else 1,
+        side_info=args.side_info,
         zero_sampling_factor=args.zero_sampling_factor,
-        num_folds=None,
-        train_size=args.train_size,
+        num_folds=args.num_folds,
         validation_size=args.validation_size,
     )
 
-    if args.algorithm_command == "nega-cv":
-        cross_validation(
+    if args.nega_command == "fine-tune":
+        finetune(
             logger=logger,
             output_path=output_path,
             dataloader=dataloader,
+            side_info_loader=side_info_loader,
             rank=args.rank,
             iterations=args.iterations,
             threshold=args.threshold,
             seed=args.seed,
+            flip_fraction=args.flip_fraction,
+            flip_frequency=args.flip_frequency,
+            patience=args.patience,
             n_trials=args.n_trials,
             timeout=args.timeout,
         )
-    elif args.algorithm_command == "nega":
+    elif args.nega_command == "cv":
         config_path = Path(args.config_path).absolute()
         if not config_path.exists():
             raise FileNotFoundError(
@@ -185,6 +220,19 @@ def nega(args: argparse.Namespace):
         logger.debug("Loading configuration file: %s", config_path)
         with config_path.open("r", encoding="utf-8") as stream:
             config = yaml.safe_load(stream)
+        if "side_info" in args and args.side_info is not None and args.side_info:
+            config = config["side-info"]
+            logger.debug("‘side-info‘ configuration loaded.")
+        elif (
+            "zero_sampling_factor" in args
+            and args.zero_sampling_factor is not None
+            and args.zero_sampling_factor > 0
+        ):
+            config = config["0s"]
+            logger.debug("‘0s‘ configuration loaded.")
+        else:
+            config = config["1s"]
+            logger.debug("‘1s‘ configuration loaded.")
 
         regularization_parameter = config.get("regularization_parameter")
         symmetry_parameter = config.get("symmetry_parameter")
@@ -200,6 +248,9 @@ def nega(args: argparse.Namespace):
             rank=args.rank,
             iterations=args.iterations,
             threshold=args.threshold,
+            flip_fraction=args.flip_fraction,
+            flip_frequency=args.flip_frequency,
+            patience=args.patience,
             seed=args.seed,
             regularization_parameter=regularization_parameter,
             symmetry_parameter=symmetry_parameter,
@@ -208,6 +259,7 @@ def nega(args: argparse.Namespace):
             rho_decrease=rho_decrease,
             tensorboard_dir=tensorboard_dir,
             results_filename=args.results_filename,
+            side_info_loader=side_info_loader,
         )
     else:
         raise ValueError(

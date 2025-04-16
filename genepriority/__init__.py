@@ -12,7 +12,6 @@ from .postprocessing import (
 from .preprocessing import (
     DataLoader,
     SideInformationLoader,
-    TrainTestMasks,
     TrainValTestMasks,
     compute_statistics,
     convert_dataframe_to_sparse_matrix,
@@ -33,7 +32,6 @@ __all__ = [
     "ModelEvaluationCollection",
     "DataLoader",
     "SideInformationLoader",
-    "TrainTestMasks",
     "TrainValTestMasks",
     "convert_dataframe_to_sparse_matrix",
     "sample_zeros",

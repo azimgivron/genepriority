@@ -20,9 +20,15 @@ from typing import Any
 
 import pytz
 
+from genepriority.scripts.baseline import baseline
 from genepriority.scripts.genehound import genehound
 from genepriority.scripts.nega import nega
-from genepriority.scripts.parsers import parse_genehound, parse_nega, parse_post
+from genepriority.scripts.parsers import (
+    parse_baseline,
+    parse_genehound,
+    parse_nega,
+    parse_post,
+)
 from genepriority.scripts.post import post
 
 
@@ -37,7 +43,7 @@ def setup_logger(args: Any):
             - log_filename: The name of the log file.
     """
     output_path = Path(args.output_path).absolute()
-    output_path.mkdir(exist_ok=True)
+    output_path.mkdir(parents=True, exist_ok=True)
 
     log_file = output_path / args.log_filename
 
@@ -85,6 +91,7 @@ def main():
     subparsers = parser.add_subparsers(dest="algorithm_command", required=True)
 
     # Set up subparsers for each subcommand
+    parse_baseline(subparsers)
     parse_genehound(subparsers)
     parse_nega(subparsers)
     parse_post(subparsers)
@@ -97,6 +104,9 @@ def main():
         elif "nega" in args.algorithm_command:
             setup_logger(args)
             nega(args)
+        elif "baseline" in args.algorithm_command:
+            setup_logger(args)
+            baseline(args)
         elif "post" in args.algorithm_command:
             args = parser.parse_args()
             if len(args.evaluation_paths) != len(args.model_names):

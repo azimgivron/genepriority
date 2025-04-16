@@ -49,6 +49,7 @@ def post(args: argparse.Namespace):
             - post_config_path (str): Path to the YAML configuration file.
             - output_path (str): Directory where output files will be saved.
     """
+    # pylint: disable=R0914
     post_config_path = Path(args.post_config_path)
     output_path = Path(args.output_path)
 
@@ -72,8 +73,8 @@ def post(args: argparse.Namespace):
     for name, path_str in zip(args.model_names, args.evaluation_paths):
         with Path(path_str).open("rb") as stream:
             results_data[name] = pickle.load(stream)
-            if args.apply_mask:
-                results_data[name].apply_mask(value=True)
+            if not args.apply_mask:
+                results_data[name].apply_mask(value=False)
 
     results = ModelEvaluationCollection(results_data)
 
@@ -84,15 +85,16 @@ def post(args: argparse.Namespace):
     )
 
     auc_loss_csv_path = output_path / "auc_loss.csv"
+    auc_losses = results.compute_auc_losses()
     generate_auc_loss_table(
-        results.compute_auc_losses(),
+        auc_losses,
         model_names=results.model_names,
     ).to_csv(auc_loss_csv_path)
     logger.info("AUC Loss table saved: %s", auc_loss_csv_path)
 
     auc_loss_plot_path = output_path / "auc.png"
     plot_auc_boxplots(
-        -results.compute_auc_losses() + 1,
+        -auc_losses + 1,
         model_names=results.model_names,
         output_file=auc_loss_plot_path,
         figsize=(12, 10),
