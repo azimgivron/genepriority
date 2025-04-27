@@ -23,7 +23,6 @@ from genepriority.postprocessing.dataframes import (
 from genepriority.postprocessing.figures import (
     plot_auc_boxplots,
     plot_bedroc_boxplots,
-    plot_roc_curves,
 )
 from genepriority.postprocessing.model_evaluation_collection import (
     ModelEvaluationCollection,
@@ -73,16 +72,8 @@ def post(args: argparse.Namespace):
     for name, path_str in zip(args.model_names, args.evaluation_paths):
         with Path(path_str).open("rb") as stream:
             results_data[name] = pickle.load(stream)
-            if not args.apply_mask:
-                results_data[name].apply_mask(value=False)
 
     results = ModelEvaluationCollection(results_data)
-
-    plot_roc_curves(
-        evaluation_collection=results,
-        output_file=output_path / "roc_curve",
-        figsize=(10, 8),
-    )
 
     auc_loss_csv_path = output_path / "auc_loss.csv"
     auc_losses = results.compute_auc_losses()

@@ -24,7 +24,7 @@ from genepriority.preprocessing.dataloader import DataLoader
 from genepriority.preprocessing.side_information_loader import SideInformationLoader
 from genepriority.trainer.base import BaseTrainer
 from genepriority.utils import (
-    calculate_auc_bedroc,
+    calculate_auroc_auprc,
     create_tb_dir,
     mask_sparse_containing_0s,
 )
@@ -246,7 +246,7 @@ class MACAUTrainer(BaseTrainer):
                 test_mask = test_mask.toarray().astype(bool)
                 test_values_actual = self.dataloader.omim.toarray()[test_mask]
                 test_predictions = pred[test_mask]
-                auc, avg_precision, bedroc = calculate_auc_bedroc(
+                auc, avg_precision = calculate_auroc_auprc(
                     test_values_actual, test_predictions
                 )
                 tf.summary.scalar(name="auc", data=auc, step=training_status.iterations)
@@ -254,9 +254,6 @@ class MACAUTrainer(BaseTrainer):
                     name="average precision",
                     data=avg_precision,
                     step=training_status.iterations,
-                )
-                tf.summary.scalar(
-                    name="bedroc top1%", data=bedroc, step=training_status.iterations
                 )
                 tf.summary.histogram(
                     "Values on test points",

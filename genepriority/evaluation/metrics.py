@@ -1,94 +1,94 @@
 """
 Metrics module
-===============
+==============
 
-Implements evaluation metrics for model predictions, including ROC curves and BEDROC scores,
-to assess the performance of gene prioritization models.
+Provides evaluation metrics for gene prioritization models. Includes:
+  - BEDROC: emphasizes early retrieval of true positives.
+  - AUC: classical ranking metric adapted to partial gene sets.
+
+Both functions accept only the evaluated subset of genes but normalize
+scores against the total gene universe.
 """
+from typing import List
+
 import numpy as np
 
 
-def bedroc_score(
-    y_true: np.ndarray, y_pred: np.ndarray, decreasing: bool, alpha: float
-):
-    """
-    Calculate the BEDROC (Boltzmann Enhanced Discrimination of the
-    Receiver Operator Characteristic) score.
+def bedroc_scores(
+    y_true: List[np.ndarray], y_pred: List[np.ndarray], gene_number: int, alpha: float
+) -> float:
+    """Compute the BEDROC score for each diseases.
 
-    The BEDROC metric evaluates a predictive model's ability to
-    prioritize positive class instances, particularly focusing on
-    early recognition.
-
-    References:
-        This code was adapted from:
-        https://scikit-chem.readthedocs.io/en/latest/_modules/skchem/metrics.html
-
-        Original paper: Truchon and Bayley (2007),
-        `10.1021/ci600426e <http://dx.doi.org/10.1021/ci600426e>`_.
+    BEDROC (Boltzmann-Enhanced Discrimination of the ROC) places exponential
+    emphasis on ranking true positives early in the prediction list.
 
     Args:
-        y_true (np.ndarray): Binary class labels (1 for positive class, 0 for negative class).
-        y_pred (np.ndarray): Predicted values or scores.
-        decreasing (bool): Whether higher `y_pred` values correspond to positive class.
-        alpha (float): Early recognition parameter.
+        y_true (List[np.ndarray]):
+            Binary labels for the evaluated genes (1 = positive, 0 = negative).
+        y_pred (List[np.ndarray]):
+            Model scores for those genes; higher means more likely positive.
+        gene_number (int):
+            Total number of genes in the universe. Must be ≥ n_samples.
+        alpha (float):
+            Early-recognition weight parameter (> 0).
 
     Returns:
-        float: BEDROC score in [0, 1], indicating the degree of early recognition
-            of positive class instances.
+        float: BEDROC in [0,1] (0=random, 1=perfect).
     """
-    if len(y_true) != len(y_pred):
-        raise ValueError(
-            f"Length mismatch detected: 'y_true' and 'y_pred' must have the same length. "
-            f"Received len(y_true)={len(y_true)} and len(y_pred)={len(y_pred)}. "
-            "Ensure that the number of predicted values matches the number of true labels."
-        )
-
-    if not np.isin(y_true, [0, 1]).all():
-        raise ValueError(
-            f"Invalid class labels detected in 'y_true': All values must be binary (0 or 1). "
-            f"Found unique values: {np.unique(y_true)}. "
-            "Please ensure your input labels are properly formatted as binary values."
-        )
-
     if alpha <= 0:
-        raise ValueError(
-            f"Invalid alpha parameter: 'alpha' must be a positive number. "
-            f"Received alpha={alpha}. "
-            "Choose a positive value to control the emphasis on early recognition of positives."
-        )
+        raise ValueError(f"alpha must be > 0; got {alpha}.")
+    n_diseases = len(y_true)
+    scores = []
+    mask = []
+    for i in range(n_diseases):
+        if (y_true[i] == 1).sum() > 0:
+            mask.append(True)
+            order = np.argsort(-y_pred[i])
+            pos_ranks = np.nonzero(y_true[i][order] == 1)[0] + 1
+            weighted = np.mean(np.exp(-alpha * (pos_ranks / gene_number)))
+            expected = (
+                (alpha / gene_number)
+                * (1 - np.exp(-alpha))
+                / (np.exp(alpha / gene_number) - 1)
+            )
+            shift = 1.0 / (1 - np.exp(alpha))
+            scores.append(weighted / expected + shift)
+        else:
+            mask.append(False)
+            scores.append(np.nan)
+    return scores, mask
 
-    total_instances = len(y_true)
-    positive_instances = sum(y_true == 1)
 
-    if positive_instances == 0:
-        raise ValueError(
-            "No positive class instances found in 'y_true'. "
-            "The BEDROC score cannot be calculated without at least one positive label (1)."
-        )
+def auc_scores(
+    y_true: List[np.ndarray], y_pred: List[np.ndarray], gene_number: int
+) -> float:
+    """Compute the AUC‐approximation score for each disease.
 
-    if positive_instances == total_instances:
-        raise ValueError(
-            "No negative class instances found in 'y_true'. "
-            "The BEDROC score requires both positive (1) and negative (0) class instances."
-        )
+    Approximates the area under the accumulation curve (AUAC), which
+    converges to AUC when positives are sparse, then normalizes by the
+    full gene universe size.
 
-    if decreasing:
-        order = np.argsort(-y_pred)
-    else:
-        order = np.argsort(y_pred)
+    Args:
+        y_true (List[np.ndarray]):
+            Binary labels (1 = positive, 0 = negative).
+        y_pred (List[np.ndarray]):
+            Predicted scores for those genes.
+        gene_number (int):
+            Total number of genes in the universe. Must be ≥ n_samples.
 
-    positive_ranks = (y_true[order] == 1).nonzero()[0] + 1
-    sum_exp = np.sum(np.exp(-alpha * positive_ranks / total_instances))
-
-    positive_ratio = positive_instances / total_instances
-    random_sum = (
-        positive_ratio * (1 - np.exp(-alpha)) / (np.exp(alpha / total_instances) - 1)
-    )
-    scaling_factor = (
-        positive_ratio
-        * np.sinh(alpha / 2)
-        / (np.cosh(alpha / 2) - np.cosh(alpha / 2 - alpha * positive_ratio))
-    )
-    constant = 1 / (1 - np.exp(alpha * (1 - positive_ratio)))
-
-    return sum_exp * scaling_factor / random_sum + constant
+    Returns:
+        float: AUC‐approx score in [0,1] (higher = better).
+    """
+    n_diseases = len(y_true)
+    scores = []
+    mask = []
+    for i in range(n_diseases):
+        if (y_true[i] == 1).sum() > 0:
+            mask.append(True)
+            order = np.argsort(-y_pred[i])
+            pos_ranks = np.nonzero(y_true[i][order] == 1)[0] + 1
+            scores.append(1-np.mean(pos_ranks / gene_number))
+        else:
+            mask.append(False)
+            scores.append(np.nan)
+    return scores, mask

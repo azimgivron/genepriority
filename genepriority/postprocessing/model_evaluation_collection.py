@@ -100,7 +100,7 @@ class ModelEvaluationCollection:
 
         Returns:
             np.ndarray: A 2D array containing the AUC loss for
-                each model and for each fold. Shape: (folds, models).
+                each model and for each fold. Shape: (diseases, models).
         """
         auc_loss = np.array(
             [eval_res.compute_avg_auc_loss() for eval_res in self.evaluations]
@@ -114,9 +114,11 @@ class ModelEvaluationCollection:
 
         Returns:
             np.ndarray: A 3D array containing the BEDROC scores for each fold,
-            across different alpha values, for each model. Shape: (alphas, folds, models).
+            across different alpha values, for each model. Shape: (alphas, diseases, models).
         """
         bedroc = np.array(
             [eval_res.compute_bedroc_scores() for eval_res in self.evaluations]
-        )  # shape = (models, folds, alphas)
-        return bedroc.T
+        )  # shape = (models, alphas, diseases)
+        # reorder to (alphas, diseases, models)
+        bedroc = bedroc.transpose(1, 2, 0)
+        return bedroc

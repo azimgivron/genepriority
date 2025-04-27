@@ -35,7 +35,7 @@ from genepriority.models.early_stopping import EarlyStopping
 from genepriority.models.flip_labels import FlipLabels
 from genepriority.models.matrix_completion_result import MatrixCompletionResult
 from genepriority.models.utils import check_save_name, tsne_plot_to_tensor
-from genepriority.utils import calculate_auc_bedroc, serialize
+from genepriority.utils import calculate_auroc_auprc, serialize
 
 
 class BaseMatrixCompletion(metaclass=abc.ABCMeta):
@@ -332,8 +332,8 @@ class BaseMatrixCompletion(metaclass=abc.ABCMeta):
 
         This method gathers various performance metrics during the optimization process and logs
         them to Tensorboard. It computes the training RMSE, logs the testing loss, and also logs
-        histograms and scalar summaries for different evaluation metrics including AUC, average
-        precision, and BEDROC. In addition, it logs histograms of the predicted values on both
+        histograms and scalar summaries for different evaluation metrics including AUC and average
+        precision. In addition, it logs histograms of the predicted values on both
         the training and  testing sets, as well as the flattened gradient values.
 
         Args:
@@ -358,7 +358,7 @@ class BaseMatrixCompletion(metaclass=abc.ABCMeta):
                 pred = self.predict_all()
                 test_predictions = pred[self.test_mask]
                 if (self.matrix[self.test_mask] == 0).any():
-                    auc, avg_precision, bedroc = calculate_auc_bedroc(
+                    auc, avg_precision = calculate_auroc_auprc(
                         test_values_actual, test_predictions
                     )
                     tf.summary.scalar(name="auc", data=auc, step=ith_iteration)
@@ -366,9 +366,6 @@ class BaseMatrixCompletion(metaclass=abc.ABCMeta):
                         name="average precision",
                         data=avg_precision,
                         step=ith_iteration,
-                    )
-                    tf.summary.scalar(
-                        name="bedroc top1%", data=bedroc, step=ith_iteration
                     )
                 tf.summary.histogram(
                     "Values on test points",
@@ -560,7 +557,6 @@ class BaseMatrixCompletion(metaclass=abc.ABCMeta):
                 testing_loss, self.h1, self.h2
             ):
                 self.h1, self.h2 = self.early_stopping.best_weights
-                self.early_stopping.clear()
                 self.logger.debug("[Early Stopping] Training interrupted.")
                 if ith_iteration % log_freq != 0:
                     self.tb_log(ith_iteration, testing_loss, grad_f_W_k)
@@ -647,7 +643,6 @@ class SideInfoMatrixCompletion(BaseMatrixCompletion):
         super().__init__(*args, **kwargs)
         if side_info is None:
             raise ValueError("Side information must be provided for this session.")
-
         gene_side_info, disease_side_info = side_info
         if self.matrix.shape[0] != gene_side_info.shape[0]:
             raise ValueError(
@@ -695,11 +690,13 @@ class SideInfoMatrixCompletion(BaseMatrixCompletion):
         grad_f_W_k = (∇_h1, ∇_h2.T).T
 
         with:
-        - ∇_h1 = X.T @ (mask ⊙ ((X @ h1) @ (h2 @ Y.T) - M)) @ (Y @ h2.T) + mu * h1,
-        - ∇_h2 = (X @ h1).T @ (mask ⊙ ((X @ h1) @ (h2 @ Y.T) - M)) @ Y + mu * h2
+        - ∇_h1 = X.T @ (R @ (Y @ h2.T)) + mu * h1,
+        - ∇_h2 = ((X @ h1).T @ R) @ Y + mu * h2
+
+        with R = (mask ⊙ ((X @ h1) @ (h2 @ Y.T) - M))
 
         Returns:
-            np.ndarray: The gradient of the latents (n+m x rank)
+            np.ndarray: The gradient of the latents ((g+d) x rank)
         """
         residual = self.calculate_training_residual()
         grad_h1 = (
@@ -754,11 +751,13 @@ class StandardMatrixCompletion(BaseMatrixCompletion):
         grad_f_W_k = (∇_h1, ∇_h2.T).T
 
         where:
-        - ∇_h1 = (mask ⊙ (h1 @ h2 - M)) @ h2.T + mu * h1,
-        - ∇_h2 = h1.T @ (mask ⊙ (h1 @ h2 - M)) + mu * h2
+        - ∇_h1 = R @ h2.T + mu * h1,
+        - ∇_h2 = h1.T @ R + mu * h2
+
+        with R = (mask ⊙ (h1 @ h2 - M))
 
         Returns:
-            np.ndarray: The gradient of the latents (n+m x rank)
+            np.ndarray: The gradient of the latents ((n+m) x rank)
         """
         residual = self.calculate_training_residual()
         grad_h1 = residual @ self.h2.T + self.regularization_parameter * self.h1

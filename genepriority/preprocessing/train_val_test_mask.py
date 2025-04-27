@@ -109,9 +109,7 @@ class TrainValTestMasks:
 
         # Use KFold on the remaining indices to create training and testing masks.
         kfold = KFold(n_splits=num_folds, shuffle=True, random_state=self.seed)
-        for train_fold_indices, test_fold_indices in kfold.split(
-            train_test_row_indices
-        ):
+        for train_fold_indices, _ in kfold.split(train_test_row_indices):
             self.training_masks.append(
                 sp.csr_matrix(
                     (
@@ -124,28 +122,30 @@ class TrainValTestMasks:
                     shape=nnz_mask.shape,
                 )
             )
-            self.testing_masks.append(
-                sp.csr_matrix(
-                    (
-                        values[test_fold_indices],
-                        (
-                            row_indices[test_fold_indices],
-                            col_indices[test_fold_indices],
-                        ),
-                    ),
-                    shape=nnz_mask.shape,
+            union_mask = (
+                (
+                    self.training_masks[-1]
+                    + self.validation_mask
+                    + self.validation_finetuning_mask
                 )
+                .toarray()
+                .astype(bool)
             )
+            test_mask = np.ones(nnz_mask.shape, dtype=bool)
+            test_mask[union_mask] = False
+            self.testing_masks.append(test_mask)
 
-    def __iter__(self) -> Iterator[Tuple[sp.csr_matrix, sp.csr_matrix, sp.csr_matrix]]:
+    def __iter__(
+        self,
+    ) -> Iterator[Tuple[sp.csr_matrix, np.ndarray, sp.csr_matrix, sp.csr_matrix]]:
         """
         Provides an iterator over the generated masks for each k-fold split.
 
         Yields:
-            Iterator[Tuple[sp.csr_matrix, sp.csr_matrix, sp.csr_matrix]]:
+            Iterator[Tuple[sp.csr_matrix, np.ndarray, sp.csr_matrix, sp.csr_matrix]]:
                 A tuple containing:
                     - A training mask (sp.csr_matrix) for the current fold.
-                    - A testing mask (sp.csr_matrix) for the current fold.
+                    - A testing mask (np.ndarray) for the current fold.
                     - The validation mask (sp.csr_matrix), for error estimation
                     during training, which is identical all folds.
                     - The validation mask (sp.csr_matrix), for finetuning,
@@ -166,3 +166,11 @@ class TrainValTestMasks:
                 validation_finetuning_mask,
             )
         )
+
+    def __len__(self) -> int:
+        """The iterator length.
+
+        Returns:
+            int: The length.
+        """
+        return len(self.training_masks)

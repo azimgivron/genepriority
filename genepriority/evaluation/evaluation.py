@@ -8,9 +8,11 @@ such as ROC curve data, AUC loss, and BEDROC scores.
 from typing import Dict, List
 
 import numpy as np
-from sklearn import metrics
 
-from genepriority.evaluation.metrics import bedroc_score
+from genepriority.evaluation.metrics import (
+    auc_scores,
+    bedroc_scores,
+)
 from genepriority.evaluation.results import Results
 
 
@@ -50,37 +52,40 @@ class Evaluation:
                 )
         self.results = results
 
-    def apply_mask(self, value: bool):
-        """
-        Set the mask application flag for all result objects.
-
-        Args:
-            value (bool): Flag indicating whether to apply the mask
-                (True) or not (False).
-        """
-        for res in self.results:
-            res.apply_mask = value
-
     def compute_bedroc_scores(self) -> np.ndarray:
         """
         Computes BEDROC (Boltzmann-Enhanced Discrimination of Receiver Operating Characteristic)
         scores for the given alpha values.
 
         Returns:
-            np.ndarray: A 2D array of BEDROC scores with shape `(fold, alphas)`,
-            where each row corresponds to a fold and each column corresponds
-            to a specific alpha value.
+            np.ndarray: A 2D array of BEDROC scores with shape `(alphas, diseases)`.
         """
         bedroc = []
+        masks = []
         for fold_res in self.results:
-            y_true = fold_res.y_true.flatten()
-            y_pred = fold_res.y_pred.flatten()
-            bedroc_per_fold = [
-                bedroc_score(y_true=y_true, y_pred=y_pred, decreasing=True, alpha=alpha)
-                for alpha in self.alphas
-            ]
-            bedroc.append(bedroc_per_fold)
-        bedroc = np.array(bedroc)  # shape=(fold, alphas)
+            y_true = fold_res.y_true
+            y_pred = fold_res.y_pred
+            bedroc.append([])
+            masks.append([])
+            for alpha in self.alphas:
+                bedroc_per_fold, mask_per_fold = bedroc_scores(
+                    y_true=y_true,
+                    y_pred=y_pred,
+                    gene_number=fold_res.gene_number,
+                    alpha=alpha,
+                )
+                bedroc[-1].append(bedroc_per_fold)
+                masks[-1].append(mask_per_fold)
+
+        mask = np.stack(masks).astype(bool)
+        bedroc = np.stack(bedroc).astype(np.float64)  # shape=(fold, alphas, diseases)
+
+        valid = mask.any(axis=(0,1))
+        mask = mask[:, :, valid]
+        bedroc  = bedroc[:, :, valid]
+        
+        bedroc_masked = np.ma.array(bedroc, mask=~mask)  
+        bedroc = bedroc_masked.mean(axis=0).data
         return bedroc
 
     def compute_avg_auc_loss(self) -> float:
@@ -90,51 +95,26 @@ class Evaluation:
 
         Returns:
             np.ndarray: A 1D array where each element represents the AUC loss
-            for a fold.
+            for a disease.
         """
-        auc_loss = []
+        auc = []
+        masks = []
         for fold_res in self.results:
-            y_true = fold_res.y_true.flatten()
-            y_pred = fold_res.y_pred.flatten()
-            auc_loss.append(1 - metrics.roc_auc_score(y_true, y_pred))
-        auc_loss = np.array(auc_loss)
+            y_true = fold_res.y_true
+            y_pred = fold_res.y_pred
+            auc_per_fold, mask_per_fold = auc_scores(
+                    y_true=y_true, y_pred=y_pred, gene_number=fold_res.gene_number
+                )
+            masks.append(mask_per_fold)
+            auc.append(auc_per_fold)
+            
+        mask = np.stack(masks).astype(bool)
+        auc = np.stack(auc).astype(np.float64)  # shape=(fold, diseases)
+        
+        valid = mask.any(axis=0)
+        mask = mask[:, valid]
+        auc  = auc[:, valid]
+
+        auc_masked = np.ma.array(auc, mask=~mask)  
+        auc_loss = 1-auc_masked.mean(axis=0).data
         return auc_loss
-
-    def compute_roc_curve(self) -> np.ndarray:
-        """
-        Computes the Receiver Operating Characteristic (ROC) curve metrics,
-        including False Positive Rates (FPR) and True Positive Rates (TPR)
-        for all folds.
-
-        Returns:
-            np.ndarray: A 2D array with the following structure:
-                - Shape: (2, number of thresholds)
-                - The first dimension contains FPR values.
-                - The second dimension contains TPR values.
-        """
-        roc_curves = []
-        for fold_res in self.results:
-            y_true = fold_res.y_true.flatten()
-            y_pred = fold_res.y_pred.flatten()
-            fpr, tpr, thresholds = metrics.roc_curve(
-                y_true, y_pred, pos_label=1, drop_intermediate=True
-            )
-            roc_curves.append((fpr, tpr, thresholds))
-
-        # Get common thresholds from all curves (sorted in ascending order)
-        common_thresholds = np.sort(
-            np.unique(np.hstack([curve[-1] for curve in roc_curves]))
-        )
-
-        # Interpolate each ROC curve so that they share the same thresholds
-        data = []
-        for fpr, tpr, thresholds in roc_curves:
-            # Reverse arrays because thresholds from roc_curve are in descending order
-            sorted_thresholds = thresholds[::-1]
-            sorted_fpr = fpr[::-1]
-            sorted_tpr = tpr[::-1]
-            interp_fpr = np.interp(common_thresholds, sorted_thresholds, sorted_fpr)
-            interp_tpr = np.interp(common_thresholds, sorted_thresholds, sorted_tpr)
-            data.append((interp_fpr, interp_tpr))
-        data = np.array(data)
-        return data.mean(axis=0)

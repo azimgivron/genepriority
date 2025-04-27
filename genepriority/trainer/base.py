@@ -172,7 +172,7 @@ class BaseTrainer(metaclass=ABCMeta):
         """
         results = []
         for i, (train_mask, test_mask, validation_mask, _) in tqdm(
-            enumerate(self.dataloader.omim_masks), desc="Fold", leave=False
+            enumerate(self.dataloader.omim_masks), desc="Fold", total=len(self.dataloader.omim_masks)
         ):
             self.logger.debug("Initiating training on fold %d", i + 1)
 
@@ -195,11 +195,15 @@ class BaseTrainer(metaclass=ABCMeta):
 
             training_status = session.run()
 
-            self.post_training_callback(training_status, session, test_mask)
+            self.post_training_callback(training_status, session, validation_mask)
 
             y_pred = self.predict(session)
             results.append(
-                Results(y_true=self.dataloader.omim, y_pred=y_pred, test_mask=test_mask)
+                Results(
+                    y_true=self.dataloader.omim.toarray(),
+                    y_pred=y_pred,
+                    mask=test_mask,
+                )
             )
         return Evaluation(results)
 

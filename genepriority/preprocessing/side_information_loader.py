@@ -8,6 +8,7 @@ into sparse matrix representations. The module includes methods for handling gen
 disease-related data, adding implicit information, and converting datasets to COO sparse matrices.
 """
 import logging
+from pathlib import Path
 from typing import List, Tuple
 
 import numpy as np
@@ -142,20 +143,17 @@ class SideInformationLoader:
 
     def process_side_info(
         self,
-        gene_side_info_paths: List[str],
-        disease_side_info_paths: List[str],
-        names: List[str] = None,
+        gene_side_info_paths: List[Path],
+        disease_side_info_paths: List[Path],
     ):
         """
         Process gene- and disease-related side information files and store the results.
 
         Args:
-            gene_side_info_paths (List[str]): List of file paths for gene-side
+            gene_side_info_paths (List[Path]): List of file paths for gene-side
                 information datasets.
-            disease_side_info_paths (List[str]): List of file paths for disease-side
+            disease_side_info_paths (List[Path]): List of file paths for disease-side
                 information datasets.
-            names (List[str], optional): List of names corresponding to each dataset
-                for logging purposes.
 
         """
         gene_dataframes = [pd.read_csv(path) for path in gene_side_info_paths]
@@ -164,10 +162,10 @@ class SideInformationLoader:
         log_df = pd.DataFrame(
             shapes, columns=["number of rows", "number of columns"]
         ).map(lambda x: f"{x:_}")
-        if names:
-            log_df.index = names
+        names = [path.stem for path in gene_side_info_paths + disease_side_info_paths]
+        log_df.index = names
         self.logger.debug(
-            "Side information dataframes loaded successfully. \n%s\n",
+            "Side informationdataframes loaded successfully. \n%s\n",
             log_df.to_markdown(),
         )
         self.gene_side_info = self(gene_dataframes, self.nb_genes)

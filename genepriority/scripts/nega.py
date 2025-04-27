@@ -173,22 +173,15 @@ def nega(args: argparse.Namespace):
     Args:
         args (argparse.Namespace): Parsed command-line arguments.
     """
-    input_path = Path(args.input_path).absolute()
-    omim_meta_path = Path(args.omim_meta_path).absolute()
-    output_path = Path(args.output_path).absolute()
     logger = logging.getLogger("NEGA")
 
-    if not input_path.exists():
-        raise FileNotFoundError(f"Input path does not exist: {input_path}")
-
-    if not omim_meta_path.exists():
-        raise FileNotFoundError(f"OMIM metadata path does not exist: {omim_meta_path}")
-
     dataloader, side_info_loader = pre_processing(
-        input_path=input_path,
+        gene_disease_path=args.gene_disease_path,
         seed=args.seed,
-        omim_meta_path=omim_meta_path,
+        omim_meta_path=args.omim_meta_path,
         side_info=args.side_info,
+        gene_side_info_paths=args.gene_side_info_paths,
+        disease_side_info_paths=args.disease_side_info_paths,
         zero_sampling_factor=args.zero_sampling_factor,
         num_folds=args.num_folds,
         validation_size=args.validation_size,
@@ -197,7 +190,7 @@ def nega(args: argparse.Namespace):
     if args.nega_command == "fine-tune":
         finetune(
             logger=logger,
-            output_path=output_path,
+            output_path=args.output_path,
             dataloader=dataloader,
             side_info_loader=side_info_loader,
             rank=args.rank,
@@ -211,14 +204,8 @@ def nega(args: argparse.Namespace):
             timeout=args.timeout,
         )
     elif args.nega_command == "cv":
-        config_path = Path(args.config_path).absolute()
-        if not config_path.exists():
-            raise FileNotFoundError(
-                f"The configuration path does not exist: {config_path}"
-            )
-
-        logger.debug("Loading configuration file: %s", config_path)
-        with config_path.open("r", encoding="utf-8") as stream:
+        logger.debug("Loading configuration file: %s", args.config_path)
+        with args.config_path.open("r", encoding="utf-8") as stream:
             config = yaml.safe_load(stream)
         if "side_info" in args and args.side_info is not None and args.side_info:
             config = config["side-info"]
@@ -239,11 +226,10 @@ def nega(args: argparse.Namespace):
         smoothness_parameter = config.get("smoothness_parameter")
         rho_increase = config.get("rho_increase")
         rho_decrease = config.get("rho_decrease")
-        tensorboard_dir = Path(args.tensorboard_dir).absolute()
 
         train_eval(
             logger=logger,
-            output_path=output_path,
+            output_path=args.output_path,
             dataloader=dataloader,
             rank=args.rank,
             iterations=args.iterations,
@@ -257,7 +243,7 @@ def nega(args: argparse.Namespace):
             smoothness_parameter=smoothness_parameter,
             rho_increase=rho_increase,
             rho_decrease=rho_decrease,
-            tensorboard_dir=tensorboard_dir,
+            tensorboard_dir=args.tensorboard_dir,
             results_filename=args.results_filename,
             side_info_loader=side_info_loader,
         )
