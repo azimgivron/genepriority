@@ -78,14 +78,11 @@ def test_dataloader_construction(nb_genes: int, nb_diseases: int, path: Path):
     tot = len(without_0s.omim.data)
     train_size = (num_folds - 1) / num_folds * (1 - validation_size)
     assert tot == len(train_data.data) + len(test_data.data) + len(val_data.data)
+    assert np.isclose(len(train_data.data) / tot, np.floor(train_size * tot) / tot)
+    assert np.isclose(len(val_data.data) / tot, validation_size)
     assert np.isclose(
-        len(train_data.data)/tot, np.floor(train_size * tot)/tot
-    )
-    assert np.isclose(
-        len(val_data.data)/tot, validation_size
-    )
-    assert np.isclose(
-        len(test_data.data)/tot, 1 - np.floor(train_size * tot)/tot - validation_size
+        len(test_data.data) / tot,
+        1 - np.floor(train_size * tot) / tot - validation_size,
     )
 
     # DataLoader with zero sampling.

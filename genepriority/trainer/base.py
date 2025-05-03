@@ -22,7 +22,8 @@ from tqdm import tqdm
 from genepriority.evaluation.evaluation import Evaluation
 from genepriority.evaluation.results import Results
 from genepriority.preprocessing.dataloader import DataLoader
-from genepriority.preprocessing.side_information_loader import SideInformationLoader
+from genepriority.preprocessing.side_information_loader import \
+    SideInformationLoader
 
 
 class BaseTrainer(metaclass=ABCMeta):
@@ -172,7 +173,9 @@ class BaseTrainer(metaclass=ABCMeta):
         """
         results = []
         for i, (train_mask, test_mask, validation_mask, _) in tqdm(
-            enumerate(self.dataloader.omim_masks), desc="Fold", total=len(self.dataloader.omim_masks)
+            enumerate(self.dataloader.omim_masks),
+            desc="Fold",
+            total=len(self.dataloader.omim_masks),
         ):
             self.logger.debug("Initiating training on fold %d", i + 1)
 

@@ -24,7 +24,8 @@ from genepriority.models.flip_labels import FlipLabels
 from genepriority.models.matrix_completion_result import MatrixCompletionResult
 from genepriority.models.smc import MatrixCompletionSession
 from genepriority.preprocessing.dataloader import DataLoader
-from genepriority.preprocessing.side_information_loader import SideInformationLoader
+from genepriority.preprocessing.side_information_loader import \
+    SideInformationLoader
 from genepriority.trainer.base import BaseTrainer
 from genepriority.utils import create_tb_dir
 

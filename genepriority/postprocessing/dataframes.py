@@ -22,7 +22,7 @@ def generate_auc_loss_table(
 
     Args:
         auc_loss (np.ndarray): A 2D array containing the AUC loss for
-            each model and disease. Shape: (diseases, models).
+            each model and fold. Shape: (fold, models).
         model_names (List[str]): Names of the models corresponding to the AUC losses.
         avg_auc_loss_name (str, optional): Column name for averaged 1-AUC error.
             Defaults to "Averaged 1-AUC error".
@@ -53,8 +53,8 @@ def generate_bedroc_table(
 
     Args:
         bedroc (np.ndarray): A 3D array containing BEDROC scores for each model,
-            each disease and different alpha values.
-            Shape: (alphas, diseases, models).
+            each fold and different alpha values.
+            Shape: (alphas, fold, models).
         model_names (List[str]): Names of the models corresponding to the BEDROC scores.
         alpha_map (Dict[float, str]): A mapping of alpha values (e.g., 0.2, 0.5) to
             descriptive strings used for table column naming.

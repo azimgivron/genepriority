@@ -9,10 +9,7 @@ from typing import Dict, List
 
 import numpy as np
 
-from genepriority.evaluation.metrics import (
-    auc_scores,
-    bedroc_scores,
-)
+from genepriority.evaluation.metrics import auc_scores, bedroc_scores
 from genepriority.evaluation.results import Results
 
 
@@ -80,11 +77,11 @@ class Evaluation:
         mask = np.stack(masks).astype(bool)
         bedroc = np.stack(bedroc).astype(np.float64)  # shape=(fold, alphas, diseases)
 
-        valid = mask.any(axis=(0,1))
+        valid = mask.any(axis=(0, 1))
         mask = mask[:, :, valid]
-        bedroc  = bedroc[:, :, valid]
-        
-        bedroc_masked = np.ma.array(bedroc, mask=~mask)  
+        bedroc = bedroc[:, :, valid]
+
+        bedroc_masked = np.ma.array(bedroc, mask=~mask)
         bedroc = bedroc_masked.mean(axis=0).data
         return bedroc
 
@@ -103,18 +100,18 @@ class Evaluation:
             y_true = fold_res.y_true
             y_pred = fold_res.y_pred
             auc_per_fold, mask_per_fold = auc_scores(
-                    y_true=y_true, y_pred=y_pred, gene_number=fold_res.gene_number
-                )
+                y_true=y_true, y_pred=y_pred, gene_number=fold_res.gene_number
+            )
             masks.append(mask_per_fold)
             auc.append(auc_per_fold)
-            
+
         mask = np.stack(masks).astype(bool)
         auc = np.stack(auc).astype(np.float64)  # shape=(fold, diseases)
-        
+
         valid = mask.any(axis=0)
         mask = mask[:, valid]
-        auc  = auc[:, valid]
+        auc = auc[:, valid]
 
-        auc_masked = np.ma.array(auc, mask=~mask)  
-        auc_loss = 1-auc_masked.mean(axis=0).data
+        auc_masked = np.ma.array(auc, mask=~mask)
+        auc_loss = 1 - auc_masked.mean(axis=0).data
         return auc_loss

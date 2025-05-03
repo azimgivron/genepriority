@@ -17,7 +17,8 @@ import pint
 import yaml
 
 from genepriority.preprocessing.dataloader import DataLoader
-from genepriority.preprocessing.side_information_loader import SideInformationLoader
+from genepriority.preprocessing.side_information_loader import \
+    SideInformationLoader
 from genepriority.scripts.utils import pre_processing
 from genepriority.trainer.neg_trainer import NEGTrainer
 from genepriority.utils import serialize
