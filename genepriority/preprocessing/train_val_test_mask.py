@@ -79,7 +79,7 @@ class TrainValTestMasks:
             shuffle=True,
         )
         validation_row_indices, validation_finetuning_row_indices = train_test_split(
-            np.arange(len(validation_row_indices)),
+            validation_row_indices,
             train_size=0.5,
             random_state=self.seed,
             shuffle=True,
@@ -109,16 +109,16 @@ class TrainValTestMasks:
 
         # Use KFold on the remaining indices to create training and testing masks.
         kfold = KFold(n_splits=num_folds, shuffle=True, random_state=self.seed)
-        for train_fold_indices, test_fold_indices in kfold.split(
-            train_test_row_indices
-        ):
+        for train_fold_indices, test_fold_indices in kfold.split(train_test_row_indices):
+            train_idx = train_test_row_indices[train_fold_indices]
+            test_idx = train_test_row_indices[test_fold_indices]
             self.training_masks.append(
                 sp.csr_matrix(
                     (
-                        values[train_fold_indices],
+                        values[train_idx],
                         (
-                            row_indices[train_fold_indices],
-                            col_indices[train_fold_indices],
+                            row_indices[train_idx],
+                            col_indices[train_idx],
                         ),
                     ),
                     shape=nnz_mask.shape,
@@ -127,10 +127,10 @@ class TrainValTestMasks:
             self.testing_masks.append(
                 sp.csr_matrix(
                     (
-                        values[test_fold_indices],
+                        values[test_idx],
                         (
-                            row_indices[test_fold_indices],
-                            col_indices[test_fold_indices],
+                            row_indices[test_idx],
+                            col_indices[test_idx],
                         ),
                     ),
                     shape=nnz_mask.shape,
