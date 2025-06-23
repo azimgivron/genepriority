@@ -122,8 +122,8 @@ This formulation from:
 ### Evaluation Strategy 📊
 
 We split the data into:
-- **90%** for on cross-validation
-- **10%** for hyperparameter fine tuning  
+- **90%** for cross-validation
+- **10%** for hyperparameter fine tuning
 
 Then use five-fold cross-validation on the main split (72% training, 18% testing per fold). We monitor metrics like **RMSE**, **ROC/AUROC**, **BEDROC**, and **PR Curve/AUPRC**. Also, negative sampling (5 negatives per positive) is used to mirror the real-life imbalance in biology.
 
