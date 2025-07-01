@@ -212,8 +212,18 @@ class BaseMatrixCompletion(metaclass=abc.ABCMeta):
                 - New loss value f(W_{k+1}).
         """
         raise NotImplementedError
+    
+    @abc.abstractmethod
+    def init_tau(self) -> float:
+        """
+        Initialize tau value.
+        
+        Returns:
+            float: tau value.
+        """
+        raise NotImplementedError
 
-    def cardano(tau: float, delta: float) -> float:
+    def cardano(self, tau: float, delta: float) -> float:
         """
         Solve the cubic equation:
             s^3 - tau * s^2 - delta = 0
@@ -471,8 +481,7 @@ class BaseMatrixCompletion(metaclass=abc.ABCMeta):
         # Stack h1 and h2 for optimization
         W_k = np.vstack([self.h1, self.h2.T])
         step_size = 1 / self.smoothness_parameter
-        tau = np.linalg.norm(self.matrix, ord="fro") / 3
-
+        tau = self.init_tau()
         self.logger.debug(
             "Starting optimization with tau=%f, step_size=%f", tau, step_size
         )

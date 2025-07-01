@@ -59,7 +59,7 @@ def tsne_plot_to_tensor(
 
     tsne = TSNE(
         n_components=2,
-        perplexity=perplexity,
+        perplexity=min(perplexity, len(high_dim_embeddings)/2),
         random_state=random_state,
         max_iter=max_iter,
     )

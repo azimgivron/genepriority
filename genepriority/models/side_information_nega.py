@@ -9,10 +9,16 @@ from genepriority.models.base_nega import BaseMatrixCompletion
 class SideInfoMatrixCompletion(BaseMatrixCompletion):
     """
     Specialized matrix completion session that incorporates side information.
-
+        
     Attributes:
         gene_side_info (sp.csr_matrix): Side information for genes (shape: n x g).
         disease_side_info (sp.csr_matrix): Side information for diseases (shape: m x d).
+        gene_similarity_inv (np.ndarray): Pseudoinverse of the gene-by-gene similarity 
+            matrix (shape: n x n).
+        disease_similarity_inv (np.ndarray): Pseudoinverse of the disease-by-disease 
+            similarity matrix (shape: m x m).
+        h1 (np.ndarray): Left latent factor matrix (shape: g x rank).
+        h2 (np.ndarray): Right latent factor matrix (shape: rank x d).
     """
 
     def __init__(
@@ -40,6 +46,13 @@ class SideInfoMatrixCompletion(BaseMatrixCompletion):
 
         self.gene_side_info = gene_side_info
         self.disease_side_info = disease_side_info
+        
+        gene_similarity = (self.gene_side_info.T @ self.gene_side_info).toarray()
+        self.gene_similarity_inv = np.linalg.pinv(gene_similarity)
+        
+        
+        disease_similarity = (self.disease_side_info.T @ self.disease_side_info).toarray()
+        self.disease_similarity_inv = np.linalg.pinv(disease_similarity)
 
         # Initialize factor matrices based on side information dimensions.
         self.h1 = np.random.randn(self.gene_side_info.shape[1], self.rank)
@@ -50,6 +63,16 @@ class SideInfoMatrixCompletion(BaseMatrixCompletion):
             self.h1.shape,
             self.h2.shape,
         )
+        
+    def init_tau(self) -> float:
+        """
+        Initialize tau value.
+        
+        Returns:
+            float: tau value.
+        """
+        return np.linalg.norm(self.matrix, ord="fro") * 2 / 3
+        
 
     def kernel(self, W: np.ndarray, tau: float) -> float:
         """
@@ -178,10 +201,11 @@ class SideInfoMatrixCompletion(BaseMatrixCompletion):
         # Apply K^{-1} to ∇f and scale by 1/3
         grad_h1 = grad_f_W_k[:g, :]
         grad_h2_T = grad_f_W_k[g:, :]
-        GtG = (self.gene_side_info.T @ self.gene_side_info).toarray()
-        YYt = (self.disease_side_info @ self.disease_side_info.T).toarray()
+
+        inv_h1 = self.gene_similarity_inv @ grad_h1
+        inv_h2_T = self.disease_similarity_inv @ grad_h2_T
         invK_grad = np.vstack(
-            [np.linalg.solve(GtG, grad_h1), np.linalg.solve(YYt, grad_h2_T)]
+            [inv_h1, inv_h2_T]
         )
 
         # Form the shift-and-scale numerator

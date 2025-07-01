@@ -24,6 +24,15 @@ class StandardMatrixCompletion(BaseMatrixCompletion):
             self.h1.shape,
             self.h2.shape,
         )
+    
+    def init_tau(self) -> float:
+        """
+        Initialize tau value.
+        
+        Returns:
+            float: tau value.
+        """
+        return np.linalg.norm(self.matrix, ord="fro") / 3
 
     def kernel(self, W: np.ndarray, tau: float) -> float:
         """
