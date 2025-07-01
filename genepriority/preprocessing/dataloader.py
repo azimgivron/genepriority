@@ -165,7 +165,6 @@ class DataLoader:
 
         Args:
             matrix (sp.csr_matrix): Sparse matrix to log statistics for.
-            dataset_name (str): The name of the dataset being processed.
         """
         self.logger.debug(
             "Number of 0s in OMIM: %s",
