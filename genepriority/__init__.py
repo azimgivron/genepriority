@@ -1,28 +1,22 @@
 """GenePriority Module"""
 # pylint: disable=R0801
-from .evaluation import Evaluation, Results, bedroc_score
-from .postprocessing import (
-    ModelEvaluationCollection,
-    generate_auc_loss_table,
-    generate_bedroc_table,
-    plot_auc_boxplots,
-    plot_bedroc_boxplots,
-    plot_roc_curves,
-)
-from .preprocessing import (
-    DataLoader,
-    SideInformationLoader,
-    TrainValTestMasks,
-    compute_statistics,
-    convert_dataframe_to_sparse_matrix,
-    filter_by_number_of_association,
-    sample_zeros,
-)
+from .evaluation import (Evaluation, Results, average_auc_score,
+                         average_bedroc_score, average_roc_curve)
+from .postprocessing import (ModelEvaluationCollection,
+                             generate_auc_loss_table, generate_bedroc_table,
+                             plot_auc_boxplots, plot_bedroc_boxplots,
+                             plot_roc_curves)
+from .preprocessing import (DataLoader, SideInformationLoader,
+                            TrainValTestMasks, compute_statistics,
+                            convert_dataframe_to_sparse_matrix,
+                            filter_by_number_of_association, sample_zeros)
 from .trainer import MACAUTrainer, NEGTrainer
 
 __all__ = [
     "Evaluation",
-    "bedroc_score",
+    "average_bedroc_score",
+    "average_auc_score",
+    "average_roc_curve",
     "Results",
     "generate_auc_loss_table",
     "generate_bedroc_table",

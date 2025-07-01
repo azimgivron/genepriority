@@ -4,6 +4,8 @@ Parser Module
 """
 import argparse
 
+from genepriority.scripts.utils import csv_file, output_dir, yaml_file
+
 
 def parse_genehound(subparsers: argparse.ArgumentParser):
     """
@@ -24,7 +26,8 @@ def parse_genehound(subparsers: argparse.ArgumentParser):
     )
     parser.add_argument(
         "--output-path",
-        type=str,
+        metavar="FILE",
+        type=output_dir,
         required=True,
         help="Directory to save output results.",
     )
@@ -42,15 +45,47 @@ def parse_genehound(subparsers: argparse.ArgumentParser):
         help="Include side information for genes and diseases (default: %(default)s).",
     )
     parser.add_argument(
-        "--input-path",
-        type=str,
-        default="/home/TheGreatestCoder/code/data/postprocessed/",
-        help="Directory containing input data files (default: %(default)s).",
+        "--gene-side-info-paths",
+        metavar="FILE",
+        nargs="+",
+        type=csv_file,
+        default=[
+            csv_file(file)
+            for file in [
+                "/home/TheGreatestCoder/code/data/postprocessed/interpro.csv",
+                "/home/TheGreatestCoder/code/data/postprocessed/uniprot.csv",
+                "/home/TheGreatestCoder/code/data/postprocessed/go.csv",
+            ]
+        ],
+        help="Paths to one or more gene-side information CSV files (default: %(default)s).",
+    )
+    parser.add_argument(
+        "--disease-side-info-paths",
+        metavar="FILE",
+        nargs="+",
+        type=csv_file,
+        default=[
+            csv_file(file)
+            for file in ["/home/TheGreatestCoder/code/data/postprocessed/phenotype.csv"]
+        ],
+        help="Paths to one or more disease-side information CSV files (default: %(default)s).",
+    )
+    parser.add_argument(
+        "--gene-disease-path",
+        metavar="FILE",
+        type=csv_file,
+        default=csv_file(
+            "/home/TheGreatestCoder/code/data/postprocessed/gene-disease.csv"
+        ),
+        help="Path of the gene disease matrix (default: %(default)s).",
     )
     parser.add_argument(
         "--omim-meta-path",
-        type=str,
-        default="/home/TheGreatestCoder/code/genepriority/configurations/omim.yaml",
+        metavar="FILE",
+        type=yaml_file,
+        default=yaml_file(
+            "/home/TheGreatestCoder/code/genepriority/configurations/omim.yaml"
+        ),
         help="Path to the OMIM metadata file (default: %(default)s).",
     )
     parser.add_argument(
@@ -61,8 +96,9 @@ def parse_genehound(subparsers: argparse.ArgumentParser):
     )
     parser.add_argument(
         "--config-path",
-        type=str,
-        default=(
+        metavar="FILE",
+        type=yaml_file,
+        default=yaml_file(
             "/home/TheGreatestCoder/code/genepriority/"
             "configurations/genehound/meta.yaml"
         ),
@@ -70,8 +106,9 @@ def parse_genehound(subparsers: argparse.ArgumentParser):
     )
     parser.add_argument(
         "--tensorboard-dir",
-        type=str,
-        default="/home/TheGreatestCoder/code/logs",
+        metavar="FILE",
+        type=output_dir,
+        default=output_dir("/home/TheGreatestCoder/code/logs"),
         help="Directory for TensorBoard logs (default: %(default)s).",
     )
     parser.add_argument(
@@ -141,9 +178,10 @@ def parse_nega(subparsers: argparse._SubParsersAction):
         )
         parser.add_argument(
             "--output-path",
-            type=str,
+            metavar="FILE",
+            type=output_dir,
             required=True,
-            help="Directory to save output result.",
+            help="Directory to save output results.",
         )
         parser.add_argument(
             "--zero-sampling-factor",
@@ -154,18 +192,21 @@ def parse_nega(subparsers: argparse._SubParsersAction):
             ),
         )
         parser.add_argument(
-            "--input-path",
-            type=str,
-            default="/home/TheGreatestCoder/code/data/postprocessed/",
-            help=(
-                "Path to the input data directory containing 'gene-disease.csv'"
-                " (default: %(default)s)."
+            "--gene-disease-path",
+            metavar="FILE",
+            type=csv_file,
+            default=csv_file(
+                "/home/TheGreatestCoder/code/data/postprocessed/gene-disease.csv"
             ),
+            help="Path of the gene disease matrix (default: %(default)s).",
         )
         parser.add_argument(
             "--omim-meta-path",
-            type=str,
-            default="/home/TheGreatestCoder/code/genepriority/configurations/omim.yaml",
+            metavar="FILE",
+            type=yaml_file,
+            default=yaml_file(
+                "/home/TheGreatestCoder/code/genepriority/configurations/omim.yaml"
+            ),
             help="Path to the OMIM metadata file (default: %(default)s).",
         )
         parser.add_argument(
@@ -237,18 +278,50 @@ def parse_nega(subparsers: argparse._SubParsersAction):
             action="store_true",
             help="Include side information for genes and diseases.",
         )
+        parser.add_argument(
+            "--gene-side-info-paths",
+            metavar="FILE",
+            nargs="+",
+            type=csv_file,
+            default=[
+                csv_file(file)
+                for file in [
+                    "/home/TheGreatestCoder/code/data/postprocessed/interpro.csv",
+                    "/home/TheGreatestCoder/code/data/postprocessed/uniprot.csv",
+                    "/home/TheGreatestCoder/code/data/postprocessed/go.csv",
+                ]
+            ],
+            help="Paths to one or more gene-side information CSV files (default: %(default)s).",
+        )
+        parser.add_argument(
+            "--disease-side-info-paths",
+            metavar="FILE",
+            nargs="+",
+            type=csv_file,
+            default=[
+                csv_file(file)
+                for file in [
+                    "/home/TheGreatestCoder/code/data/postprocessed/phenotype.csv"
+                ]
+            ],
+            help="Paths to one or more disease-side information CSV files (default: %(default)s).",
+        )
 
     # Additional arguments specific to the "cv" subcommand
     cv_parser.add_argument(
         "--tensorboard-dir",
-        type=str,
-        default="/home/TheGreatestCoder/code/logs",
+        metavar="FILE",
+        type=output_dir,
+        default=output_dir("/home/TheGreatestCoder/code/logs"),
         help="Directory for TensorBoard logs (default: %(default)s).",
     )
     cv_parser.add_argument(
         "--config-path",
-        type=str,
-        default="/home/TheGreatestCoder/code/genepriority/configurations/nega/meta.yaml",
+        metavar="FILE",
+        type=yaml_file,
+        default=yaml_file(
+            "/home/TheGreatestCoder/code/genepriority/configurations/nega/meta.yaml"
+        ),
         help=(
             "Path to the YAML configuration file containing simulation parameters "
             "(default: %(default)s)."
@@ -295,7 +368,8 @@ def parse_baseline(subparsers: argparse.ArgumentParser):
     )
     parser.add_argument(
         "--output-path",
-        type=str,
+        metavar="FILE",
+        type=output_dir,
         required=True,
         help="Directory to save output results.",
     )
@@ -308,15 +382,21 @@ def parse_baseline(subparsers: argparse.ArgumentParser):
         ),
     )
     parser.add_argument(
-        "--input-path",
-        type=str,
-        default="/home/TheGreatestCoder/code/data/postprocessed/",
-        help="Directory containing input data files (default: %(default)s).",
+        "--gene-disease-path",
+        metavar="FILE",
+        type=csv_file,
+        default=csv_file(
+            "/home/TheGreatestCoder/code/data/postprocessed/gene-disease.csv"
+        ),
+        help="Path of the gene disease matrix (default: %(default)s).",
     )
     parser.add_argument(
         "--omim-meta-path",
-        type=str,
-        default="/home/TheGreatestCoder/code/genepriority/configurations/omim.yaml",
+        metavar="FILE",
+        type=yaml_file,
+        default=yaml_file(
+            "/home/TheGreatestCoder/code/genepriority/configurations/omim.yaml"
+        ),
         help="Path to the OMIM metadata file (default: %(default)s).",
     )
     parser.add_argument(
@@ -373,9 +453,10 @@ def parse_post(subparsers: argparse._SubParsersAction):
     )
     parser.add_argument(
         "--output-path",
-        type=str,
+        metavar="FILE",
+        type=output_dir,
         required=True,
-        help="Directory where output results will be saved.",
+        help="Directory to save output results.",
     )
     parser.add_argument(
         "--evaluation-paths",
@@ -393,8 +474,11 @@ def parse_post(subparsers: argparse._SubParsersAction):
     )
     parser.add_argument(
         "--post-config-path",
-        type=str,
-        default="/home/TheGreatestCoder/code/genepriority/configurations/post.yaml",
+        metavar="FILE",
+        type=yaml_file,
+        default=yaml_file(
+            "/home/TheGreatestCoder/code/genepriority/configurations/post.yaml"
+        ),
         help=(
             "Path to the post-processing configuration file containing alpha values."
             " (default: %(default)s)"
@@ -406,7 +490,7 @@ def parse_post(subparsers: argparse._SubParsersAction):
         help="Whether to share the y axis for BEDROC boxplots (default: %(default)s).",
     )
     parser.add_argument(
-        "--apply-mask",
+        "--full",
         action="store_false",
         help=(
             "If flagged, assessment is made on whole completed matrix instead of the"

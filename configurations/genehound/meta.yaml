@@ -24,10 +24,5 @@
 direct: False
 univariate: True
 save_freq: 100
-num_samples: 1_000
-burnin_period: 500
-# direct: True
-# univariate: False
-# save_freq: 200
-# num_samples: 200
-# burnin_period: 150
+num_samples: 3_500
+burnin_period: 1_500

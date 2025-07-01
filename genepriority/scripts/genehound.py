@@ -20,7 +20,8 @@ from pathlib import Path
 import yaml
 
 from genepriority.preprocessing.dataloader import DataLoader
-from genepriority.preprocessing.side_information_loader import SideInformationLoader
+from genepriority.preprocessing.side_information_loader import \
+    SideInformationLoader
 from genepriority.scripts.utils import pre_processing
 from genepriority.trainer.macau_trainer import MACAUTrainer
 from genepriority.utils import serialize
@@ -109,31 +110,15 @@ def genehound(args: argparse.Namespace):
     Args:
         args (argparse.Namespace): Parsed command-line arguments.
     """
-    output_path = Path(args.output_path).absolute()
-    output_path.mkdir(parents=True, exist_ok=True)
-
-    tensorboard_dir = Path(args.tensorboard_dir).absolute()
-    tensorboard_dir.mkdir(parents=True, exist_ok=True)
-
     seed = args.seed
 
-    input_path = Path(args.input_path).absolute()
-    if not input_path.exists():
-        raise FileNotFoundError(f"The input path does not exist: {input_path}")
-
-    config_path = Path(args.config_path).absolute()
-    if not config_path.exists():
-        raise FileNotFoundError(f"The configuration path does not exist: {config_path}")
-
-    omim_meta_path = Path(args.omim_meta_path).absolute()
-    if not omim_meta_path.exists():
-        raise FileNotFoundError(f"OMIM metadata path does not exist: {omim_meta_path}")
-
     dataloader, side_info_loader = pre_processing(
-        input_path=input_path,
-        seed=seed,
-        omim_meta_path=omim_meta_path,
+        gene_disease_path=args.gene_disease_path,
+        seed=args.seed,
+        omim_meta_path=args.omim_meta_path,
         side_info=args.side_info,
+        gene_side_info_paths=args.gene_side_info_paths,
+        disease_side_info_paths=args.disease_side_info_paths,
         zero_sampling_factor=args.zero_sampling_factor,
         num_folds=args.num_folds,
         validation_size=args.validation_size,
@@ -141,10 +126,10 @@ def genehound(args: argparse.Namespace):
     run(
         dataloader=dataloader,
         side_info_loader=side_info_loader,
-        output_path=output_path,
-        tensorboard_dir=tensorboard_dir,
+        output_path=args.output_path,
+        tensorboard_dir=args.tensorboard_dir,
         seed=seed,
         latent_dimension=args.latent_dimension,
         results_filename=args.results_filename,
-        config_path=config_path,
+        config_path=args.config_path,
     )

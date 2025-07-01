@@ -16,63 +16,6 @@ import numpy as np
 import seaborn as sns
 
 from genepriority.evaluation.evaluation import Evaluation
-from genepriority.postprocessing.model_evaluation_collection import (
-    ModelEvaluationCollection,
-)
-
-
-def plot_roc_curves(
-    evaluation_collection: ModelEvaluationCollection,
-    output_file: str,
-    figsize: Tuple[int, int],
-):
-    """
-    Plots average ROC curves for multiple models and saves the plot to a file.
-
-    Args:
-        evaluation_collection (ModelEvaluationCollection): A collection of `Evaluation`
-            objects, each containing the evaluation of a model.
-        output_file (str): File path where the ROC curve plot will be saved.
-        figsize (Tuple[int, int]): Figure size in inches (width, height).
-
-    """
-    colors = ["#0072B2", "#E69F00", "#009E73", "#D55E00", "#CC79A7", "#F0E442"]
-    linestyles = [
-        "solid",
-        "dotted",
-        "dashed",
-        "dashdot",
-        (0, (1, 1)),
-        (0, (3, 10, 1, 10, 1, 10)),
-    ]
-
-    if len(evaluation_collection) > len(colors):
-        raise ValueError("Not enough colors.")
-
-    fig = plt.figure(figsize=figsize)
-    for i, (name, evaluation) in enumerate(evaluation_collection.items()):
-        fpr_tpr_avg = evaluation.compute_roc_curve()
-        fpr, tpr = fpr_tpr_avg
-        plt.plot(
-            fpr,
-            tpr,
-            linewidth=4,
-            c=colors[i],
-            label=name,
-            linestyle=linestyles[i],
-        )
-    plt.plot(
-        [0, 1], [0, 1], linestyle=(0, (1, 10)), color="black", label="Random Guess"
-    )
-    plt.yticks(fontsize=14)
-    plt.xlabel("Average FPR", fontsize=16)
-    plt.ylabel("Average TPR", fontsize=16)
-    plt.legend(fontsize=16)
-    plt.grid(alpha=0.3)
-    plt.tight_layout()
-    fig.subplots_adjust(hspace=0.3, wspace=0.4, top=0.9)
-    plt.savefig(output_file, dpi=300)
-    plt.close()
 
 
 def plot_bedroc_boxplots(
@@ -87,8 +30,8 @@ def plot_bedroc_boxplots(
     without plotting outliers, with a shared y-axis and a single legend on the side.
 
     Args:
-        bedroc (np.ndarray): BEDROC scores array of shape (alphas, folds, models).
-            Each entry represents the BEDROC score for a specific alpha value, fold,
+        bedroc (np.ndarray): BEDROC scores array of shape (alphas, diseases, models).
+            Each entry represents the BEDROC score for a specific alpha value, disease,
             and model.
         model_names (List[str]): Names of the models being compared.
         output_file (str): File path where the BEDROC boxplot figure will be saved.
@@ -166,7 +109,7 @@ def plot_auc_boxplots(
 
     Args:
         auc (np.ndarray): A 2D array containing the AUC for
-            each model and fold. Shape: (folds, models).
+            each model and disease. Shape: (diseases, models).
         model_names (List[str]): Names of the models being compared.
         output_file (str): File path where the BEDROC boxplot figure will be saved.
         figsize (Tuple[int, int]): Figure size in inches (width, height).

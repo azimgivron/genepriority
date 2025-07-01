@@ -137,15 +137,17 @@ class TrainValTestMasks:
                 )
             )
 
-    def __iter__(self) -> Iterator[Tuple[sp.csr_matrix, sp.csr_matrix, sp.csr_matrix]]:
+    def __iter__(
+        self,
+    ) -> Iterator[Tuple[sp.csr_matrix, np.ndarray, sp.csr_matrix, sp.csr_matrix]]:
         """
         Provides an iterator over the generated masks for each k-fold split.
 
         Yields:
-            Iterator[Tuple[sp.csr_matrix, sp.csr_matrix, sp.csr_matrix]]:
+            Iterator[Tuple[sp.csr_matrix, np.ndarray, sp.csr_matrix, sp.csr_matrix]]:
                 A tuple containing:
                     - A training mask (sp.csr_matrix) for the current fold.
-                    - A testing mask (sp.csr_matrix) for the current fold.
+                    - A testing mask (np.ndarray) for the current fold.
                     - The validation mask (sp.csr_matrix), for error estimation
                     during training, which is identical all folds.
                     - The validation mask (sp.csr_matrix), for finetuning,
@@ -166,3 +168,11 @@ class TrainValTestMasks:
                 validation_finetuning_mask,
             )
         )
+
+    def __len__(self) -> int:
+        """The iterator length.
+
+        Returns:
+            int: The length.
+        """
+        return len(self.training_masks)

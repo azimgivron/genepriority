@@ -24,7 +24,7 @@ Features:
 import abc
 import logging
 import time
-from typing import Tuple, Union
+from typing import Tuple
 
 import numpy as np
 import scipy.sparse as sp
@@ -35,7 +35,7 @@ from genepriority.models.early_stopping import EarlyStopping
 from genepriority.models.flip_labels import FlipLabels
 from genepriority.models.matrix_completion_result import MatrixCompletionResult
 from genepriority.models.utils import check_save_name, tsne_plot_to_tensor
-from genepriority.utils import calculate_auc_bedroc, serialize
+from genepriority.utils import calculate_auroc_auprc, serialize
 
 
 class BaseMatrixCompletion(metaclass=abc.ABCMeta):
@@ -177,6 +177,103 @@ class BaseMatrixCompletion(metaclass=abc.ABCMeta):
         """
         raise NotImplementedError
 
+    @abc.abstractmethod
+    def kernel(self, W: np.ndarray, tau: float) -> float:
+        """
+        Computes the value of the kernel function h.
+
+        Args:
+            W (np.ndarray): The input matrix.
+            tau (float): Regularization parameter.
+
+        Returns:
+            float: The computed value of the h function.
+        """
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def substep(
+        self,
+        W_k: np.ndarray,
+        tau: float,
+        step_size: float,
+        grad_f_W_k: np.ndarray,
+        tau1: float,
+    ) -> Tuple[np.ndarray, float]:
+        """
+        Performs a single substep in the optimization process to update the factor matrices.
+
+        This substep calculates the next iterate W_{k+1} using the gradient of the objective
+        function and an adaptive step size.
+
+        Returns:
+            Tuple[np.ndarray, float]:
+                - Updated stacked matrix W_{k+1}.
+                - New loss value f(W_{k+1}).
+        """
+        raise NotImplementedError
+    
+    @abc.abstractmethod
+    def init_tau(self) -> float:
+        """
+        Initialize tau value.
+        
+        Returns:
+            float: tau value.
+        """
+        raise NotImplementedError
+
+    def cardano(self, tau: float, delta: float) -> float:
+        """
+        Solve the cubic equation:
+            s^3 - tau * s^2 - delta = 0
+        using Cardano's method.
+
+        Args:
+            tau (float): Coefficient τ in the equation.
+            delta (float): Constant term δ in the equation.
+
+        Returns:
+            float: The unique real root s of the cubic.
+        """
+        # Compute intermediate parameters
+        tau1_loc = -(tau**2) / 3
+        tau2 = (-2 * tau**3 - 27 * delta) / 27
+
+        # Discriminant for Cardano's formula
+        discr = (tau2 / 2) ** 2 + (tau1_loc / 3) ** 3
+        sqrt_disc = np.sqrt(discr, dtype=np.complex128)
+
+        # Compute the real root
+        t_k = (tau / 3) + (
+            np.power(-tau2 / 2 + sqrt_disc, 1 / 3, dtype=np.complex128)
+            + np.power(-tau2 / 2 - sqrt_disc, 1 / 3, dtype=np.complex128)
+        ).real
+
+        return t_k
+
+    def bregman_distance(
+        self, W_next: np.ndarray, W_current: np.ndarray, tau: float
+    ) -> float:
+        """
+        Computes the Bregman distance:
+            D_h = h(W_next) - h(W_current) - <grad_h(W_next), W_next - W_current>
+
+        Args:
+            W_next (np.ndarray): The updated input sparse matrix.
+            W_current (np.ndarray): The current input sparse matrix.
+            tau (float): Regularization parameter.
+
+        Returns:
+            float: The computed Bregman distance.
+        """
+        h_W_next = self.kernel(W_next, tau)
+        h_W_current = self.kernel(W_current, tau)
+        grad_h_W_current = (np.linalg.norm(W_current, ord="fro") ** 2 + tau) * W_current
+        linear_approx = (grad_h_W_current.T @ (W_next - W_current)).sum()
+        dist = h_W_next - h_W_current - linear_approx
+        return dist
+
     def calculate_training_residual(self) -> np.ndarray:
         """
         Compute the training residual from the input matrix M (m x n), the model's prediction
@@ -252,78 +349,6 @@ class BaseMatrixCompletion(metaclass=abc.ABCMeta):
         rmse = np.sqrt(metrics.mean_squared_error(actual_values, predictions))
         return rmse
 
-    def substep(
-        self,
-        W_k: np.ndarray,
-        tau: float,
-        step_size: float,
-        grad_f_W_k: np.ndarray,
-        tau1: float,
-    ) -> Tuple[np.ndarray, float]:
-        """
-        Performs a single substep in the optimization process to update the factor matrices.
-
-        This substep calculates the next iterate W_{k+1} using the gradient of the objective
-        function and an adaptive step size.
-
-        Steps in the Substep Process:
-
-        1. Compute the Gradient Step:
-           grad = (||W_k||_F^2 + tau) * W_k - step_size * grad_f_W_k
-
-           - ||W_k||_F: Frobenius norm of the current matrix W_k.
-           - tau: Regularization parameter.
-           - step_size: Learning rate for the gradient step.
-           - grad_f_W_k: Gradient of the objective function at W_k.
-
-        2. Solve the Cubic Equation for the Step Size t:
-           Δ = tau_2^2 + (tau1/3)^3
-           if Δ >= 0:
-
-           t = (tau / 3) + cube_root(T_1) + cube_root(T_2)
-
-           - T_1 = -tau_2 + sqrt(Δ)
-           - T_2 = -tau_2 - sqrt(Δ)
-           - tau_2 = (-2 * tau^3 - 27 * ||grad||_F^2) / 27
-
-           The cubic root function ensures stability, even for negative T_1 and T_2.
-
-        3. Update the Next Iterate W_{k+1}:
-           W_{k+1} = (1 / t) * grad
-
-        4. Split W_{k+1} into Factor Matrices h1 and h2:
-           - h1 = W_{k+1}[:m, :]
-           - h2 = W_{k+1}[m:, :].T
-
-        Args:
-            W_k (np.ndarray): Current stacked factor matrices.
-            tau (float): Regularization parameter.
-            step_size (float): Learning rate for the gradient step.
-            grad_f_W_k (np.ndarray): Gradient of the objective function at W_k.
-            tau1 (float): Cubic root parameter for step size adjustment.
-
-        Returns:
-            Tuple[np.ndarray, float]:
-                - Updated stacked matrix W_{k+1}.
-                - New loss value f(W_{k+1}).
-        """
-        step = (np.linalg.norm(W_k, ord="fro") ** 2 + tau) * W_k - (
-            step_size * grad_f_W_k
-        )
-        tau2 = (-2 * (tau**3) - 27 * (np.linalg.norm(step, ord="fro") ** 2)) / 27
-        discriminant = (tau2 / 2) ** 2 + (tau1 / 3) ** 3
-        discriminant_sqrt = np.sqrt(discriminant, dtype=np.complex128)
-        t_k = (tau / 3) + (
-            np.power(-tau2 + discriminant_sqrt, 1 / 3, dtype=np.complex128)
-            + np.power(-tau2 - discriminant_sqrt, 1 / 3, dtype=np.complex128)
-        ).real
-        W_k_next = (1 / t_k) * step
-        m = self.h1.shape[0]
-        self.h1 = W_k_next[:m, :]
-        self.h2 = W_k_next[m:, :].T
-        res_norm_next_it = self.calculate_loss()
-        return W_k_next, res_norm_next_it
-
     def tb_log(
         self, ith_iteration: int, testing_loss: np.ndarray, grad_f_W_k: np.ndarray
     ):
@@ -332,8 +357,8 @@ class BaseMatrixCompletion(metaclass=abc.ABCMeta):
 
         This method gathers various performance metrics during the optimization process and logs
         them to Tensorboard. It computes the training RMSE, logs the testing loss, and also logs
-        histograms and scalar summaries for different evaluation metrics including AUC, average
-        precision, and BEDROC. In addition, it logs histograms of the predicted values on both
+        histograms and scalar summaries for different evaluation metrics including AUC and average
+        precision. In addition, it logs histograms of the predicted values on both
         the training and  testing sets, as well as the flattened gradient values.
 
         Args:
@@ -358,7 +383,7 @@ class BaseMatrixCompletion(metaclass=abc.ABCMeta):
                 pred = self.predict_all()
                 test_predictions = pred[self.test_mask]
                 if (self.matrix[self.test_mask] == 0).any():
-                    auc, avg_precision, bedroc = calculate_auc_bedroc(
+                    auc, avg_precision = calculate_auroc_auprc(
                         test_values_actual, test_predictions
                     )
                     tf.summary.scalar(name="auc", data=auc, step=ith_iteration)
@@ -366,9 +391,6 @@ class BaseMatrixCompletion(metaclass=abc.ABCMeta):
                         name="average precision",
                         data=avg_precision,
                         step=ith_iteration,
-                    )
-                    tf.summary.scalar(
-                        name="bedroc top1%", data=bedroc, step=ith_iteration
                     )
                 tf.summary.histogram(
                     "Values on test points",
@@ -459,9 +481,7 @@ class BaseMatrixCompletion(metaclass=abc.ABCMeta):
         # Stack h1 and h2 for optimization
         W_k = np.vstack([self.h1, self.h2.T])
         step_size = 1 / self.smoothness_parameter
-        tau = np.linalg.norm(self.matrix, ord="fro") / 3
-        tau1 = -(tau**2) / 3
-
+        tau = self.init_tau()
         self.logger.debug(
             "Starting optimization with tau=%f, step_size=%f", tau, step_size
         )
@@ -485,13 +505,13 @@ class BaseMatrixCompletion(metaclass=abc.ABCMeta):
             )
             grad_f_W_k = self.compute_grad_f_W_k()
 
-            substep_res = self.substep(W_k, tau, step_size, grad_f_W_k, tau1)
+            substep_res = self.substep(W_k, tau, step_size, grad_f_W_k)
             if substep_res is None:
                 break
             W_k_next, res_norm_next_it = substep_res
             # Inner loop to adjust step size
             linear_approx = (grad_f_W_k.T @ (W_k_next - W_k)).sum()
-            bregman = bregman_distance(W_k_next, W_k, tau)
+            bregman = self.bregman_distance(W_k_next, W_k, tau)
             non_euclidean_descent_lemma_cond = (
                 res_norm_next_it
                 <= res_norm + linear_approx + self.smoothness_parameter * bregman
@@ -518,12 +538,12 @@ class BaseMatrixCompletion(metaclass=abc.ABCMeta):
                 self.smoothness_parameter *= self.rho_increase**inner_loop_it
                 step_size = (1 + self.symmetry_parameter) / self.smoothness_parameter
 
-                substep_res = self.substep(W_k, tau, step_size, grad_f_W_k, tau1)
+                substep_res = self.substep(W_k, tau, step_size, grad_f_W_k)
                 if substep_res is None:
                     break
                 W_k_next, res_norm_next_it = substep_res
                 linear_approx = (grad_f_W_k.T @ (W_k_next - W_k)).sum()
-                bregman = bregman_distance(W_k_next, W_k, tau)
+                bregman = self.bregman_distance(W_k_next, W_k, tau)
                 # Detect overflow and exit if necessary
                 if self.rho_increase**inner_loop_it > np.finfo(float).max:
                     self.logger.warning(
@@ -560,7 +580,6 @@ class BaseMatrixCompletion(metaclass=abc.ABCMeta):
                 testing_loss, self.h1, self.h2
             ):
                 self.h1, self.h2 = self.early_stopping.best_weights
-                self.early_stopping.clear()
                 self.logger.debug("[Early Stopping] Training interrupted.")
                 if ith_iteration % log_freq != 0:
                     self.tb_log(ith_iteration, testing_loss, grad_f_W_k)
@@ -582,220 +601,3 @@ class BaseMatrixCompletion(metaclass=abc.ABCMeta):
             runtime=runtime,
         )
         return training_data
-
-
-def kernel(W: np.ndarray, tau: float) -> float:
-    """
-    Computes the value of the kernel function h for a given matrix W and
-    regularization parameter tau.
-
-    The h function is defined as:
-        h(W) = 0.25 * ||W||_F^4 + 0.5 * tau * ||W||_F^2
-
-    Args:
-        W (np.ndarray): The input matrix.
-        tau (float): Regularization parameter.
-
-    Returns:
-        float: The computed value of the h function.
-    """
-    norm = np.linalg.norm(W, ord="fro")
-    h_value = 0.25 * norm**4 + 0.5 * tau * norm**2
-    return h_value
-
-
-def bregman_distance(W1: np.ndarray, W2: np.ndarray, tau: float) -> float:
-    """
-    Computes the Bregman distance:
-        D_h = h(W1) - h(W2) - <grad_h(W2), W1 - W2>
-
-    Args:
-        W1 (np.ndarray): The first input sparse matrix.
-        W2 (np.ndarray): The second input sparse matrix.
-        tau (float): Regularization parameter.
-
-    Returns:
-        float: The computed Bregman distance.
-    """
-    h_W1 = kernel(W1, tau)
-    h_W2 = kernel(W2, tau)
-    grad_h_W2 = (np.linalg.norm(W2, ord="fro") ** 2 + tau) * W2
-    linear_approx = (grad_h_W2.T @ (W1 - W2)).sum()
-    dist = h_W1 - h_W2 - linear_approx
-    return dist
-
-
-class SideInfoMatrixCompletion(BaseMatrixCompletion):
-    """
-    Specialized matrix completion session that incorporates side information.
-
-    Attributes:
-        gene_side_info (sp.csr_matrix): Side information for genes (shape: n x g).
-        disease_side_info (sp.csr_matrix): Side information for diseases (shape: m x d).
-    """
-
-    def __init__(
-        self, *args, side_info: Tuple[sp.csr_matrix, sp.csr_matrix] = None, **kwargs
-    ):
-        """
-        Initializes the session with side information.
-
-        Args:
-            side_info (Tuple[sp.csr_matrix, sp.csr_matrix]): Tuple containing gene and disease
-                side information matrices.
-        """
-        super().__init__(*args, **kwargs)
-        if side_info is None:
-            raise ValueError("Side information must be provided for this session.")
-
-        gene_side_info, disease_side_info = side_info
-        if self.matrix.shape[0] != gene_side_info.shape[0]:
-            raise ValueError(
-                "Dimension 0 of matrix does not match dimension 0 of gene side information."
-            )
-        if self.matrix.shape[1] != disease_side_info.shape[0]:
-            raise ValueError(
-                "Dimension 1 of matrix does not match dimension 0 of gene side information."
-            )
-
-        self.gene_side_info = gene_side_info
-        self.disease_side_info = disease_side_info
-
-        # Initialize factor matrices based on side information dimensions.
-        self.h1 = np.random.randn(self.gene_side_info.shape[1], self.rank)
-        self.h2 = np.random.randn(self.rank, self.disease_side_info.shape[1])
-
-        self.logger.debug(
-            "Initialized h1 with shape %s and h2 with shape %s",
-            self.h1.shape,
-            self.h2.shape,
-        )
-
-    def predict_all(self) -> np.ndarray:
-        """
-        Computes the reconstructed matrix from the factor matrices h1 and h2.
-
-        Mathematically, the completed matrix is computed as:
-            M_pred = (X @ h1) @ (h2 @ Y.T)
-
-        where:
-        - X is the gene feature matrix (shape: n x g),
-        - h1 is the left factor matrix (shape: g x rank),
-        - h2 is the right factor matrix (shape: rank x d),
-        - Y is the disease feature matrix (shape: d x m).
-
-        Returns:
-            np.ndarray: The reconstructed (completed) matrix.
-        """
-        return (self.gene_side_info @ self.h1) @ (self.h2 @ self.disease_side_info.T)
-
-    def compute_grad_f_W_k(self) -> np.ndarray:
-        """Compute the gradients for for each latent as:
-
-        grad_f_W_k = (∇_h1, ∇_h2.T).T
-
-        with:
-        - ∇_h1 = X.T @ (mask ⊙ ((X @ h1) @ (h2 @ Y.T) - M)) @ (Y @ h2.T) + mu * h1,
-        - ∇_h2 = (X @ h1).T @ (mask ⊙ ((X @ h1) @ (h2 @ Y.T) - M)) @ Y + mu * h2
-
-        Returns:
-            np.ndarray: The gradient of the latents (n+m x rank)
-        """
-        residual = self.calculate_training_residual()
-        grad_h1 = (
-            self.gene_side_info.T @ (residual @ (self.disease_side_info @ self.h2.T))
-            + self.regularization_parameter * self.h1
-        )
-        grad_h2 = (
-            ((self.gene_side_info @ self.h1).T @ residual)
-        ) @ self.disease_side_info + self.regularization_parameter * self.h2
-        return np.vstack([grad_h1, grad_h2.T])
-
-
-class StandardMatrixCompletion(BaseMatrixCompletion):
-    """
-    Matrix completion session without side information.
-    """
-
-    def __init__(self, *args, **kwargs):
-        """
-        Initializes the session without side information.
-        """
-        super().__init__(*args, **kwargs)
-        # Initialize factor matrices based solely on the matrix dimensions.
-        num_rows, num_cols = self.matrix.shape
-        self.h1 = np.random.randn(num_rows, self.rank)
-        self.h2 = np.random.randn(self.rank, num_cols)
-        self.logger.debug(
-            "Initialized h1 with shape %s and h2 with shape %s",
-            self.h1.shape,
-            self.h2.shape,
-        )
-
-    def predict_all(self) -> np.ndarray:
-        """
-        Computes the reconstructed matrix from the factor matrices h1 and h2.
-
-        Mathematically, the completed matrix is computed as:
-            M_pred = h1 @ h2
-
-        where:
-        - h1 is the left factor matrix (shape: n x rank),
-        - h2 is the right factor matrix (shape: rank x m).
-
-        Returns:
-            np.ndarray: The reconstructed (completed) matrix.
-        """
-        return self.h1 @ self.h2
-
-    def compute_grad_f_W_k(self) -> np.ndarray:
-        """Compute the gradients for for each latent as:
-
-        grad_f_W_k = (∇_h1, ∇_h2.T).T
-
-        where:
-        - ∇_h1 = (mask ⊙ (h1 @ h2 - M)) @ h2.T + mu * h1,
-        - ∇_h2 = h1.T @ (mask ⊙ (h1 @ h2 - M)) + mu * h2
-
-        Returns:
-            np.ndarray: The gradient of the latents (n+m x rank)
-        """
-        residual = self.calculate_training_residual()
-        grad_h1 = residual @ self.h2.T + self.regularization_parameter * self.h1
-        grad_h2 = self.h1.T @ residual + self.regularization_parameter * self.h2
-        return np.vstack([grad_h1, grad_h2.T])
-
-
-MatrixCompletionSessionType = Union[
-    "StandardMatrixCompletion", "SideInfoMatrixCompletion"
-]
-
-
-class MatrixCompletionSession:
-    """
-    Factory class that selects and returns an appropriate matrix completion session
-    implementation based on the provided parameters.
-
-    This class exposes a unified API for matrix completion. When creating an instance,
-    if the `side_info` parameter is provided, an instance of SideInfoMatrixCompletion is returned;
-    otherwise, an instance of StandardMatrixCompletion is instantiated.
-    """
-
-    def __new__(cls, *args, side_info=None, **kwargs) -> MatrixCompletionSessionType:
-        """
-        Creates a new instance of a matrix completion session.
-
-        Args:
-            *args: Positional arguments for the underlying session class.
-            side_info (tuple or None): A tuple containing side information for genes and diseases.
-                If provided, a SideInfoMatrixCompletion instance is created; if None,
-                a StandardMatrixCompletion instance is returned.
-            **kwargs: Keyword arguments for the underlying session class.
-
-        Returns:
-            MatrixCompletionSessionType: An instance of StandardMatrixCompletion or
-                SideInfoMatrixCompletion based on the presence of side_info.
-        """
-        if side_info is None:
-            return StandardMatrixCompletion(*args, **kwargs)
-        return SideInfoMatrixCompletion(*args, side_info=side_info, **kwargs)

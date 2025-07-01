@@ -22,9 +22,10 @@ import tensorflow as tf
 from genepriority.models.early_stopping import EarlyStopping
 from genepriority.models.flip_labels import FlipLabels
 from genepriority.models.matrix_completion_result import MatrixCompletionResult
-from genepriority.models.smc import MatrixCompletionSession
+from genepriority.models.nega import NegaSession
 from genepriority.preprocessing.dataloader import DataLoader
-from genepriority.preprocessing.side_information_loader import SideInformationLoader
+from genepriority.preprocessing.side_information_loader import \
+    SideInformationLoader
 from genepriority.trainer.base import BaseTrainer
 from genepriority.utils import create_tb_dir
 
@@ -145,7 +146,7 @@ class NEGTrainer(BaseTrainer):
 
         Returns:
             Dict[str, any]: A dictionary containing the parameters required
-                to initialize a `MatrixCompletionSession`, such as
+                to initialize a `NegaSession`, such as
                 regularization, and step size.
         """
         return {
@@ -160,13 +161,13 @@ class NEGTrainer(BaseTrainer):
 
     def predict(
         self,
-        session: MatrixCompletionSession,
+        session: NegaSession,
     ) -> np.ndarray:
         """
         Extracts predictions from the trained NEG model.
 
         Args:
-            session (MatrixCompletionSession): The trained session
+            session (NegaSession): The trained session
                 containing the model's factor matrices.
 
         Returns:
@@ -184,7 +185,7 @@ class NEGTrainer(BaseTrainer):
         num_latent: int,
         save_name: Union[str, Path],
         side_info: Tuple[sp.csr_matrix, sp.csr_matrix],
-    ) -> MatrixCompletionSession:
+    ) -> NegaSession:
         """
         Create a session for model training and evaluation.
 
@@ -198,7 +199,7 @@ class NEGTrainer(BaseTrainer):
                 for both genes and diseases.
 
         Returns:
-            MatrixCompletionSession: A configured session object for model training and evaluation.
+            NegaSession: A configured session object for model training and evaluation.
         """
         kwargs = self.neg_session_kwargs
         if self.flip_fraction is not None:
@@ -208,7 +209,7 @@ class NEGTrainer(BaseTrainer):
             )
         if self.patience is not None:
             kwargs["early_stopping"] = EarlyStopping(self.patience)
-        return MatrixCompletionSession(
+        return NegaSession(
             **kwargs,
             rank=num_latent,
             matrix=self.dataloader.omim,
@@ -271,7 +272,7 @@ class NEGTrainer(BaseTrainer):
     def post_training_callback(
         self,
         training_status: MatrixCompletionResult,
-        session: MatrixCompletionSession,
+        session: NegaSession,
         test_mask: sp.csr_matrix,
     ):
         """
@@ -280,7 +281,7 @@ class NEGTrainer(BaseTrainer):
         Args:
             training_status (MatrixCompletionResult): The results from training.
                 Contains loss histories, runtime, etc.
-            session (MatrixCompletionSession): The session object of the trained
+            session (NegaSession): The session object of the trained
                 matrix completion model, which contains model parameters such as
                 rank, regularization parameter, etc.
             test_mask (sp.csr_matrix): Sparse matrix serving as a mask to identify
@@ -346,7 +347,7 @@ class NEGTrainer(BaseTrainer):
             rho_decrease = trial.suggest_float(
                 "Factor for decreasing the step size dynamically.", 0.1, 0.9, step=0.1
             )
-            session = MatrixCompletionSession(
+            session = NegaSession(
                 regularization_parameter=regularization_parameter,
                 iterations=iterations,
                 symmetry_parameter=symmetry_parameter,

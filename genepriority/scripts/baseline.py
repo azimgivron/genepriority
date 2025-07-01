@@ -12,12 +12,14 @@ from pathlib import Path
 from genepriority.preprocessing.dataloader import DataLoader
 from genepriority.scripts.utils import pre_processing
 from genepriority.trainer.baseline_trainer import BaselineTrainer
+from genepriority.utils import serialize
 
 
 def run(
     dataloader: DataLoader,
     output_path: Path,
     seed: int,
+    results_filename: str,
 ):
     """
     Execute a baseline training session with cross-validation.
@@ -26,9 +28,8 @@ def run(
         dataloader (DataLoader): The DataLoader containing gene–disease association data.
         output_path (Path): Directory where training outputs will be saved.
         seed (int): Seed for reproducibility.
+        results_filename (str): Filename to use for saving results.
 
-    Returns:
-        None
     """
     logger = logging.getLogger("run")
     logger.debug("Configuring Baseline training session.")
@@ -40,10 +41,11 @@ def run(
     results_path = output_path
     results_path.mkdir(parents=True, exist_ok=True)
     trainer.path = results_path
-    _ = trainer.train_test_cross_validation(
+    result = trainer.train_test_cross_validation(
         num_latent=None,
-        save_name=f"baseline:{dataloader.zero_sampling_factor}0s.hdf5",
+        save_name=f"baseline:{dataloader.zero_sampling_factor}0s.pickle",
     )
+    serialize(result, results_path / results_filename)
 
 
 def baseline(args: argparse.Namespace):
@@ -63,34 +65,22 @@ def baseline(args: argparse.Namespace):
     Returns:
         None
     """
-    output_path = Path(args.output_path).absolute()
-    output_path.mkdir(parents=True, exist_ok=True)
-
     seed = args.seed
 
-    input_path = Path(args.input_path).absolute()
-    if not input_path.exists():
-        raise FileNotFoundError(f"The input path does not exist: {input_path}")
-
-    config_path = Path(args.config_path).absolute()
-    if not config_path.exists():
-        raise FileNotFoundError(f"The configuration path does not exist: {config_path}")
-
-    omim_meta_path = Path(args.omim_meta_path).absolute()
-    if not omim_meta_path.exists():
-        raise FileNotFoundError(f"OMIM metadata path does not exist: {omim_meta_path}")
-
     dataloader, _ = pre_processing(
-        input_path=input_path,
-        seed=seed,
-        omim_meta_path=omim_meta_path,
+        gene_disease_path=args.gene_disease_path,
+        seed=args.seed,
+        omim_meta_path=args.omim_meta_path,
         side_info=args.side_info,
+        gene_side_info_paths=args.gene_side_info_paths,
+        disease_side_info_paths=args.disease_side_info_paths,
         zero_sampling_factor=args.zero_sampling_factor,
         num_folds=args.num_folds,
         validation_size=args.validation_size,
     )
     run(
         dataloader=dataloader,
-        output_path=output_path,
+        output_path=args.output_path,
         seed=seed,
+        results_filename=args.results_filename,
     )
