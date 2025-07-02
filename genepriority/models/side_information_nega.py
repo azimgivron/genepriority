@@ -2,17 +2,18 @@ from typing import Tuple
 
 import numpy as np
 import scipy.sparse as sp
+from sklearn.decomposition import TruncatedSVD
 
 from genepriority.models.base_nega import BaseNEGA
 
 
-class SideInfoMatrixCompletion(BaseNEGA):
+class NegaSi(BaseNEGA):
     """
     Specialized matrix completion session that incorporates side information.
         
     Attributes:
-        gene_side_info (sp.csr_matrix): Side information for genes (shape: n x g).
-        disease_side_info (sp.csr_matrix): Side information for diseases (shape: m x d).
+        gene_side_info (np.ndarray): Side information for genes (shape: n x g).
+        disease_side_info (np.ndarray): Side information for diseases (shape: m x d).
         gene_similarity_inv (np.ndarray): Pseudoinverse of the gene-by-gene similarity 
             matrix (shape: n x n).
         disease_similarity_inv (np.ndarray): Pseudoinverse of the disease-by-disease 
@@ -22,7 +23,7 @@ class SideInfoMatrixCompletion(BaseNEGA):
     """
 
     def __init__(
-        self, *args, side_info: Tuple[sp.csr_matrix, sp.csr_matrix] = None, **kwargs
+        self, *args, side_info: Tuple[sp.csr_matrix, sp.csr_matrix] = None, max_features: int = 1_000, **kwargs
     ):
         """
         Initializes the session with side information.
@@ -30,6 +31,7 @@ class SideInfoMatrixCompletion(BaseNEGA):
         Args:
             side_info (Tuple[sp.csr_matrix, sp.csr_matrix]): Tuple containing gene and disease
                 side information matrices.
+            max_features (int, optional): Maximum number of features. Default to 1000.
         """
         super().__init__(*args, **kwargs)
         if side_info is None:
@@ -44,15 +46,24 @@ class SideInfoMatrixCompletion(BaseNEGA):
                 "Dimension 1 of matrix does not match dimension 0 of disease side information."
             )
 
+        if gene_side_info.shape[1] > max_features:
+            self.logger.debug(
+                "Using TruncatedSVD to reduce gene features from %d to %d",
+                gene_side_info.shape[1],
+                max_features,
+            )
+            gene_side_info = TruncatedSVD(n_components=max_features).fit_transform(gene_side_info)
+            
+        if disease_side_info.shape[1] > max_features:
+            self.logger.debug(
+                "Using TruncatedSVD to reduce disease features from %d to %d",
+                disease_side_info.shape[1],
+                max_features,
+            )
+            disease_side_info = TruncatedSVD(n_components=max_features).fit_transform(disease_side_info)
+
         self.gene_side_info = gene_side_info
         self.disease_side_info = disease_side_info
-        
-        gene_similarity = (self.gene_side_info.T @ self.gene_side_info).toarray()
-        self.gene_similarity_inv = np.linalg.pinv(gene_similarity)
-        
-        
-        disease_similarity = (self.disease_side_info.T @ self.disease_side_info).toarray()
-        self.disease_similarity_inv = np.linalg.pinv(disease_similarity)
 
         # Initialize factor matrices based on side information dimensions.
         self.h1 = np.random.randn(self.gene_side_info.shape[1], self.rank)
@@ -62,6 +73,23 @@ class SideInfoMatrixCompletion(BaseNEGA):
             "Initialized h1 with shape %s and h2 with shape %s",
             self.h1.shape,
             self.h2.shape,
+        )
+
+        self.logger.debug(
+            "Starting pre-computation of similarity matrices"
+        )
+        gene_similarity = self.gene_side_info.T @ self.gene_side_info
+        self.gene_similarity_inv = np.linalg.pinv(gene_similarity)
+        self.logger.debug(
+            "Computed gene_similarity_inv: %s",
+            self.gene_similarity_inv.shape,
+        )
+        
+        disease_similarity = self.disease_side_info.T @ self.disease_side_info
+        self.disease_similarity_inv = np.linalg.pinv(disease_similarity)
+        self.logger.debug(
+            "Computed disease_similarity_inv: %s",
+            self.disease_similarity_inv.shape,
         )
         
     def init_tau(self) -> float:
@@ -170,11 +198,11 @@ class SideInfoMatrixCompletion(BaseNEGA):
             Δ = ‖X step_h1‖_F² + ‖step_h2 Yᵀ‖_F²
 
             4. Normalizer via Cardano’s formula:
-            t_k = cardano(tau, Δ),
+            s_k = cardano(tau, Δ),
             solving s³ - τ s² - Δ = 0
 
             5. Final update:
-            W_{k+1} = step / t_k,
+            W_{k+1} = step / s_k,
             then unstack h1 ← first g rows, h2 ← last d rows (transposed)
 
         Args:
@@ -220,11 +248,11 @@ class SideInfoMatrixCompletion(BaseNEGA):
             + np.linalg.norm(step_h2 @ self.disease_side_info.T, "fro") ** 2
         )
 
-        # Solve cubic s^3 - τ s^2 - Δ = 0 for t_k
-        t_k = self.cardano(tau, delta)
+        # Solve cubic s^3 - τ s^2 - Δ = 0
+        s_k = self.cardano(tau, delta)
 
         # Update and unstack
-        W_k_next = step / t_k
+        W_k_next = step / s_k
         self.h1 = W_k_next[:g, :]
         self.h2 = W_k_next[g:, :].T
 
