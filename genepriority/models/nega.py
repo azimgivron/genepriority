@@ -1,9 +1,9 @@
 from typing import Union
 
-from genepriority.models.side_information_nega import SideInfoMatrixCompletion
-from genepriority.models.standard_nega import StandardMatrixCompletion
+from genepriority.models.side_information_nega import NegaSi
+from genepriority.models.standard_nega import Nega
 
-NegaSessionType = Union["StandardMatrixCompletion", "SideInfoMatrixCompletion"]
+NegaSessionType = Union["Nega", "NegaSi"]
 
 
 class NegaSession:
@@ -32,5 +32,5 @@ class NegaSession:
                 SideInfoMatrixCompletion based on the presence of side_info.
         """
         if side_info is None:
-            return StandardMatrixCompletion(*args, **kwargs)
-        return SideInfoMatrixCompletion(*args, side_info=side_info, **kwargs)
+            return Nega(*args, **kwargs)
+        return NegaSi(*args, side_info=side_info, **kwargs)

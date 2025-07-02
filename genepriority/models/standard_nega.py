@@ -5,7 +5,7 @@ import numpy as np
 from genepriority.models.base_nega import BaseNEGA
 
 
-class StandardMatrixCompletion(BaseNEGA):
+class Nega(BaseNEGA):
     """
     Matrix completion session without side information.
     """
