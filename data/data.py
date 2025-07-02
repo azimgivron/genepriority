@@ -14,12 +14,12 @@ For more information, reach out:
 import argparse
 import logging
 from dataclasses import dataclass, field
+from multiprocessing import Pool, cpu_count
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 from scipy.io import loadmat
-from multiprocessing import Pool, cpu_count
 
 
 def load_csv(
@@ -156,11 +156,11 @@ class ReadmeConfig:
             ReadmeEntry("phenotype.csv", "Phenotypic association scores", 1_326_832, 3),
             ReadmeEntry("phenotype-terms.csv", "OMIM phenotype terms", 314, 2),
             ReadmeEntry(
-                        "Gene–literature feature associations",
-                        "Gene literature data",
-                        2_915_310,
-                        3,
-                    )
+                "Gene–literature feature associations",
+                "Gene literature data",
+                2_915_310,
+                3,
+            ),
         ]
     )
     terms_description: str = (
@@ -299,42 +299,44 @@ def process_phen_terms(raw: Path, cfg: FileConfig) -> pd.DataFrame:
         {"Disease ID": np.arange(1, len(terms) + 1), "Phenotype term": terms}
     )
 
+
 def _extract_nonzero(args):
     """
-     Helper to parse one CSV row, extracting non-zero values.
+    Helper to parse one CSV row, extracting non-zero values.
 
-     Args:
-         args (tuple[int, str]): A tuple where the first element is the row index
-             in the text matrix, and the second is the CSV-formatted line string.
+    Args:
+        args (tuple[int, str]): A tuple where the first element is the row index
+            in the text matrix, and the second is the CSV-formatted line string.
 
-     Returns:
-         list[tuple[int, int, float]]: List of (line_index, column_index, value)
-             for each non-zero entry in the row.
-     """
+    Returns:
+        list[tuple[int, int, float]]: List of (line_index, column_index, value)
+            for each non-zero entry in the row.
+    """
     i, line = args
     out = []
     for j, tok in enumerate(line.rstrip("\n").split(",")):
         v = float(tok)
         if v != 0.0:
-            out.append((i+1, j+1, v))
+            out.append((i + 1, j + 1, v))
     return out
+
 
 def process_text_data(raw: Path, cfg: FileConfig) -> pd.DataFrame:
     """
-     Process the raw text feature matrix in parallel, then remap gene IDs.
+    Process the raw text feature matrix in parallel, then remap gene IDs.
 
-     Reads a comma-delimited ‘text.csv’, extracts all non-zero values
-     in parallel using multiprocessing, and merges with the gene_id map
-     to produce a unified ['Gene ID', 'Feature ID', 'Value'] table.
+    Reads a comma-delimited ‘text.csv’, extracts all non-zero values
+    in parallel using multiprocessing, and merges with the gene_id map
+    to produce a unified ['Gene ID', 'Feature ID', 'Value'] table.
 
-     Args:
-         raw (Path): Directory containing raw files.
-         cfg (FileConfig): File configuration containing 'text' and 'gene_ids'.
+    Args:
+        raw (Path): Directory containing raw files.
+        cfg (FileConfig): File configuration containing 'text' and 'gene_ids'.
 
-     Returns:
-         pd.DataFrame: DataFrame with columns ['Gene ID', 'Feature ID', 'Value']
-             representing all non-zero literature-derived features.
-     """
+    Returns:
+        pd.DataFrame: DataFrame with columns ['Gene ID', 'Feature ID', 'Value']
+            representing all non-zero literature-derived features.
+    """
     text_path = raw / cfg.text
 
     # 1) Read all lines with their indices
@@ -362,16 +364,13 @@ def process_text_data(raw: Path, cfg: FileConfig) -> pd.DataFrame:
         on="Gene ID",
     )
 
-    merged = (
-        merged
-        .drop(columns=["Gene ID"])
-        .rename(columns={"Gene ID Map": "Gene ID"})
-        [["Gene ID", "Feature ID", "Value"]]
-    )
+    merged = merged.drop(columns=["Gene ID"]).rename(
+        columns={"Gene ID Map": "Gene ID"}
+    )[["Gene ID", "Feature ID", "Value"]]
     merged["Gene ID"] += 1
     return merged
 
- 
+
 def write_readme(out: Path, cfg: FileConfig, rd_cfg: ReadmeConfig):
     """
     Generate a README.md summarizing all processed files.
@@ -399,8 +398,14 @@ def write_readme(out: Path, cfg: FileConfig, rd_cfg: ReadmeConfig):
         f.write("\n\n## Field Descriptions\n")
         f.write(rd_cfg.terms_description)
         f.write("\n")
-        
-def verify_datasets_consistency(datasets: dict[str, pd.DataFrame], cfg: FileConfig, nb_genes: int=14_195, nb_diseases: int=314):
+
+
+def verify_datasets_consistency(
+    datasets: dict[str, pd.DataFrame],
+    cfg: FileConfig,
+    nb_genes: int = 14_195,
+    nb_diseases: int = 314,
+):
     """
     Verify that gene and disease IDs across all datasets are consistent with the
         gene-disease map.
@@ -416,13 +421,13 @@ def verify_datasets_consistency(datasets: dict[str, pd.DataFrame], cfg: FileConf
             associations.
     """
     # Reference gene-disease associations
-    valid_genes = set(np.arange(1, nb_genes+1))
-    valid_diseases = set(np.arange(1, nb_diseases+1))
+    valid_genes = set(np.arange(1, nb_genes + 1))
+    valid_diseases = set(np.arange(1, nb_diseases + 1))
 
     # Check gene-based datasets
     for key in (cfg.out_go, cfg.out_uniprot, cfg.out_interpro, cfg.out_gene_literature):
         df = datasets[key]
-        missing = set(df['Gene ID']) - valid_genes
+        missing = set(df["Gene ID"]) - valid_genes
         if missing:
             raise ValueError(
                 f"Dataset '{key}' contains Gene IDs not "
@@ -431,7 +436,7 @@ def verify_datasets_consistency(datasets: dict[str, pd.DataFrame], cfg: FileConf
 
     # Check phenotype dataset
     phen_df = datasets[cfg.out_phen]
-    missing_ph = set(phen_df['Disease ID']) - valid_diseases
+    missing_ph = set(phen_df["Disease ID"]) - valid_diseases
     if missing_ph:
         raise ValueError(
             f"Phenotype dataset '{cfg.out_phen}' contains Disease IDs not in '{cfg.out_gene_disease}': {sorted(missing_ph)[:5]}..."
@@ -483,7 +488,7 @@ def main():
         cfg.out_phen_terms: process_phen_terms(raw, cfg),
         cfg.out_gene_literature: process_text_data(raw, cfg),
     }
-    
+
     # Verify consistency before saving
     verify_datasets_consistency(datasets, cfg)
 
