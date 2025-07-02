@@ -38,7 +38,7 @@ from genepriority.models.utils import check_save_name, tsne_plot_to_tensor
 from genepriority.utils import calculate_auroc_auprc, serialize
 
 
-class BaseMatrixCompletion(metaclass=abc.ABCMeta):
+class BaseNEGA(metaclass=abc.ABCMeta):
     """
     Manages the configuration, training, and evaluation of a matrix completion model.
 
@@ -99,7 +99,7 @@ class BaseMatrixCompletion(metaclass=abc.ABCMeta):
         early_stopping: EarlyStopping = None,
     ):
         """
-        Initializes the BaseMatrixCompletion instance with the provided configuration
+        Initializes the BaseNEGA instance with the provided configuration
         parameters for matrix approximation.
 
         Args:
@@ -198,13 +198,18 @@ class BaseMatrixCompletion(metaclass=abc.ABCMeta):
         tau: float,
         step_size: float,
         grad_f_W_k: np.ndarray,
-        tau1: float,
     ) -> Tuple[np.ndarray, float]:
         """
         Performs a single substep in the optimization process to update the factor matrices.
 
         This substep calculates the next iterate W_{k+1} using the gradient of the objective
         function and an adaptive step size.
+        
+        Args:
+            W_k (np.ndarray): Current stacked factor matrices.
+            tau (float): Regularization parameter.
+            step_size (float): Learning rate for the gradient step.
+            grad_f_W_k (np.ndarray): Gradient of the objective function at W_k.
 
         Returns:
             Tuple[np.ndarray, float]:

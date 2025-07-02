@@ -139,7 +139,9 @@ class SideInformationLoader:
             side_info_mat = self.to_coo(dataframe, rows).tocsr()
             norm = sp.linalg.norm(side_info_mat, ord="fro")
             side_info.append(side_info_mat / norm)
-        return sp.hstack(side_info)
+        stacked = sp.hstack(side_info)
+        normalized = stacked / sp.linalg.norm(stacked, ord="fro")
+        return normalized
 
     def process_side_info(
         self,

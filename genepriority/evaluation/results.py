@@ -31,8 +31,8 @@ class Results:
             mask (np.ndarray): Mask of entries for test.
         """
         self.mask = mask
-        self.y_true = [y_true[:, i][mask[:, i]] for i in range(y_true.shape[1])]
-        self.y_pred = [y_pred[:, i][mask[:, i]] for i in range(y_pred.shape[1])]
+        self.y_true = [y_true[:, i][self.mask[:, i]] for i in range(y_true.shape[1])]
+        self.y_pred = [y_pred[:, i][self.mask[:, i]] for i in range(y_pred.shape[1])]
 
     @property
     def gene_number(self) -> int:

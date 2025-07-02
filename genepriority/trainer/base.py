@@ -205,7 +205,7 @@ class BaseTrainer(metaclass=ABCMeta):
                 Results(
                     y_true=self.dataloader.omim.toarray(),
                     y_pred=y_pred,
-                    mask=test_mask,
+                    mask=test_mask.toarray(),
                 )
             )
         return Evaluation(results)

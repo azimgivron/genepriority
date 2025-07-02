@@ -39,7 +39,6 @@ def bedroc_score(
             Value in interval [0, 1] indicating degree to which the predictive
             technique employed detects (early) the positive class.
     """
-
     assert len(y_true) == len(
         y_pred
     ), "The number of scores must be equal to the number of labels"
@@ -68,7 +67,7 @@ def bedroc_score(
 
 def bedroc_scores(
     y_true: List[np.ndarray], y_pred: List[np.ndarray], gene_number: int, alpha: float
-) -> float:
+) -> List[float]:
     """Compute the BEDROC score for each diseases.
 
     BEDROC (Boltzmann-Enhanced Discrimination of the ROC) places exponential
@@ -85,7 +84,7 @@ def bedroc_scores(
             Early-recognition weight parameter (> 0).
 
     Returns:
-        float: BEDROC in [0,1] (0=random, 1=perfect).
+        List[float]: BEDROC in [0,1] (0=random, 1=perfect).
     """
     if alpha <= 0:
         raise ValueError(f"alpha must be > 0; got {alpha}.")
@@ -101,6 +100,7 @@ def bedroc_scores(
             scores.append(np.nan)
             continue
         bedroc = bedroc_score(labels, scores_pred, alpha=alpha)
+        assert 0 <= bedroc <= 1, f'BEDROC must be in [0;1]. Found => {bedroc}'
         scores.append(bedroc)
     return scores, mask
 

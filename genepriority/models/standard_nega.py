@@ -2,10 +2,10 @@ from typing import Tuple
 
 import numpy as np
 
-from genepriority.models.base_nega import BaseMatrixCompletion
+from genepriority.models.base_nega import BaseNEGA
 
 
-class StandardMatrixCompletion(BaseMatrixCompletion):
+class StandardMatrixCompletion(BaseNEGA):
     """
     Matrix completion session without side information.
     """

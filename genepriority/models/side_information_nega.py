@@ -3,10 +3,10 @@ from typing import Tuple
 import numpy as np
 import scipy.sparse as sp
 
-from genepriority.models.base_nega import BaseMatrixCompletion
+from genepriority.models.base_nega import BaseNEGA
 
 
-class SideInfoMatrixCompletion(BaseMatrixCompletion):
+class SideInfoMatrixCompletion(BaseNEGA):
     """
     Specialized matrix completion session that incorporates side information.
         
@@ -41,7 +41,7 @@ class SideInfoMatrixCompletion(BaseMatrixCompletion):
             )
         if self.matrix.shape[1] != disease_side_info.shape[0]:
             raise ValueError(
-                "Dimension 1 of matrix does not match dimension 0 of gene side information."
+                "Dimension 1 of matrix does not match dimension 0 of disease side information."
             )
 
         self.gene_side_info = gene_side_info
@@ -93,8 +93,9 @@ class SideInfoMatrixCompletion(BaseMatrixCompletion):
         m = self.h1.shape[0]
         h1 = W[:m, :]
         h2 = W[m:, :].T
-        norm = np.linalg.norm((self.gene_side_info @ h1), ord="fro") + np.linalg.norm(
-            (h2 @ self.disease_side_info.T), ord="fro"
+        norm = (
+            np.linalg.norm((self.gene_side_info @ h1), ord="fro")**2
+            + np.linalg.norm((h2 @ self.disease_side_info.T), ord="fro")**2
         )
         h_value = 0.75 * norm**2 + 1.5 * tau * norm
         return h_value
