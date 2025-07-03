@@ -289,6 +289,7 @@ def parse_nega(subparsers: argparse._SubParsersAction):
                     "/home/TheGreatestCoder/code/data/postprocessed/interpro.csv",
                     "/home/TheGreatestCoder/code/data/postprocessed/uniprot.csv",
                     "/home/TheGreatestCoder/code/data/postprocessed/go.csv",
+                    "/home/TheGreatestCoder/code/data/postprocessed/gene-literature.csv",
                 ]
             ],
             help="Paths to one or more gene-side information CSV files (default: %(default)s).",
