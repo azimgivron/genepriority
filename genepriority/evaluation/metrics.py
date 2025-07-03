@@ -100,7 +100,7 @@ def bedroc_scores(
             scores.append(np.nan)
             continue
         bedroc = bedroc_score(labels, scores_pred, alpha=alpha)
-        assert 0 <= bedroc <= 1, f'BEDROC must be in [0;1]. Found => {bedroc}'
+        assert 0 <= bedroc <= 1, f"BEDROC must be in [0;1]. Found => {bedroc}"
         scores.append(bedroc)
     return scores, mask
 

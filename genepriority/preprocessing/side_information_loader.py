@@ -14,6 +14,7 @@ from typing import List, Tuple
 import numpy as np
 import pandas as pd
 import scipy.sparse as sp
+from sklearn.decomposition import TruncatedSVD
 
 
 class SideInformationLoader:
@@ -33,10 +34,12 @@ class SideInformationLoader:
         nb_genes (int): Number of genes defining the dimensions of gene-side sparse matrices.
         nb_diseases (int): Number of diseases defining the dimensions of disease-side
             sparse matrices.
+        max_dims (int, optional): Maximum number of dimensions of the side
+            information.
 
     """
 
-    def __init__(self, nb_genes: int, nb_diseases: int):
+    def __init__(self, nb_genes: int, nb_diseases: int, max_dims: int):
         """
         Initialize the SideInformationLoader class with a logger instance.
 
@@ -44,10 +47,12 @@ class SideInformationLoader:
             nb_genes (int): Number of genes to define the shape of gene-side matrices.
             nb_diseases (int): Number of diseases to define the shape of
                 disease-side matrices.
-
+            max_dims (int): Maximum number of dimensions of the side
+                information.
         """
         self.nb_genes = nb_genes
         self.nb_diseases = nb_diseases
+        self.max_dims = max_dims
         self.logger = logging.getLogger(self.__class__.__name__)
 
         # Initialize attributes for processed data
@@ -80,6 +85,8 @@ class SideInformationLoader:
             sp.coo_matrix: Sparse matrix in COO format.
         """
         mat = dataframe.to_numpy()
+        if mat[:, 1].min() == 0.:
+            mat[:, 1] = mat[:, 1] + 1
         return sp.coo_matrix(
             (mat[:, 2], (mat[:, 0], mat[:, 1])),
             shape=(rows, int(mat[:, 1].max())),
@@ -180,6 +187,26 @@ class SideInformationLoader:
             "Disease side information matrix has shape: %s",
             self.disease_side_info.shape,
         )
+        if self.max_dims is not None:
+            if self.gene_side_info.shape[1] > self.max_dims:
+                self.logger.debug(
+                    "Using TruncatedSVD to reduce gene features from %d to %d",
+                    self.gene_side_info.shape[1],
+                    self.max_dims,
+                )
+                self.gene_side_info = TruncatedSVD(
+                    n_components=self.max_dims
+                ).fit_transform(self.gene_side_info)
+
+            if self.disease_side_info.shape[1] > self.max_dims:
+                self.logger.debug(
+                    "Using TruncatedSVD to reduce disease features from %d to %d",
+                    self.disease_side_info.shape[1],
+                    self.max_dims,
+                )
+                self.disease_side_info = TruncatedSVD(
+                    n_components=self.max_dims
+                ).fit_transform(self.disease_side_info)
         self.logger.debug(
             "Processed gene-side information and disease-side information successfully."
         )

@@ -160,7 +160,7 @@ class ReadmeConfig:
             ReadmeEntry(
                 "Gene–literature feature associations",
                 "Gene literature data",
-                2_915_310,
+                3_198_556,
                 3,
             ),
         ]
@@ -467,7 +467,6 @@ def verify_datasets_consistency(
         raise ValueError(
             f"Phenotype dataset '{cfg.out_phen}' contains Disease IDs not in '{cfg.out_gene_disease}': {sorted(missing_ph)[:5]}..."
         )
-
 
 def save_dataframe(df: pd.DataFrame, path: Path):
     """

@@ -204,7 +204,7 @@ class BaseNEGA(metaclass=abc.ABCMeta):
 
         This substep calculates the next iterate W_{k+1} using the gradient of the objective
         function and an adaptive step size.
-        
+
         Args:
             W_k (np.ndarray): Current stacked factor matrices.
             tau (float): Regularization parameter.
@@ -217,12 +217,12 @@ class BaseNEGA(metaclass=abc.ABCMeta):
                 - New loss value f(W_{k+1}).
         """
         raise NotImplementedError
-    
+
     @abc.abstractmethod
     def init_tau(self) -> float:
         """
         Initialize tau value.
-        
+
         Returns:
             float: tau value.
         """

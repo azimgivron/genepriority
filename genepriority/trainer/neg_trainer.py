@@ -297,7 +297,14 @@ class NEGTrainer(BaseTrainer):
                 )
                 tf.summary.flush()
 
-    def fine_tune(self, n_trials: int, timeout: float, num_latent: int, **_):
+    def fine_tune(
+        self,
+        n_trials: int,
+        timeout: float,
+        num_latent: int,
+        load_if_exists: bool = False,
+        **_,
+    ):
         """
         Fine-tunes the hyperparameters for sparse matrix completion using Optuna.
 
@@ -311,6 +318,8 @@ class NEGTrainer(BaseTrainer):
             timeout (float): Stop study after the given number of second(s).
                 None represents no limit in terms of elapsed time.
             num_latent (int): The number of latent dimensions for the model.
+            load_if_exists (bool, optional): Whether to load the study if it exists.
+                Default to False.
 
         Returns:
             optuna.study.Study: The study object containing the results of the optimization.
@@ -366,6 +375,11 @@ class NEGTrainer(BaseTrainer):
             trial.set_user_attr("loss on training set", training_status.loss_history)
             return training_status.rmse_history[-1]
 
+        load = (self.path / "optuna_journal_storage.log").exists()
+        if load and not load_if_exists:
+            (self.path / "optuna_journal_storage.log").unlink()
+            load = False
+
         storage = optuna.storages.JournalStorage(
             optuna.storages.journal.JournalFileBackend(
                 str(self.path / "optuna_journal_storage.log")
@@ -376,6 +390,7 @@ class NEGTrainer(BaseTrainer):
             study_name="SMC hyper-parameters optimization",
             direction="minimize",
             storage=storage,
+            load_if_exists=load,
         )
         optuna.logging.enable_propagation()  # Propagate logs to the root logger.
         optuna.logging.disable_default_handler()

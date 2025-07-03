@@ -109,7 +109,9 @@ class TrainValTestMasks:
 
         # Use KFold on the remaining indices to create training and testing masks.
         kfold = KFold(n_splits=num_folds, shuffle=True, random_state=self.seed)
-        for train_fold_indices, test_fold_indices in kfold.split(train_test_row_indices):
+        for train_fold_indices, test_fold_indices in kfold.split(
+            train_test_row_indices
+        ):
             train_idx = train_test_row_indices[train_fold_indices]
             test_idx = train_test_row_indices[test_fold_indices]
             self.training_masks.append(

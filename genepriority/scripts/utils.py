@@ -55,6 +55,7 @@ def pre_processing(
     zero_sampling_factor: int,
     num_folds: int,
     validation_size: float,
+    max_dims: int,
 ) -> Tuple[DataLoader, SideInformationLoader]:
     """
     Loads configuration parameters, gene–disease association data, and side information.
@@ -85,6 +86,8 @@ def pre_processing(
         validation_size (float):
             Fraction of data to hold out for validation
             (unused data for comparison with NEGA).
+        max_dims (int): Maximum number of dimensions of the side
+                information.
 
     Returns:
         Tuple[DataLoader, SideInformationLoader]:
@@ -110,7 +113,7 @@ def pre_processing(
     side_info_loader = None
     if side_info:
         side_info_loader = SideInformationLoader(
-            nb_genes=nb_genes, nb_diseases=nb_diseases
+            nb_genes=nb_genes, nb_diseases=nb_diseases, max_dims=max_dims
         )
         side_info_loader.process_side_info(
             gene_side_info_paths=gene_side_info_paths,

@@ -24,11 +24,11 @@ class Nega(BaseNEGA):
             self.h1.shape,
             self.h2.shape,
         )
-    
+
     def init_tau(self) -> float:
         """
         Initialize tau value.
-        
+
         Returns:
             float: tau value.
         """

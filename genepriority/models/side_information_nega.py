@@ -2,7 +2,6 @@ from typing import Tuple
 
 import numpy as np
 import scipy.sparse as sp
-from sklearn.decomposition import TruncatedSVD
 
 from genepriority.models.base_nega import BaseNEGA
 
@@ -10,20 +9,20 @@ from genepriority.models.base_nega import BaseNEGA
 class NegaSi(BaseNEGA):
     """
     Specialized matrix completion session that incorporates side information.
-        
+
     Attributes:
         gene_side_info (np.ndarray): Side information for genes (shape: n x g).
         disease_side_info (np.ndarray): Side information for diseases (shape: m x d).
-        gene_similarity_inv (np.ndarray): Pseudoinverse of the gene-by-gene similarity 
+        gene_similarity_inv (np.ndarray): Pseudoinverse of the gene-by-gene similarity
             matrix (shape: n x n).
-        disease_similarity_inv (np.ndarray): Pseudoinverse of the disease-by-disease 
+        disease_similarity_inv (np.ndarray): Pseudoinverse of the disease-by-disease
             similarity matrix (shape: m x m).
         h1 (np.ndarray): Left latent factor matrix (shape: g x rank).
         h2 (np.ndarray): Right latent factor matrix (shape: rank x d).
     """
 
     def __init__(
-        self, *args, side_info: Tuple[sp.csr_matrix, sp.csr_matrix] = None, max_features: int = 1_000, **kwargs
+        self, *args, side_info: Tuple[sp.csr_matrix, sp.csr_matrix] = None, **kwargs
     ):
         """
         Initializes the session with side information.
@@ -31,7 +30,6 @@ class NegaSi(BaseNEGA):
         Args:
             side_info (Tuple[sp.csr_matrix, sp.csr_matrix]): Tuple containing gene and disease
                 side information matrices.
-            max_features (int, optional): Maximum number of features. Default to 1000.
         """
         super().__init__(*args, **kwargs)
         if side_info is None:
@@ -46,22 +44,6 @@ class NegaSi(BaseNEGA):
                 "Dimension 1 of matrix does not match dimension 0 of disease side information."
             )
 
-        if gene_side_info.shape[1] > max_features:
-            self.logger.debug(
-                "Using TruncatedSVD to reduce gene features from %d to %d",
-                gene_side_info.shape[1],
-                max_features,
-            )
-            gene_side_info = TruncatedSVD(n_components=max_features).fit_transform(gene_side_info)
-            
-        if disease_side_info.shape[1] > max_features:
-            self.logger.debug(
-                "Using TruncatedSVD to reduce disease features from %d to %d",
-                disease_side_info.shape[1],
-                max_features,
-            )
-            disease_side_info = TruncatedSVD(n_components=max_features).fit_transform(disease_side_info)
-
         self.gene_side_info = gene_side_info
         self.disease_side_info = disease_side_info
 
@@ -75,32 +57,14 @@ class NegaSi(BaseNEGA):
             self.h2.shape,
         )
 
-        self.logger.debug(
-            "Starting pre-computation of similarity matrices"
-        )
-        gene_similarity = self.gene_side_info.T @ self.gene_side_info
-        self.gene_similarity_inv = np.linalg.pinv(gene_similarity)
-        self.logger.debug(
-            "Computed gene_similarity_inv: %s",
-            self.gene_similarity_inv.shape,
-        )
-        
-        disease_similarity = self.disease_side_info.T @ self.disease_side_info
-        self.disease_similarity_inv = np.linalg.pinv(disease_similarity)
-        self.logger.debug(
-            "Computed disease_similarity_inv: %s",
-            self.disease_similarity_inv.shape,
-        )
-        
     def init_tau(self) -> float:
         """
         Initialize tau value.
-        
+
         Returns:
             float: tau value.
         """
-        return np.linalg.norm(self.matrix, ord="fro") * 2 / 3
-        
+        return np.linalg.norm(self.matrix, ord="fro") / 3
 
     def kernel(self, W: np.ndarray, tau: float) -> float:
         """
@@ -118,14 +82,8 @@ class NegaSi(BaseNEGA):
         Returns:
             float: The computed value of the h function.
         """
-        m = self.h1.shape[0]
-        h1 = W[:m, :]
-        h2 = W[m:, :].T
-        norm = (
-            np.linalg.norm((self.gene_side_info @ h1), ord="fro")**2
-            + np.linalg.norm((h2 @ self.disease_side_info.T), ord="fro")**2
-        )
-        h_value = 0.75 * norm**2 + 1.5 * tau * norm
+        norm = np.linalg.norm(W, ord="fro")
+        h_value = 0.25 * norm**4 + 0.5 * tau * norm**2
         return h_value
 
     def predict_all(self) -> np.ndarray:
@@ -216,45 +174,17 @@ class NegaSi(BaseNEGA):
                 - np.ndarray of shape (g+d, r): Updated stacked latent W_{k+1}.
                 - float: Loss value at W_{k+1}.
         """
-        # Unstack W_k into h1_k, h2_k
-        g = self.h1.shape[0]
-        h1_k = W_k[:g, :]
-        h2_k = W_k[g:, :].T
-
-        # Compute φ_k = ||X h1_k||_F^2 + ||h2_k Y^T||_F^2
-        phi = (
-            np.linalg.norm(self.gene_side_info @ h1_k, "fro") ** 2
-            + np.linalg.norm(h2_k @ self.disease_side_info.T, "fro") ** 2
+        step = (np.linalg.norm(W_k, ord="fro") ** 2 + tau) * W_k - (
+            step_size * grad_f_W_k
         )
+        delta = np.linalg.norm(step, ord="fro") ** 2
+        # Solve the cubic s³ – τ s² – Δ = 0 by Cardano
+        t_k = self.cardano(tau, delta)
 
-        # Apply K^{-1} to ∇f and scale by 1/3
-        grad_h1 = grad_f_W_k[:g, :]
-        grad_h2_T = grad_f_W_k[g:, :]
-
-        inv_h1 = self.gene_similarity_inv @ grad_h1
-        inv_h2_T = self.disease_similarity_inv @ grad_h2_T
-        invK_grad = np.vstack(
-            [inv_h1, inv_h2_T]
-        )
-
-        # Form the shift-and-scale numerator
-        step = (phi + tau) * W_k - (step_size / 3) * invK_grad
-
-        # Compute Δ = ||X step_h1||^2 + ||step_h2 Y^T||^2
-        step_h1 = step[:g, :]
-        step_h2 = step[g:, :].T
-        delta = (
-            np.linalg.norm(self.gene_side_info @ step_h1, "fro") ** 2
-            + np.linalg.norm(step_h2 @ self.disease_side_info.T, "fro") ** 2
-        )
-
-        # Solve cubic s^3 - τ s^2 - Δ = 0
-        s_k = self.cardano(tau, delta)
-
-        # Update and unstack
-        W_k_next = step / s_k
-        self.h1 = W_k_next[:g, :]
-        self.h2 = W_k_next[g:, :].T
+        W_k_next = (1 / t_k) * step
+        m = self.h1.shape[0]
+        self.h1 = W_k_next[:m, :]
+        self.h2 = W_k_next[m:, :].T
 
         loss = self.calculate_loss()
         return W_k_next, loss

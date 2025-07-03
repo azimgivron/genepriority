@@ -122,6 +122,7 @@ def genehound(args: argparse.Namespace):
         zero_sampling_factor=args.zero_sampling_factor,
         num_folds=args.num_folds,
         validation_size=args.validation_size,
+        max_dims=args.max_dims,
     )
     run(
         dataloader=dataloader,

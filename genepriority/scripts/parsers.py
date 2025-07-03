@@ -262,6 +262,16 @@ def parse_nega(subparsers: argparse._SubParsersAction):
             ),
         )
         parser.add_argument(
+            "--max_dims",
+            type=int,
+            default=None,
+            help=(
+                "The maximum number of dimension to use in the factorization of the side features."
+                "Default is None, meaning no factorization is made. "
+                "(default: %(default)s)."
+            ),
+        )
+        parser.add_argument(
             "--validation-size",
             type=float,
             default=0.1,
