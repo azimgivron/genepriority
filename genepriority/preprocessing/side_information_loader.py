@@ -85,11 +85,9 @@ class SideInformationLoader:
             sp.coo_matrix: Sparse matrix in COO format.
         """
         mat = dataframe.to_numpy()
-        if mat[:, 1].min() == 0.:
-            mat[:, 1] = mat[:, 1] + 1
         return sp.coo_matrix(
             (mat[:, 2], (mat[:, 0], mat[:, 1])),
-            shape=(rows, int(mat[:, 1].max())),
+            shape=(rows, int(mat[:, 1].max()+1)),
         )
 
     @staticmethod

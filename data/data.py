@@ -194,9 +194,9 @@ def process_gene_disease(raw: Path, cfg: FileConfig) -> pd.DataFrame:
         names=["Gene ID", "Disease ID"],
         dtype={"Gene ID": int, "Disease ID": int},
     )
-    if df["Gene ID"].min() > 0 and df["Gene ID"].max() > NB_GENES: #indexes are starting at 1
+    if df["Gene ID"].min() > 0 and df["Gene ID"].max() >= NB_GENES: #indexes are starting at 1
        df["Gene ID"] -= 1
-    if df["Disease ID"].min() > 0 and df["Disease ID"].max() > NB_DISEASES: #indexes are starting at 1
+    if df["Disease ID"].min() > 0 and df["Disease ID"].max() >= NB_DISEASES: #indexes are starting at 1
        df["Disease ID"] -= 1
     return df
      
