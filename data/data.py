@@ -234,7 +234,7 @@ def process_go(raw: Path, cfg: FileConfig) -> pd.DataFrame:
     """
     df = load_csv(raw / cfg.go, header=None, names=["Gene ID", "GO term ID", "_"])
     df = df.drop(columns=["_"])
-    if df["Gene ID"].min() > 0 and df["Gene ID"].max() > NB_GENES: #indexes are starting at 1
+    if df["Gene ID"].min() > 0 and df["Gene ID"].max() >= NB_GENES: #indexes are starting at 1
        df["Gene ID"] -= 1
     if df["GO term ID"].min() > 0: #indexes are starting at 1
        df["GO term ID"] -= 1
@@ -256,7 +256,7 @@ def process_interpro(raw: Path, cfg: FileConfig) -> pd.DataFrame:
         raw / cfg.interpro, header=None, names=["Gene ID", "InterPro domain ID", "_"]
     )
     df = df.drop(columns=["_"])
-    if df["Gene ID"].min() > 0 and df["Gene ID"].max() > NB_GENES: #indexes are starting at 1
+    if df["Gene ID"].min() > 0 and df["Gene ID"].max() >= NB_GENES: #indexes are starting at 1
        df["Gene ID"] -= 1
     if df["InterPro domain ID"].min() > 0: #indexes are starting at 1
        df["InterPro domain ID"] -= 1
@@ -276,10 +276,11 @@ def process_uniprot(raw: Path, cfg: FileConfig) -> pd.DataFrame:
     """
     df = load_csv(raw / cfg.uniprot, header=None, names=["Gene ID", "UniProt ID", "_"])
     df = df.drop(columns=["_"])
-    if df["Gene ID"].min() > 0 and df["Gene ID"].max() > NB_GENES: #indexes are starting at 1
+    if df["Gene ID"].min() > 0 and df["Gene ID"].max() >= NB_GENES: #indexes are starting at 1
        df["Gene ID"] -= 1
     if df["UniProt ID"].min() > 0: #indexes are starting at 1
        df["UniProt ID"] -= 1
+    return df
 
 
 def process_phenotypes(raw: Path, cfg: FileConfig) -> pd.DataFrame:
@@ -306,6 +307,7 @@ def process_phenotypes(raw: Path, cfg: FileConfig) -> pd.DataFrame:
        df["Disease ID"] -= 1
     if df["Phenotypic term ID"].min() > 0: #indexes are starting at 1
        df["Phenotypic term ID"] -= 1
+    return df
 
 
 def process_phen_terms(raw: Path, cfg: FileConfig) -> pd.DataFrame:
@@ -321,9 +323,12 @@ def process_phen_terms(raw: Path, cfg: FileConfig) -> pd.DataFrame:
     """
     raw_terms = load_mat(raw / cfg.phen_terms, "omim_terms")
     terms = [t.item() for t in raw_terms.squeeze()]
-    return pd.DataFrame(
+    df = pd.DataFrame(
         {"Disease ID": np.arange(len(terms)), "Phenotype term": terms}
     )
+    if df["Disease ID"].min() > 0 and df["Disease ID"].max() > NB_DISEASES: #indexes are starting at 1
+        df["Disease ID"] -= 1
+    return df
 
 
 def _extract_nonzero(args):
@@ -386,10 +391,10 @@ def process_text_data(raw: Path, cfg: FileConfig) -> pd.DataFrame:
 
     merged = df.merge(
         map_df,
-        how="inner",
+        how="right",
         on="Gene ID",
     )
-
+    merged = merged.fillna(0)
     merged = merged.drop(columns=["Gene ID"]).rename(
         columns={"Gene ID Map": "Gene ID"}
     )[["Gene ID", "Feature ID", "Value"]]
@@ -509,6 +514,8 @@ def main():
         cfg.out_phen_terms: process_phen_terms(raw, cfg),
         cfg.out_gene_literature: process_text_data(raw, cfg),
     }
+    for key, df in datasets.items():
+        logging.info("ID in %s ranges from %d to %d.", key, df.iloc[:,0].min(), df.iloc[:,0].max())
 
     # Verify consistency before saving
     verify_datasets_consistency(datasets, cfg)
