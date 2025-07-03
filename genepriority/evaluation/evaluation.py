@@ -85,14 +85,14 @@ class Evaluation:
         bedroc = bedroc_masked.mean(axis=0).data
         return bedroc
 
-    def compute_avg_auc_loss(self) -> float:
+    def compute_avg_auc(self) -> float:
         """
-        Computes the average AUC loss, which is defined as `1 - AUC`
-        for each fold, indicating the model's inability to achieve perfect separation.
+        Computes the average AUC for each fold, indicating the model's
+        ability to achieve perfect separation.
 
         Returns:
-            np.ndarray: A 1D array where each element represents the AUC loss
-            for a disease.
+            np.ndarray: A 1D array where each element represents the AUC
+                for a disease.
         """
         auc = []
         masks = []
@@ -113,5 +113,35 @@ class Evaluation:
         auc = auc[:, valid]
 
         auc_masked = np.ma.array(auc, mask=~mask)
-        auc_loss = 1 - auc_masked.mean(axis=0).data
-        return auc_loss
+        auc = auc_masked.mean(axis=0).data
+        return auc
+
+    def compute_avg_roc_curve(self) -> float:
+        """
+        Computes the average ROC curve across folds.
+
+        Returns:
+            np.ndarray: A 1D array where each element represents the AUC loss
+            for a disease.
+        """
+        roc = []
+        masks = []
+        for fold_res in self.results:
+            y_true = fold_res.y_true
+            y_pred = fold_res.y_pred
+            auc_per_fold, mask_per_fold = roc_curves(
+                y_true=y_true, y_pred=y_pred, gene_number=fold_res.gene_number
+            )
+            masks.append(mask_per_fold)
+            roc.append(auc_per_fold)
+
+        mask = np.stack(masks).astype(bool)
+        roc = np.stack(roc).astype(np.float64)  # shape=(fold, diseases)
+
+        valid = mask.any(axis=0)
+        mask = mask[:, valid]
+        roc = roc[:, valid]
+
+        roc_masked = np.ma.array(roc, mask=~mask)
+        roc = roc_masked.mean(axis=0).data
+        return roc
