@@ -6,6 +6,12 @@ import argparse
 
 from genepriority.scripts.utils import csv_file, output_dir, yaml_file
 
+DEFAULT_PATHS = [
+        "/home/TheGreatestCoder/code/data/postprocessed/interpro.csv",
+        "/home/TheGreatestCoder/code/data/postprocessed/uniprot.csv",
+        "/home/TheGreatestCoder/code/data/postprocessed/go.csv",
+        "/home/TheGreatestCoder/code/data/postprocessed/gene-literature.csv",
+    ]
 
 def parse_genehound(subparsers: argparse.ArgumentParser):
     """
@@ -40,6 +46,16 @@ def parse_genehound(subparsers: argparse.ArgumentParser):
         ),
     )
     parser.add_argument(
+        "--max_dims",
+        type=int,
+        default=None,
+        help=(
+            "The maximum number of dimension to use in the factorization of the side features."
+            "Default is None, meaning no factorization is made. "
+            "(default: %(default)s)."
+        ),
+    )
+    parser.add_argument(
         "--side-info",
         action="store_true",
         help="Include side information for genes and diseases (default: %(default)s).",
@@ -51,11 +67,7 @@ def parse_genehound(subparsers: argparse.ArgumentParser):
         type=csv_file,
         default=[
             csv_file(file)
-            for file in [
-                "/home/TheGreatestCoder/code/data/postprocessed/interpro.csv",
-                "/home/TheGreatestCoder/code/data/postprocessed/uniprot.csv",
-                "/home/TheGreatestCoder/code/data/postprocessed/go.csv",
-            ]
+            for file in DEFAULT_PATHS
         ],
         help="Paths to one or more gene-side information CSV files (default: %(default)s).",
     )
@@ -295,12 +307,7 @@ def parse_nega(subparsers: argparse._SubParsersAction):
             type=csv_file,
             default=[
                 csv_file(file)
-                for file in [
-                    "/home/TheGreatestCoder/code/data/postprocessed/interpro.csv",
-                    "/home/TheGreatestCoder/code/data/postprocessed/uniprot.csv",
-                    "/home/TheGreatestCoder/code/data/postprocessed/go.csv",
-                    "/home/TheGreatestCoder/code/data/postprocessed/gene-literature.csv",
-                ]
+                for file in DEFAULT_PATHS
             ],
             help="Paths to one or more gene-side information CSV files (default: %(default)s).",
         )
