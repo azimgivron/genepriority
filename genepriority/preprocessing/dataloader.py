@@ -117,7 +117,7 @@ class DataLoader:
         gene_disease = self.load_data()
 
         self.omim = convert_dataframe_to_sparse_matrix(
-            gene_disease, shape=(self.nb_genes + 1, self.nb_diseases + 1)
+            gene_disease, shape=(self.nb_genes, self.nb_diseases)
         )
 
         if self.with_0s:

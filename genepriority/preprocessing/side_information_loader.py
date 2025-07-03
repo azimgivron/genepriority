@@ -82,7 +82,7 @@ class SideInformationLoader:
         mat = dataframe.to_numpy()
         return sp.coo_matrix(
             (mat[:, 2], (mat[:, 0], mat[:, 1])),
-            shape=(rows + 1, int(mat[:, 1].max()) + 1),
+            shape=(rows, int(mat[:, 1].max())),
         )
 
     @staticmethod

@@ -21,6 +21,8 @@ import numpy as np
 import pandas as pd
 from scipy.io import loadmat
 
+NB_GENES: int = 14_195
+NB_DISEASES: int = 314
 
 def load_csv(
     path: Path, header=None, names=None, usecols=None, dtype=None
@@ -139,12 +141,12 @@ class ReadmeConfig:
     entries: list[ReadmeEntry] = field(
         default_factory=lambda: [
             ReadmeEntry(
-                "geneSymbols.csv", "Maps gene symbols to identifiers", 14_195, 2
+                "geneSymbols.csv", "Maps gene symbols to identifiers", NB_GENES, 2
             ),
             ReadmeEntry(
                 "geneIds_(only for text data).csv",
                 "Gene IDs used in text data",
-                14195,
+                NB_GENES,
                 1,
             ),
             ReadmeEntry("go.csv", "Gene ontology associations", 1_365_394, 2),
@@ -154,7 +156,7 @@ class ReadmeConfig:
             ReadmeEntry("uniprot.csv", "UniProt protein associations", 164_126, 2),
             ReadmeEntry("gene-disease.csv", "Gene–disease associations", 2625, 2),
             ReadmeEntry("phenotype.csv", "Phenotypic association scores", 1_326_832, 3),
-            ReadmeEntry("phenotype-terms.csv", "OMIM phenotype terms", 314, 2),
+            ReadmeEntry("phenotype-terms.csv", "OMIM phenotype terms", NB_DISEASES, 2),
             ReadmeEntry(
                 "Gene–literature feature associations",
                 "Gene literature data",
@@ -186,12 +188,18 @@ def process_gene_disease(raw: Path, cfg: FileConfig) -> pd.DataFrame:
         pd.DataFrame: Gene–disease associations with columns ['Gene ID', 'Disease ID'].
     """
     path = raw / cfg.gene_disease
-    return load_csv(
+    df = load_csv(
         path,
         header=None,
         names=["Gene ID", "Disease ID"],
         dtype={"Gene ID": int, "Disease ID": int},
     )
+    if df["Gene ID"].min() > 0 and df["Gene ID"].max() > NB_GENES: #indexes are starting at 1
+       df["Gene ID"] -= 1
+    if df["Disease ID"].min() > 0 and df["Disease ID"].max() > NB_DISEASES: #indexes are starting at 1
+       df["Disease ID"] -= 1
+    return df
+     
 
 
 def process_gene_symbols(raw: Path, cfg: FileConfig) -> pd.DataFrame:
@@ -209,7 +217,7 @@ def process_gene_symbols(raw: Path, cfg: FileConfig) -> pd.DataFrame:
     sym_df = load_csv(raw / cfg.gene_symbols, header=None)
     aligned = sym_df.iloc[ids_df[0] - 1].reset_index(drop=True)
     return pd.DataFrame(
-        {"Gene ID": np.arange(1, len(aligned) + 1), "Gene Symbol": aligned[0]}
+        {"Gene ID": np.arange(len(aligned)), "Gene Symbol": aligned[0]}
     )
 
 
@@ -225,7 +233,12 @@ def process_go(raw: Path, cfg: FileConfig) -> pd.DataFrame:
         pd.DataFrame: GO associations with ['Gene ID', 'GO term ID'].
     """
     df = load_csv(raw / cfg.go, header=None, names=["Gene ID", "GO term ID", "_"])
-    return df.drop(columns=["_"])
+    df = df.drop(columns=["_"])
+    if df["Gene ID"].min() > 0 and df["Gene ID"].max() > NB_GENES: #indexes are starting at 1
+       df["Gene ID"] -= 1
+    if df["GO term ID"].min() > 0: #indexes are starting at 1
+       df["GO term ID"] -= 1
+    return df
 
 
 def process_interpro(raw: Path, cfg: FileConfig) -> pd.DataFrame:
@@ -242,7 +255,12 @@ def process_interpro(raw: Path, cfg: FileConfig) -> pd.DataFrame:
     df = load_csv(
         raw / cfg.interpro, header=None, names=["Gene ID", "InterPro domain ID", "_"]
     )
-    return df.drop(columns=["_"])
+    df = df.drop(columns=["_"])
+    if df["Gene ID"].min() > 0 and df["Gene ID"].max() > NB_GENES: #indexes are starting at 1
+       df["Gene ID"] -= 1
+    if df["InterPro domain ID"].min() > 0: #indexes are starting at 1
+       df["InterPro domain ID"] -= 1
+    return df
 
 
 def process_uniprot(raw: Path, cfg: FileConfig) -> pd.DataFrame:
@@ -257,7 +275,11 @@ def process_uniprot(raw: Path, cfg: FileConfig) -> pd.DataFrame:
         pd.DataFrame: UniProt associations with ['Gene ID', 'UniProt ID'].
     """
     df = load_csv(raw / cfg.uniprot, header=None, names=["Gene ID", "UniProt ID", "_"])
-    return df.drop(columns=["_"])
+    df = df.drop(columns=["_"])
+    if df["Gene ID"].min() > 0 and df["Gene ID"].max() > NB_GENES: #indexes are starting at 1
+       df["Gene ID"] -= 1
+    if df["UniProt ID"].min() > 0: #indexes are starting at 1
+       df["UniProt ID"] -= 1
 
 
 def process_phenotypes(raw: Path, cfg: FileConfig) -> pd.DataFrame:
@@ -273,13 +295,17 @@ def process_phenotypes(raw: Path, cfg: FileConfig) -> pd.DataFrame:
     """
     mat = load_mat(raw / cfg.phen, "omimXterms_tf_Idf")
     coo = mat.tocoo()
-    return pd.DataFrame(
+    df = pd.DataFrame(
         {
-            "Disease ID": coo.row.astype(np.int32) + 1,
+            "Disease ID": coo.row.astype(np.int32),
             "Phenotypic term ID": coo.col.astype(np.int32),
             "Association score": coo.data,
         }
     )
+    if df["Disease ID"].min() > 0 and df["Disease ID"].max() > NB_DISEASES: #indexes are starting at 1
+       df["Disease ID"] -= 1
+    if df["Phenotypic term ID"].min() > 0: #indexes are starting at 1
+       df["Phenotypic term ID"] -= 1
 
 
 def process_phen_terms(raw: Path, cfg: FileConfig) -> pd.DataFrame:
@@ -296,7 +322,7 @@ def process_phen_terms(raw: Path, cfg: FileConfig) -> pd.DataFrame:
     raw_terms = load_mat(raw / cfg.phen_terms, "omim_terms")
     terms = [t.item() for t in raw_terms.squeeze()]
     return pd.DataFrame(
-        {"Disease ID": np.arange(1, len(terms) + 1), "Phenotype term": terms}
+        {"Disease ID": np.arange(len(terms)), "Phenotype term": terms}
     )
 
 
@@ -317,7 +343,7 @@ def _extract_nonzero(args):
     for j, tok in enumerate(line.rstrip("\n").split(",")):
         v = float(tok)
         if v != 0.0:
-            out.append((i + 1, j + 1, v))
+            out.append((i, j, v))
     return out
 
 
@@ -367,7 +393,6 @@ def process_text_data(raw: Path, cfg: FileConfig) -> pd.DataFrame:
     merged = merged.drop(columns=["Gene ID"]).rename(
         columns={"Gene ID Map": "Gene ID"}
     )[["Gene ID", "Feature ID", "Value"]]
-    merged["Gene ID"] += 1
     return merged
 
 
@@ -402,9 +427,7 @@ def write_readme(out: Path, cfg: FileConfig, rd_cfg: ReadmeConfig):
 
 def verify_datasets_consistency(
     datasets: dict[str, pd.DataFrame],
-    cfg: FileConfig,
-    nb_genes: int = 14_195,
-    nb_diseases: int = 314,
+    cfg: FileConfig
 ):
     """
     Verify that gene and disease IDs across all datasets are consistent with the
@@ -413,16 +436,14 @@ def verify_datasets_consistency(
     Args:
         datasets (dict[str, pd.DataFrame]): Mapping from output filename to DataFrame.
         cfg (FileConfig): File configuration holding output keys.
-        nb_genes (int):
-        nb_diseases (int):
 
     Raises:
         ValueError: If any dataset contains IDs not present in the gene-disease
             associations.
     """
     # Reference gene-disease associations
-    valid_genes = set(np.arange(1, nb_genes + 1))
-    valid_diseases = set(np.arange(1, nb_diseases + 1))
+    valid_genes = set(np.arange(NB_GENES))
+    valid_diseases = set(np.arange(NB_DISEASES))
 
     # Check gene-based datasets
     for key in (cfg.out_go, cfg.out_uniprot, cfg.out_interpro, cfg.out_gene_literature):
