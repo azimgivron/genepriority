@@ -133,6 +133,13 @@ class NEGTrainer(BaseTrainer):
         self.rho_increase = rho_increase
         self.rho_decrease = rho_decrease
         self.threshold = threshold
+        if ((flip_fraction is None) ^ (flip_frequency is None)):
+            raise ValueError(
+                "Invalid flip-label configuration: "
+                "`flip_fraction` and `flip_frequency` must be provided"
+                f" together (or both left as None). Got flip_fraction={flip_fraction!r},"
+                f" flip_frequency={flip_frequency!r}."
+            )
         self.flip_fraction = flip_fraction
         self.flip_frequency = flip_frequency
         self.patience = patience

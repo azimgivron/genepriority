@@ -14,18 +14,13 @@ dynamic = ["version", "dependencies"]
 genepriority = "genepriority.scripts.genepriority:main"
 
 [tool.setuptools]
-packages = [
-    "genepriority",
-    "genepriority.evaluation",
-    "genepriority.postprocessing",
-    "genepriority.preprocessing",
-    "genepriority.trainer",
-    "genepriority.models",
-    "genepriority.scripts"
-]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [tool.setuptools.dynamic]
 dependencies = { file = "requirements.txt" }
 
 [tool.pytest.ini_options]
-pythonpath = ["."]
+pythonpath = ["src"]
