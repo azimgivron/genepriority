@@ -242,11 +242,11 @@ class BaseNEGA(metaclass=abc.ABCMeta):
             float: The unique real root s of the cubic.
         """
         # Compute intermediate parameters
-        tau1_loc = -(tau**2) / 3
+        tau1 = -(tau**2) / 3
         tau2 = (-2 * tau**3 - 27 * delta) / 27
 
         # Discriminant for Cardano's formula
-        discr = (tau2 / 2) ** 2 + (tau1_loc / 3) ** 3
+        discr = (tau2 / 2) ** 2 + (tau1 / 3) ** 3
         sqrt_disc = np.sqrt(discr, dtype=np.complex128)
 
         # Compute the real root
