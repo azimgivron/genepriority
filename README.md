@@ -189,12 +189,10 @@ pip install genepriority git+https://github.com/azimgivron/genepriority.git@main
 genepriority/
 ├── models/                # NEGA2 algorithm implementation
 ├── evaluation/            # Tools for evaluation metrics
-├── postprocessing/        # Aggregates & analyzes model results
 ├── preprocessing/         # DataLoader for gene-disease data
 ├── scripts/
 │   ├── genehound          # Reproducing GeneHound results
-│   ├── nega               # NEGA fine-tuning & cross-validation scripts
-│   └── post               # Post-processing scripts
+│   └── nega               # NEGA fine-tuning & cross-validation scripts
 ├── trainer/               # Training and evaluation framework
 ├── utils/                 # Utility functions
 ├── README.md              # This documentation!
@@ -216,7 +214,6 @@ usage: genepriority [-h] {genehound,nega-tuning,nega,post} ...
 - **genehound:** Run GeneHound with cross-validation on the OMIM dataset.
 - **nega-tuning:** Find the best hyperparameters for NEGA.
 - **nega:** Train and evaluate the NEGA model using cross-validation.
-- **post:** Post-process and analyze the evaluation results.
 
 For more details, run:
 ```bash
