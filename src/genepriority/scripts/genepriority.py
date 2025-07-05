@@ -27,9 +27,7 @@ from genepriority.scripts.parsers import (
     parse_baseline,
     parse_genehound,
     parse_nega,
-    parse_post,
 )
-from genepriority.scripts.post import post
 
 
 def setup_logger(args: Any):
@@ -94,7 +92,6 @@ def main():
     parse_baseline(subparsers)
     parse_genehound(subparsers)
     parse_nega(subparsers)
-    parse_post(subparsers)
 
     args: Any = parser.parse_args()
     try:
@@ -107,13 +104,6 @@ def main():
         elif "baseline" in args.algorithm_command:
             setup_logger(args)
             baseline(args)
-        elif "post" in args.algorithm_command:
-            args = parser.parse_args()
-            if len(args.evaluation_paths) != len(args.model_names):
-                parser.error(
-                    "The number of evaluation paths must match the number of model names."
-                )
-            post(args)
         else:
             raise ValueError(f"No such command: {args.algorithm_command}")
     except Exception as exception:
