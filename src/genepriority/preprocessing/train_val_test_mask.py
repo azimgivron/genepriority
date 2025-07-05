@@ -35,15 +35,16 @@ class TrainValTestMasks:
             used for error estimation during training, which is fixed across all folds.
         validation_finetuning_mask (sp.csr_matrix): A sparse matrix representing the validation
             mask used for fine tuning, which is fixed across all folds.
-        testing_masks (List[sp.csr_matrix]): A list of sparse matrices, each representing
-            a testing mask corresponding to one fold of the k-fold split.
+        testing_masks (List[np.ndarray]): A list of dense matrices, each representing
+            a testing mask corresponding to one fold of the k-fold and that is the whole
+            data excluded validation and training data.
         seed (int): The random seed used to ensure reproducibility of the dataset splits.
     """
 
     def __init__(
         self,
+        data: sp.csr_matrix,
         seed: int,
-        nnz_mask: sp.csr_matrix,
         validation_size: float,
         num_folds: int,
     ):
@@ -52,9 +53,8 @@ class TrainValTestMasks:
         validation, and testing.
 
         Args:
+            data (sp.csr_matrix): The data to split (binary matrix).
             seed (int): The random seed to ensure reproducibility in dataset splits.
-            nnz_mask (sp.csr_matrix): A sparse matrix representing the non-zero entries of the
-                dataset. The non-zero entries are used as the basis for mask generation.
             validation_size (float): Fraction of non-zero entries to be held out as a validation
                 set. Must be between 0 and 1.
             num_folds (int): The number of folds to use for k-fold cross validation, which
@@ -68,8 +68,11 @@ class TrainValTestMasks:
 
         self.seed = seed
 
+        nnz_mask = data.copy()
+        nnz_mask.data = np.ones(nnz_mask.nnz, dtype=bool)
+
         # Extract the row, column, and nonzero values from the input sparse mask.
-        row_indices, col_indices, values = sp.find(nnz_mask)
+        row_indices, col_indices, _ = sp.find(nnz_mask)
 
         # Split the nonzero entries into a validation set and the rest.
         validation_row_indices, train_test_row_indices = train_test_split(
@@ -78,25 +81,25 @@ class TrainValTestMasks:
             random_state=self.seed,
             shuffle=True,
         )
-        validation_row_indices, validation_finetuning_row_indices = train_test_split(
+        validation_row_indices, finetuning_row_indices = train_test_split(
             validation_row_indices,
             train_size=0.5,
             random_state=self.seed,
             shuffle=True,
         )
-        self.validation_finetuning_mask = sp.csr_matrix(
+        self.finetuning_mask = sp.csr_matrix(
             (
-                values[validation_finetuning_row_indices],
+                np.ones(len(finetuning_row_indices), dtype=bool),
                 (
-                    row_indices[validation_finetuning_row_indices],
-                    col_indices[validation_finetuning_row_indices],
+                    row_indices[finetuning_row_indices],
+                    col_indices[finetuning_row_indices],
                 ),
             ),
             shape=nnz_mask.shape,
         )
         self.validation_mask = sp.csr_matrix(
             (
-                values[validation_row_indices],
+                np.ones(len(validation_row_indices), dtype=bool),
                 (
                     row_indices[validation_row_indices],
                     col_indices[validation_row_indices],
@@ -109,35 +112,25 @@ class TrainValTestMasks:
 
         # Use KFold on the remaining indices to create training and testing masks.
         kfold = KFold(n_splits=num_folds, shuffle=True, random_state=self.seed)
-        for train_fold_indices, test_fold_indices in kfold.split(
-            train_test_row_indices
-        ):
+        for train_fold_indices, _ in kfold.split(train_test_row_indices):
             train_idx = train_test_row_indices[train_fold_indices]
-            test_idx = train_test_row_indices[test_fold_indices]
-            self.training_masks.append(
-                sp.csr_matrix(
+            train_mask = sp.csr_matrix(
+                (
+                    np.ones(len(train_idx), dtype=bool),
                     (
-                        values[train_idx],
-                        (
-                            row_indices[train_idx],
-                            col_indices[train_idx],
-                        ),
+                        row_indices[train_idx],
+                        col_indices[train_idx],
                     ),
-                    shape=nnz_mask.shape,
-                )
+                ),
+                shape=nnz_mask.shape,
             )
-            self.testing_masks.append(
-                sp.csr_matrix(
-                    (
-                        values[test_idx],
-                        (
-                            row_indices[test_idx],
-                            col_indices[test_idx],
-                        ),
-                    ),
-                    shape=nnz_mask.shape,
-                )
-            )
+            self.training_masks.append(train_mask)
+            test_mask = np.ones_like(data.toarray(), dtype=bool)
+            remove_mask = (
+                self.finetuning_mask + self.validation_mask + train_mask
+            ).toarray()
+            test_mask[remove_mask] = False
+            self.testing_masks.append(test_mask)
 
     def __iter__(
         self,
@@ -159,15 +152,15 @@ class TrainValTestMasks:
         validation_masks = [
             self.validation_mask for _ in range(len(self.training_masks))
         ]
-        validation_finetuning_mask = [
-            self.validation_finetuning_mask for _ in range(len(self.training_masks))
+        finetuning_mask = [
+            self.finetuning_mask for _ in range(len(self.training_masks))
         ]
         return iter(
             zip(
                 self.training_masks,
                 self.testing_masks,
                 validation_masks,
-                validation_finetuning_mask,
+                finetuning_mask,
             )
         )
 

@@ -24,8 +24,7 @@ from genepriority.models.flip_labels import FlipLabels
 from genepriority.models.matrix_completion_result import MatrixCompletionResult
 from genepriority.models.nega import NegaSession
 from genepriority.preprocessing.dataloader import DataLoader
-from genepriority.preprocessing.side_information_loader import \
-    SideInformationLoader
+from genepriority.preprocessing.side_information_loader import SideInformationLoader
 from genepriority.trainer.base import BaseTrainer
 from genepriority.utils import create_tb_dir
 
@@ -133,7 +132,7 @@ class NEGTrainer(BaseTrainer):
         self.rho_increase = rho_increase
         self.rho_decrease = rho_decrease
         self.threshold = threshold
-        if ((flip_fraction is None) ^ (flip_frequency is None)):
+        if (flip_fraction is None) ^ (flip_frequency is None):
             raise ValueError(
                 "Invalid flip-label configuration: "
                 "`flip_fraction` and `flip_frequency` must be provided"

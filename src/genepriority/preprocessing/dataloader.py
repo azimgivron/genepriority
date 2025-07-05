@@ -24,7 +24,10 @@ import pandas as pd
 import scipy.sparse as sp
 
 from genepriority.preprocessing.preprocessing import (
-    compute_statistics, convert_dataframe_to_sparse_matrix, sample_zeros)
+    compute_statistics,
+    convert_dataframe_to_sparse_matrix,
+    sample_zeros,
+)
 from genepriority.preprocessing.train_val_test_mask import TrainValTestMasks
 
 
@@ -125,20 +128,16 @@ class DataLoader:
                 self.omim, self.zero_sampling_factor, seed=self.seed
             )
         self._log_matrix_stats(self.omim)
-
-        nnz_mask = self.omim.copy()
-        nnz_mask.data = np.ones(nnz_mask.nnz, dtype=bool)
-
         self.omim_masks = TrainValTestMasks(
+            data=self.omim,
             seed=self.seed,
-            nnz_mask=nnz_mask,
             validation_size=self.validation_size,
             num_folds=self.num_folds,
         )
         train_size = (self.num_folds - 1) / self.num_folds * (1 - self.validation_size)
         self.logger.debug(
-            "Random splits created: %.2f%% for validation, %.2f%% for "
-            "training, %.2f%% for testing.",
+            "Random splits created: %.2f%% for validation (50%% for validation, 50%% for"
+            "fine tuning), %.2f%% for training, %.2f%% for testing.",
             self.validation_size * 100,
             train_size * 100,
             (1 - train_size - self.validation_size) * 100,
@@ -148,8 +147,8 @@ class DataLoader:
             "%.2ipts for finetuning, %.2ipts for testing (avg).",
             np.mean([len(mask.data) for mask in self.omim_masks.training_masks]),
             len(self.omim_masks.validation_mask.data),
-            len(self.omim_masks.validation_finetuning_mask.data),
-            np.mean([len(mask.data) for mask in self.omim_masks.testing_masks]),
+            len(self.omim_masks.finetuning_mask.data),
+            np.mean([len(mask.flatten()) for mask in self.omim_masks.testing_masks]),
         )
 
         self.logger.debug("Processed OMIM dataset. Shape: %s", self.omim.shape)

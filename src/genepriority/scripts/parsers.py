@@ -7,11 +7,12 @@ import argparse
 from genepriority.scripts.utils import csv_file, output_dir, yaml_file
 
 DEFAULT_PATHS = [
-        "/home/TheGreatestCoder/code/data/postprocessed/interpro.csv",
-        "/home/TheGreatestCoder/code/data/postprocessed/uniprot.csv",
-        "/home/TheGreatestCoder/code/data/postprocessed/go.csv",
-        "/home/TheGreatestCoder/code/data/postprocessed/gene-literature.csv",
-    ]
+    "/home/TheGreatestCoder/code/data/postprocessed/interpro.csv",
+    "/home/TheGreatestCoder/code/data/postprocessed/uniprot.csv",
+    "/home/TheGreatestCoder/code/data/postprocessed/go.csv",
+    "/home/TheGreatestCoder/code/data/postprocessed/gene-literature.csv",
+]
+
 
 def parse_genehound(subparsers: argparse.ArgumentParser):
     """
@@ -65,10 +66,7 @@ def parse_genehound(subparsers: argparse.ArgumentParser):
         metavar="FILE",
         nargs="+",
         type=csv_file,
-        default=[
-            csv_file(file)
-            for file in DEFAULT_PATHS
-        ],
+        default=[csv_file(file) for file in DEFAULT_PATHS],
         help="Paths to one or more gene-side information CSV files (default: %(default)s).",
     )
     parser.add_argument(
@@ -305,10 +303,7 @@ def parse_nega(subparsers: argparse._SubParsersAction):
             metavar="FILE",
             nargs="+",
             type=csv_file,
-            default=[
-                csv_file(file)
-                for file in DEFAULT_PATHS
-            ],
+            default=[csv_file(file) for file in DEFAULT_PATHS],
             help="Paths to one or more gene-side information CSV files (default: %(default)s).",
         )
         parser.add_argument(
@@ -428,12 +423,6 @@ def parse_baseline(subparsers: argparse.ArgumentParser):
         type=str,
         default="results.pickle",
         help="Filename for serialized results (default: %(default)s).",
-    )
-    parser.add_argument(
-        "--latent-dimension",
-        type=int,
-        default=40,
-        help="Size of the latent dimension (default: %(default)s).",
     )
     parser.add_argument(
         "--validation-size",

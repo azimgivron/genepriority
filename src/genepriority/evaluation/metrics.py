@@ -9,61 +9,118 @@ Provides evaluation metrics for gene prioritization models. Includes:
 Both functions accept only the evaluated subset of genes but normalize
 scores against the total gene universe.
 """
-from typing import List, Tuple, Callable
+import math
+from typing import Callable, List, Tuple
 
 import numpy as np
 from sklearn import metrics
 
 
-def bedroc_score(
-    y_true: np.ndarray, y_pred: np.ndarray, decreasing: bool = True, alpha: float = 20.0
-):
-    """BEDROC metric implemented according to Truchon and Bayley.
-
-    The Boltzmann Enhanced Descrimination of the Receiver Operator
-    Characteristic (BEDROC) score is a modification of the Receiver Operator
-    Characteristic (ROC) score that allows for a factor of *early recognition*.
-
-    References:
-        The original paper by Truchon et al. is located at `10.1021/ci600426e
-        <http://dx.doi.org/10.1021/ci600426e>`_.
+def _rie_helper(labels_sorted: np.ndarray, alpha: float) -> Tuple[float, int]:
+    """
+    Compute the raw RIE (Robust Initial Enhancement) value for a single column.
+    from https://github.com/rdkit/rdkit/blob/master/rdkit/ML/Scoring/Scoring.py#L66
 
     Args:
-        y_true (np.ndarray): Binary class labels. 1 for positive class, 0 otherwise.
-        y_pred (np.ndarray): Prediction values.
-        decreasing (bool): True if high values of ``y_pred`` correlates to positive class.
-        alpha (float): Early recognition parameter.
+        labels_sorted (np.ndarray): Array of binary labels (1 positives, 0 negatives),
+            sorted by predicted score descending.
+        alpha (float): Early-recognition parameter (must be > 0).
+
+    Raises:
+        ValueError: If `labels_sorted` is empty or `alpha` ≤ 0.
+
+    Returns:
+        Tuple[float, int]:
+            - rie_value: Unnormalized RIE score for this column.
+            - num_actives: Number of positive instances in this column.
+    """
+    num_molecules = len(labels_sorted)
+    alpha = float(alpha)
+
+    if num_molecules == 0:
+        raise ValueError("Label list is empty")
+    if alpha <= 0.0:
+        raise ValueError("Alpha must be greater than zero")
+
+    # normalization denominator
+    denom = (
+        1.0
+        / num_molecules
+        * (1 - math.exp(-alpha))
+        / (math.exp(alpha / num_molecules) - 1)
+    )
+
+    # count actives
+    num_actives = int(np.sum(labels_sorted))
+    if num_actives == 0:
+        return 0.0, 0
+
+    # accumulate exponentials for active instances
+    sum_exp = 0.0
+    for rank, lab in enumerate(labels_sorted, start=1):
+        if lab:
+            sum_exp += math.exp(-(alpha * rank) / num_molecules)
+
+    rie_value = sum_exp / (num_actives * denom)
+    return rie_value, num_actives
+
+
+def bedroc_score(y_true: np.ndarray, y_pred: np.ndarray, alpha: float = 20.0) -> float:
+    """
+    Compute the BEDROC (Boltzmann-Enhanced Discrimination of ROC) score.
+
+    This metric emphasizes early recognition of positives in a ranked list
+    of predictions, as described by Truchon and Bayley.
+    from https://github.com/rdkit/rdkit/blob/master/rdkit/ML/Scoring/Scoring.py
+
+    References:
+        Truchon, J.-F., & Bayly, C. I. (2007).
+        Evaluating virtual screening methods: good and bad metrics for the "early
+        recognition" problem. _Journal of Chemical Information and Modeling_, 47(2), 488–508.
+        DOI: 10.1021/ci600426e
+
+    Args:
+        y_true (np.ndarray): Binary ground-truth labels (1 for positive, 0 for negative).
+        y_pred (np.ndarray): Predicted scores (higher = more likely positive).
+        alpha (float): Early-recognition parameter (controls weighting).
 
     Returns:
         float:
-            Value in interval [0, 1] indicating degree to which the predictive
-            technique employed detects (early) the positive class.
+            BEDROC score in [0, 1], with higher values indicating better early recognition.
     """
-    assert len(y_true) == len(
-        y_pred
-    ), "The number of scores must be equal to the number of labels"
-    big_n = len(y_true)
-    n = sum(y_true == 1)
+    if y_true.shape[0] != y_pred.shape[0]:
+        raise ValueError("Number of predictions must match number of true labels")
 
-    if decreasing:
-        order = np.argsort(-y_pred)
-    else:
-        order = np.argsort(y_pred)
+    # sort by descending predicted score
+    sorted_indices = np.argsort(-y_pred)
+    labels_sorted = y_true[sorted_indices]
 
-    m_rank = (y_true[order] == 1).nonzero()[0]
-    s = np.sum(np.exp(-alpha * m_rank / big_n))
-    r_a = n / big_n
-    rand_sum = r_a * (1 - np.exp(-alpha)) / (np.exp(alpha / big_n) - 1)
-    fac = (
-        r_a
-        * np.sinh(alpha / 2)
-        / (np.cosh(alpha / 2) - np.cosh(alpha / 2 - alpha * r_a))
+    rie_value, num_actives = _rie_helper(labels_sorted, alpha)
+
+    if num_actives == 0:
+        return 0.0
+
+    num_molecules = len(labels_sorted)
+    active_ratio = num_actives / num_molecules
+
+    rie_max = (1 - math.exp(-alpha * active_ratio)) / (
+        active_ratio * (1 - math.exp(-alpha))
     )
-    cte = 1 / (1 - np.exp(alpha * (1 - r_a)))
-    return s * fac / rand_sum + cte
+    rie_min = (1 - math.exp(alpha * active_ratio)) / (
+        active_ratio * (1 - math.exp(alpha))
+    )
+
+    # normalize to [0,1]
+    if rie_max != rie_min:
+        score = (rie_value - rie_min) / (rie_max - rie_min)
+        score = np.round(score, 10)
+        assert 0 <= score <= 1, f"BEDROC must be in [0;1]. Found => {score}"
+        return score
+    else:
+        return 1.0
 
 
-def bedroc_scores(
+def bedroc_per_disease(
     y_true: List[np.ndarray], y_pred: List[np.ndarray], gene_number: int, alpha: float
 ) -> List[float]:
     """Compute the BEDROC score for each diseases.
@@ -98,12 +155,11 @@ def bedroc_scores(
             scores.append(np.nan)
             continue
         bedroc = bedroc_score(labels, scores_pred, alpha=alpha)
-        assert 0 <= bedroc <= 1, f"BEDROC must be in [0;1]. Found => {bedroc}"
         scores.append(bedroc)
     return scores, mask
 
 
-def auc_scores(
+def auc_per_disease(
     y_true: List[np.ndarray], y_pred: List[np.ndarray], gene_number: int
 ) -> Tuple[List[float], List[bool]]:
     """Compute the true AUC score for each disease.
@@ -115,6 +171,42 @@ def auc_scores(
 
     Returns:
         scores: List of AUC floats (nan if no positives or no negatives).
+        mask:   List of booleans indicating which diseases had ≥1 positive.
+    """
+    return metric_per_disease(y_true, y_pred, gene_number, metrics.roc_auc_score)
+
+
+def avg_precision_per_disease(
+    y_true: List[np.ndarray], y_pred: List[np.ndarray], gene_number: int
+) -> Tuple[List[float], List[bool]]:
+    """Compute the average Precision score for each disease.
+
+    Args:
+        y_true: List of 1D arrays of 0/1 labels.
+        y_pred: List of 1D arrays of scores (same length as each y_true[i]).
+        gene_number: Number of genes.
+
+    Returns:
+        scores: List of Average Precision floats (nan if no positives or no negatives).
+        mask:   List of booleans indicating which diseases had ≥1 positive.
+    """
+    return metric_per_disease(
+        y_true, y_pred, gene_number, metrics.average_precision_score
+    )
+
+
+def metric_per_disease(
+    y_true: List[np.ndarray], y_pred: List[np.ndarray], gene_number: int, func: Callable
+) -> Tuple[List[float], List[bool]]:
+    """Compute the metric score from func for each disease.
+
+    Args:
+        y_true: List of 1D arrays of 0/1 labels.
+        y_pred: List of 1D arrays of scores (same length as each y_true[i]).
+        gene_number: Number of genes.
+
+    Returns:
+        scores: List of metric (nan if no positives or no negatives).
         mask:   List of booleans indicating which diseases had ≥1 positive.
     """
     scores = []
@@ -130,15 +222,15 @@ def auc_scores(
             scores.append(np.nan)
             continue
 
-        auc = metrics.roc_auc_score(labels, scores_pred)
-        scores.append(auc)
+        metric = func(labels, scores_pred)
+        scores.append(metric)
     return scores, mask
 
 
-def roc_curves(
+def roc_per_disease(
     y_true: List[np.ndarray], y_pred: List[np.ndarray], gene_number: int
-) -> Tuple[List[float], List[bool]]:
-    """Compute the ROC curve per disease.
+) -> Tuple[np.ndarray, np.ndarray]:
+    """Compute the ROC curve averaged over diseases.
 
     Args:
         y_true: List of 1D arrays of 0/1 labels.
@@ -146,14 +238,18 @@ def roc_curves(
         gene_number: Number of genes.
 
     Returns:
-        scores: List of FPR and TPR lists.
+        Tuple[np.ndarray, np.ndarray]:
+            - 2D array of interpolated mean Precision/Recall values across diseases
+                (shape: [2, n_thresholds]).
+            - 1D array of thresholds.
     """
     return build_curves_per_disease(y_true, y_pred, gene_number, metrics.roc_curve)
 
-def pr_curves(
+
+def pr_per_disease(
     y_true: List[np.ndarray], y_pred: List[np.ndarray], gene_number: int
-) -> Tuple[List[float], List[bool]]:
-    """Compute the PR curve per disease.
+) -> Tuple[np.ndarray, np.ndarray]:
+    """Compute the PR curve averaged over diseases.
 
     Args:
         y_true: List of 1D arrays of 0/1 labels.
@@ -161,20 +257,24 @@ def pr_curves(
         gene_number: Number of genes.
 
     Returns:
-        scores: List of Precision and Recall lists.
+        Tuple[np.ndarray, np.ndarray]:
+            - 2D array of interpolated mean FPR/TPR values across diseases
+                (shape: [2, n_thresholds]).
+            - 1D array of thresholds.
     """
-    return build_curves_per_disease(y_true, y_pred, gene_number, metrics.precision_recall_curve)
+    return build_curves_per_disease(
+        y_true, y_pred, gene_number, metrics.precision_recall_curve
+    )
 
 
 def build_curves_per_disease(
     y_true: List[np.ndarray],
     y_pred: List[np.ndarray],
     gene_number: int,
-    func: Callable[[np.ndarray, np.ndarray], Tuple[np.ndarray, np.ndarray, np.ndarray]]
+    func: Callable[[np.ndarray, np.ndarray], Tuple[np.ndarray, np.ndarray, np.ndarray]],
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
-    Compute interpolated metric curves (ROC or PR) per disease over a
-        shared set of thresholds.
+    Compute interpolated metric curves (ROC or PR) average over diseases.
 
     Args:
         y_true (List[np.ndarray]):
@@ -189,32 +289,28 @@ def build_curves_per_disease(
 
     Returns:
         Tuple[np.ndarray, np.ndarray]:
-            - 3D array of interpolated metric values for all diseases
-                (shape: [n_diseases, 2, n_thresholds]).
-            - 1D boolean mask array indicating which diseases returned NaN curves.
+            - 2D array of interpolated metric values
+                (shape: [2, n_thresholds]).
+            - 1D array of thresholds.
     """
     scores = []
-    thresholds = set()
     for labels, scores_pred in zip(y_true, y_pred):
         n_pos = int(labels.sum())
         if n_pos == 0 or n_pos == gene_number:
-            scores.append((np.nan, np.nan, np.nan))
             continue
 
         first, second, thr = func(labels, scores_pred)
+        if len(thr) < len(first):
+            first = first[:-1]
+            second = second[:-1]
         scores.append((first, second, thr))
-        thresholds |= set(thr)
 
-    thresholds = sorted(thresholds)
-    final = interpolate(scores, thresholds)
-    mask = np.array([np.isnan(entry[0]).all() for entry in final])
-
-    return final, mask
+    final = interpolate(scores, thr)
+    return final, thr
 
 
 def interpolate(
-    scores: List[Tuple[np.ndarray, np.ndarray, np.ndarray]],
-    thresholds: List[float]
+    scores: List[Tuple[np.ndarray, np.ndarray, np.ndarray]], thresholds: List[float]
 ) -> np.ndarray:
     """
     Linearly interpolate metric values (e.g., TPR/FPR or Precision/Recall)
@@ -228,18 +324,12 @@ def interpolate(
 
     Returns:
         np.ndarray:
-            3D array of shape [n_diseases, 2, n_thresholds] containing
+            2D array of shape [2, n_thresholds] containing
                 interpolated metrics.
-            The first dimension is disease, second is metric (e.g., FPR and TPR),
-                third is thresholds.
     """
     final = []
     for first, second, thr in scores:
-        if isinstance(first, float) and np.isnan(first):
-            first_interp = np.full(len(thresholds), np.nan)
-            second_interp = np.full(len(thresholds), np.nan)
-        else:
-            first_interp = np.interp(thresholds, thr, first)
-            second_interp = np.interp(thresholds, thr, second)
-        final.append([first_interp, second_interp])
-    return np.array(final)
+        first_interp = np.interp(thresholds, thr, first)
+        second_interp = np.interp(thresholds, thr, second)
+    final.append([first_interp, second_interp])
+    return np.array(final).mean(0)

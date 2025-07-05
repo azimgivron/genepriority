@@ -24,6 +24,7 @@ from scipy.io import loadmat
 NB_GENES: int = 14_195
 NB_DISEASES: int = 314
 
+
 def load_csv(
     path: Path, header=None, names=None, usecols=None, dtype=None
 ) -> pd.DataFrame:
@@ -194,12 +195,15 @@ def process_gene_disease(raw: Path, cfg: FileConfig) -> pd.DataFrame:
         names=["Gene ID", "Disease ID"],
         dtype={"Gene ID": int, "Disease ID": int},
     )
-    if df["Gene ID"].min() > 0 and df["Gene ID"].max() >= NB_GENES: #indexes are starting at 1
-       df["Gene ID"] -= 1
-    if df["Disease ID"].min() > 0 and df["Disease ID"].max() >= NB_DISEASES: #indexes are starting at 1
-       df["Disease ID"] -= 1
+    if (
+        df["Gene ID"].min() > 0 and df["Gene ID"].max() >= NB_GENES
+    ):  # indexes are starting at 1
+        df["Gene ID"] -= 1
+    if (
+        df["Disease ID"].min() > 0 and df["Disease ID"].max() >= NB_DISEASES
+    ):  # indexes are starting at 1
+        df["Disease ID"] -= 1
     return df
-     
 
 
 def process_gene_symbols(raw: Path, cfg: FileConfig) -> pd.DataFrame:
@@ -216,9 +220,7 @@ def process_gene_symbols(raw: Path, cfg: FileConfig) -> pd.DataFrame:
     ids_df = load_csv(raw / cfg.gene_ids, header=None)
     sym_df = load_csv(raw / cfg.gene_symbols, header=None)
     aligned = sym_df.iloc[ids_df[0] - 1].reset_index(drop=True)
-    return pd.DataFrame(
-        {"Gene ID": np.arange(len(aligned)), "Gene Symbol": aligned[0]}
-    )
+    return pd.DataFrame({"Gene ID": np.arange(len(aligned)), "Gene Symbol": aligned[0]})
 
 
 def process_go(raw: Path, cfg: FileConfig) -> pd.DataFrame:
@@ -234,10 +236,12 @@ def process_go(raw: Path, cfg: FileConfig) -> pd.DataFrame:
     """
     df = load_csv(raw / cfg.go, header=None, names=["Gene ID", "GO term ID", "_"])
     df = df.drop(columns=["_"])
-    if df["Gene ID"].min() > 0 and df["Gene ID"].max() >= NB_GENES: #indexes are starting at 1
-       df["Gene ID"] -= 1
-    if df["GO term ID"].min() > 0: #indexes are starting at 1
-       df["GO term ID"] -= 1
+    if (
+        df["Gene ID"].min() > 0 and df["Gene ID"].max() >= NB_GENES
+    ):  # indexes are starting at 1
+        df["Gene ID"] -= 1
+    if df["GO term ID"].min() > 0:  # indexes are starting at 1
+        df["GO term ID"] -= 1
     return df
 
 
@@ -256,10 +260,12 @@ def process_interpro(raw: Path, cfg: FileConfig) -> pd.DataFrame:
         raw / cfg.interpro, header=None, names=["Gene ID", "InterPro domain ID", "_"]
     )
     df = df.drop(columns=["_"])
-    if df["Gene ID"].min() > 0 and df["Gene ID"].max() >= NB_GENES: #indexes are starting at 1
-       df["Gene ID"] -= 1
-    if df["InterPro domain ID"].min() > 0: #indexes are starting at 1
-       df["InterPro domain ID"] -= 1
+    if (
+        df["Gene ID"].min() > 0 and df["Gene ID"].max() >= NB_GENES
+    ):  # indexes are starting at 1
+        df["Gene ID"] -= 1
+    if df["InterPro domain ID"].min() > 0:  # indexes are starting at 1
+        df["InterPro domain ID"] -= 1
     return df
 
 
@@ -276,10 +282,12 @@ def process_uniprot(raw: Path, cfg: FileConfig) -> pd.DataFrame:
     """
     df = load_csv(raw / cfg.uniprot, header=None, names=["Gene ID", "UniProt ID", "_"])
     df = df.drop(columns=["_"])
-    if df["Gene ID"].min() > 0 and df["Gene ID"].max() >= NB_GENES: #indexes are starting at 1
-       df["Gene ID"] -= 1
-    if df["UniProt ID"].min() > 0: #indexes are starting at 1
-       df["UniProt ID"] -= 1
+    if (
+        df["Gene ID"].min() > 0 and df["Gene ID"].max() >= NB_GENES
+    ):  # indexes are starting at 1
+        df["Gene ID"] -= 1
+    if df["UniProt ID"].min() > 0:  # indexes are starting at 1
+        df["UniProt ID"] -= 1
     return df
 
 
@@ -303,10 +311,12 @@ def process_phenotypes(raw: Path, cfg: FileConfig) -> pd.DataFrame:
             "Association score": coo.data,
         }
     )
-    if df["Disease ID"].min() > 0 and df["Disease ID"].max() > NB_DISEASES: #indexes are starting at 1
-       df["Disease ID"] -= 1
-    if df["Phenotypic term ID"].min() > 0: #indexes are starting at 1
-       df["Phenotypic term ID"] -= 1
+    if (
+        df["Disease ID"].min() > 0 and df["Disease ID"].max() > NB_DISEASES
+    ):  # indexes are starting at 1
+        df["Disease ID"] -= 1
+    if df["Phenotypic term ID"].min() > 0:  # indexes are starting at 1
+        df["Phenotypic term ID"] -= 1
     return df
 
 
@@ -323,10 +333,10 @@ def process_phen_terms(raw: Path, cfg: FileConfig) -> pd.DataFrame:
     """
     raw_terms = load_mat(raw / cfg.phen_terms, "omim_terms")
     terms = [t.item() for t in raw_terms.squeeze()]
-    df = pd.DataFrame(
-        {"Disease ID": np.arange(len(terms)), "Phenotype term": terms}
-    )
-    if df["Disease ID"].min() > 0 and df["Disease ID"].max() > NB_DISEASES: #indexes are starting at 1
+    df = pd.DataFrame({"Disease ID": np.arange(len(terms)), "Phenotype term": terms})
+    if (
+        df["Disease ID"].min() > 0 and df["Disease ID"].max() > NB_DISEASES
+    ):  # indexes are starting at 1
         df["Disease ID"] -= 1
     return df
 
@@ -430,10 +440,7 @@ def write_readme(out: Path, cfg: FileConfig, rd_cfg: ReadmeConfig):
         f.write("\n")
 
 
-def verify_datasets_consistency(
-    datasets: dict[str, pd.DataFrame],
-    cfg: FileConfig
-):
+def verify_datasets_consistency(datasets: dict[str, pd.DataFrame], cfg: FileConfig):
     """
     Verify that gene and disease IDs across all datasets are consistent with the
         gene-disease map.
@@ -467,6 +474,7 @@ def verify_datasets_consistency(
         raise ValueError(
             f"Phenotype dataset '{cfg.out_phen}' contains Disease IDs not in '{cfg.out_gene_disease}': {sorted(missing_ph)[:5]}..."
         )
+
 
 def save_dataframe(df: pd.DataFrame, path: Path):
     """
@@ -514,7 +522,12 @@ def main():
         cfg.out_gene_literature: process_text_data(raw, cfg),
     }
     for key, df in datasets.items():
-        logging.info("ID in %s ranges from %d to %d.", key, df.iloc[:,0].min(), df.iloc[:,0].max())
+        logging.info(
+            "ID in %s ranges from %d to %d.",
+            key,
+            df.iloc[:, 0].min(),
+            df.iloc[:, 0].max(),
+        )
 
     # Verify consistency before saving
     verify_datasets_consistency(datasets, cfg)

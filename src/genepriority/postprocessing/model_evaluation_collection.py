@@ -94,18 +94,29 @@ class ModelEvaluationCollection:
         """
         return iter(self.evaluations)
 
-    def compute_auc_losses(self) -> np.ndarray:
+    def compute_auc(self) -> np.ndarray:
         """
-        Calculates the AUC loss (1 - AUC) for each model and fold.
+        Calculates the AUC for each model and fold.
 
         Returns:
-            np.ndarray: A 2D array containing the AUC loss for
+            np.ndarray: A 2D array containing the AUC for
                 each model and for each fold. Shape: (fold, models).
         """
-        auc_loss = np.array(
-            [eval_res.compute_avg_auc_loss() for eval_res in self.evaluations]
+        auc = np.array([eval_res.compute_avg_auc() for eval_res in self.evaluations])
+        return auc.T
+
+    def compute_avg_precision(self) -> np.ndarray:
+        """
+        Calculates the Avgerage Precision for each model and fold.
+
+        Returns:
+            np.ndarray: A 2D array containing the Average Precision for
+                each model and for each fold. Shape: (fold, models).
+        """
+        avg_pr = np.array(
+            [eval_res.compute_avg_precision() for eval_res in self.evaluations]
         )
-        return auc_loss.T
+        return avg_pr.T
 
     def compute_bedroc_scores(self) -> np.ndarray:
         """
@@ -122,3 +133,25 @@ class ModelEvaluationCollection:
         # reorder to (alphas, fold, models)
         bedroc = bedroc.transpose(1, 2, 0)
         return bedroc
+
+    def compute_roc(self) -> List[np.ndarray]:
+        """
+        Calculates the ROC curve for each model.
+
+        Returns:
+            List[np.ndarray]: 2D arrays containing the ROC for
+                each model. Shape: (2, n_thresholds).
+        """
+        roc = [eval_res.compute_avg_roc_curve() for eval_res in self.evaluations]
+        return roc
+
+    def compute_pr(self) -> List[np.ndarray]:
+        """
+        Calculates the PR curve for each model.
+
+        Returns:
+            List[np.ndarray]: 2D arrays containing the PR for
+                each model. Shape: (2, n_thresholds).
+        """
+        pr = [eval_res.compute_avg_pr_curve() for eval_res in self.evaluations]
+        return pr

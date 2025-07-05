@@ -115,8 +115,8 @@ def compute_statistics(
     """
     counts = []
     for _, test_mask, _, _ in folds:
-        data = sp.find(sparse_matrix.multiply(test_mask))[1]
-        counts.append(len(set(data)))
+        count = sparse_matrix.toarray()[test_mask].sum()
+        counts.append(count)
     average_count = np.mean(counts)
     variance_count = np.std(counts)
     return pd.DataFrame(

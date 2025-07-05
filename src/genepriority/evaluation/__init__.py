@@ -1,25 +1,21 @@
 """Evaluation Module"""
 # pylint disable=R0801
 from .evaluation import Evaluation
-from .metrics import auc_scores, bedroc_scores
+from .metrics import (
+    auc_per_disease,
+    avg_precision_per_disease,
+    bedroc_per_disease,
+    pr_per_disease,
+    roc_per_disease,
+)
 from .results import Results
-
-
-def average_auc_score():
-    return
-
-
-def average_bedroc_score():
-    return
-
-
-def average_roc_curve():
-    return
-
 
 __all__ = [
     "Evaluation",
-    "bedroc_scores",
-    "auc_scores",
+    "auc_per_disease",
+    "bedroc_per_disease",
+    "roc_per_disease",
+    "pr_per_disease",
+    "avg_precision_per_disease",
     "Results",
 ]

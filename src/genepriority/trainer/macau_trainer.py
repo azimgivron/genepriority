@@ -21,11 +21,13 @@ import tensorflow as tf
 from genepriority.models.macau import MacauSession
 from genepriority.models.matrix_completion_result import MatrixCompletionResult
 from genepriority.preprocessing.dataloader import DataLoader
-from genepriority.preprocessing.side_information_loader import \
-    SideInformationLoader
+from genepriority.preprocessing.side_information_loader import SideInformationLoader
 from genepriority.trainer.base import BaseTrainer
-from genepriority.utils import (calculate_auroc_auprc, create_tb_dir,
-                                mask_sparse_containing_0s)
+from genepriority.utils import (
+    calculate_auroc_auprc,
+    create_tb_dir,
+    mask_sparse_containing_0s,
+)
 
 
 class MACAUTrainer(BaseTrainer):

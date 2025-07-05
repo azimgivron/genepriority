@@ -22,8 +22,7 @@ from tqdm import tqdm
 from genepriority.evaluation.evaluation import Evaluation
 from genepriority.evaluation.results import Results
 from genepriority.preprocessing.dataloader import DataLoader
-from genepriority.preprocessing.side_information_loader import \
-    SideInformationLoader
+from genepriority.preprocessing.side_information_loader import SideInformationLoader
 
 
 class BaseTrainer(metaclass=ABCMeta):
@@ -205,7 +204,7 @@ class BaseTrainer(metaclass=ABCMeta):
                 Results(
                     y_true=self.dataloader.omim.toarray(),
                     y_pred=y_pred,
-                    mask=test_mask.toarray(),
+                    mask=test_mask,
                 )
             )
         return Evaluation(results)
