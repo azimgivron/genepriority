@@ -190,7 +190,7 @@ class SideInformationLoader:
                 self.logger.debug(
                     "Using TruncatedSVD to reduce gene features from %d to %d",
                     self.gene_side_info.shape[1],
-                    self.max_dims,
+                    min(self.max_dims, self.gene_side_info.shape[1]),
                 )
                 self.gene_side_info = TruncatedSVD(
                     n_components=self.max_dims
@@ -200,11 +200,13 @@ class SideInformationLoader:
                 self.logger.debug(
                     "Using TruncatedSVD to reduce disease features from %d to %d",
                     self.disease_side_info.shape[1],
-                    self.max_dims,
+                    min(self.max_dims, self.disease_side_info.shape[1]),
                 )
                 self.disease_side_info = TruncatedSVD(
                     n_components=self.max_dims
                 ).fit_transform(self.disease_side_info)
         self.logger.debug(
-            "Processed gene-side information and disease-side information successfully."
+            "Processed gene-side information of shape %s and disease-side information of shape %s successfully.",
+            self.gene_side_info.shape,
+            self.disease_side_info.shape
         )

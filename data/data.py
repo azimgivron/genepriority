@@ -329,15 +329,11 @@ def process_phen_terms(raw: Path, cfg: FileConfig) -> pd.DataFrame:
         cfg (FileConfig): File configuration.
 
     Returns:
-        pd.DataFrame: DataFrame with ['Disease ID', 'Phenotype term'].
+        pd.DataFrame: DataFrame with ["Phenotypic term ID", 'Phenotype term'].
     """
     raw_terms = load_mat(raw / cfg.phen_terms, "omim_terms")
     terms = [t.item() for t in raw_terms.squeeze()]
-    df = pd.DataFrame({"Disease ID": np.arange(len(terms)), "Phenotype term": terms})
-    if (
-        df["Disease ID"].min() > 0 and df["Disease ID"].max() > NB_DISEASES
-    ):  # indexes are starting at 1
-        df["Disease ID"] -= 1
+    df = pd.DataFrame({"Phenotypic term ID": np.arange(len(terms)), "Phenotype term": terms})
     return df
 
 
