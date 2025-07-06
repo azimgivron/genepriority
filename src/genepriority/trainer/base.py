@@ -201,29 +201,18 @@ class BaseTrainer(metaclass=ABCMeta):
             mask_train.append(train_mask.toarray())
             mask_val.append(validation_mask.toarray())
             mask_test.append(test_mask)
-            # training_status = session.run()
+            training_status = session.run()
 
-            # self.post_training_callback(training_status, session, validation_mask)
+            self.post_training_callback(training_status, session, validation_mask)
 
-            # y_pred = self.predict(session)
-            # results.append(
-            #     Results(
-            #         y_true=self.dataloader.omim.toarray(),
-            #         y_pred=y_pred,
-            #         mask=test_mask,
-            #     )
-            # )
-        np.savez_compressed(
-            "/home/TheGreatestCoder/code/experiments/data",
-            gene_disease=self.dataloader.omim.toarray(),
-            mask_train=np.stack(mask_train, axis=0),
-            mask_val=np.stack(mask_val, axis=0),
-            mask_test=np.stack(mask_test, axis=0),
-            gene_feats=side_info[0],
-            disease_feats=side_info[1],
-            allow_pickle=True,
-        )
-        exit()
+            y_pred = self.predict(session)
+            results.append(
+                Results(
+                    y_true=self.dataloader.omim.toarray(),
+                    y_pred=y_pred,
+                    mask=test_mask,
+                )
+            )
         return Evaluation(results)
 
     def log_data(self, set_name: str, data: sp.csr_matrix):
