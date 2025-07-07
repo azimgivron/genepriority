@@ -19,6 +19,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from pandas.api.types import is_numeric_dtype
 from scipy.io import loadmat
 
 NB_GENES: int = 14_195
@@ -519,11 +520,18 @@ def main():
     }
     for key, df in datasets.items():
         logging.info(
-            "ID in %s ranges from %d to %d.",
+            "First column IDs in %s ranges from %d to %d.",
             key,
             df.iloc[:, 0].min(),
             df.iloc[:, 0].max(),
         )
+        if is_numeric_dtype(df.iloc[:, 1].dtype):
+            logging.info(
+                "Second column IDs in %s ranges from %d to %d.",
+                key,
+                df.iloc[:, 1].min(),
+                df.iloc[:, 1].max(),
+            )
 
     # Verify consistency before saving
     verify_datasets_consistency(datasets, cfg)
