@@ -1,6 +1,7 @@
 from typing import Tuple
 
 import numpy as np
+from sklearn.decomposition import TruncatedSVD
 
 from genepriority.models.base_nega import BaseNEGA
 
@@ -17,10 +18,24 @@ class Nega(BaseNEGA):
         super().__init__(*args, **kwargs)
         # Initialize factor matrices based solely on the matrix dimensions.
         num_rows, num_cols = self.matrix.shape
-        self.h1 = np.random.randn(num_rows, self.rank)
-        self.h2 = np.random.randn(self.rank, num_cols)
+
+        # Apply the train mask: unobserved entries are set to zero
+        observed_matrix = np.zeros_like(self.matrix)
+        observed_matrix[self.train_mask] = self.matrix[self.train_mask]
+
+        # Perform Truncated SVD on the observed matrix
+        svd = TruncatedSVD(n_components=self.rank, n_iter=7, random_state=0)
+        row_embeddings = svd.fit_transform(observed_matrix)  # shape: (n_rows, rank)
+        singular_values = svd.singular_values_  # shape: (rank,)
+        column_embeddings = svd.components_  # shape: (rank, n_cols)
+
+        # Distribute singular values evenly across the two factor matrices
+        sqrt_singular_values = np.diag(np.sqrt(singular_values))
+        self.h1 = row_embeddings @ sqrt_singular_values  # shape: (n_rows, rank)
+        self.h2 = sqrt_singular_values @ column_embeddings  # shape: (rank, n_cols)
+
         self.logger.debug(
-            "Initialized h1 with shape %s and h2 with shape %s",
+            "Initialized h1 with shape %s and h2 with shape %s using masked TruncatedSVD",
             self.h1.shape,
             self.h2.shape,
         )
@@ -149,9 +164,9 @@ class Nega(BaseNEGA):
         t_k = self.cardano(tau, delta)
 
         W_k_next = (1 / t_k) * step
-        m = self.h1.shape[0]
-        self.h1 = W_k_next[:m, :]
-        self.h2 = W_k_next[m:, :].T
+        split = self.h1.shape[0]
+        self.h1 = W_k_next[:split, :]
+        self.h2 = W_k_next[split:, :].T
 
         loss = self.calculate_loss()
         return W_k_next, loss

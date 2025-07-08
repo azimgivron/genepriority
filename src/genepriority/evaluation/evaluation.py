@@ -9,13 +9,10 @@ from typing import Callable, Dict, List
 
 import numpy as np
 
-from genepriority.evaluation.metrics import (
-    auc_per_disease,
-    avg_precision_per_disease,
-    bedroc_per_disease,
-    pr_per_disease,
-    roc_per_disease,
-)
+from genepriority.evaluation.metrics import (auc_per_disease,
+                                             avg_precision_per_disease,
+                                             bedroc_per_disease,
+                                             pr_per_disease, roc_per_disease)
 from genepriority.evaluation.results import Results
 
 

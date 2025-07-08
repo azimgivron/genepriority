@@ -8,11 +8,11 @@ The API is designed to be straightforward and intuitive, offering configurable p
 for training, evaluation, and prediction of low-rank approximations.
 
 Key Components:
-- BaseMatrixCompletion: An abstract base class that encapsulates the common configuration,
+- BaseNEGA: An abstract base class that encapsulates the common configuration,
   training routines, and evaluation metrics for matrix completion.
-- SideInfoMatrixCompletion: A specialized session that integrates auxiliary side information
+- NegaSi: A specialized session that integrates auxiliary side information
   (e.g., gene and disease features) into the matrix completion process.
-- StandardMatrixCompletion: A standard implementation for matrix completion without side
+- Nega: A standard implementation for matrix completion without side
     information.
 
 Features:

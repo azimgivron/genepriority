@@ -43,7 +43,7 @@ def run(
     trainer.path = results_path
     result = trainer.train_test_cross_validation(
         num_latent=None,
-        save_name=f"baseline.pickle",
+        save_name="baseline.pickle",
     )
     serialize(result, results_path / results_filename)
 

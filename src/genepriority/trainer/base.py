@@ -22,7 +22,8 @@ from tqdm import tqdm
 from genepriority.evaluation.evaluation import Evaluation
 from genepriority.evaluation.results import Results
 from genepriority.preprocessing.dataloader import DataLoader
-from genepriority.preprocessing.side_information_loader import SideInformationLoader
+from genepriority.preprocessing.side_information_loader import \
+    SideInformationLoader
 
 
 class BaseTrainer(metaclass=ABCMeta):
@@ -197,7 +198,7 @@ class BaseTrainer(metaclass=ABCMeta):
                 run_name += "-no-0s"
             run_name += f"-{self.__class__.__name__}"
             self.pre_training_callback(session, run_name)
-            
+
             mask_train.append(train_mask.toarray())
             mask_val.append(validation_mask.toarray())
             mask_test.append(test_mask)

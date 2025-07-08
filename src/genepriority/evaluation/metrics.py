@@ -116,8 +116,7 @@ def bedroc_score(y_true: np.ndarray, y_pred: np.ndarray, alpha: float = 20.0) ->
         score = np.round(score, 10)
         assert 0 <= score <= 1, f"BEDROC must be in [0;1]. Found => {score}"
         return score
-    else:
-        return 1.0
+    return 1.0
 
 
 def bedroc_per_disease(
@@ -150,7 +149,7 @@ def bedroc_per_disease(
         n_pos = int(labels.sum())
         mask.append(n_pos > 0)
 
-        if n_pos == 0 or n_pos == gene_number:
+        if n_pos in (0, gene_number):
             # undefined if no positives or no negatives
             scores.append(np.nan)
             continue
@@ -217,7 +216,7 @@ def metric_per_disease(
         n_pos = int(labels.sum())
         mask.append(n_pos > 0)
 
-        if n_pos == 0 or n_pos == gene_number:
+        if n_pos in (0, gene_number):
             # undefined if no positives or no negatives
             scores.append(np.nan)
             continue
@@ -296,7 +295,7 @@ def build_curves_per_disease(
     scores = []
     for labels, scores_pred in zip(y_true, y_pred):
         n_pos = int(labels.sum())
-        if n_pos == 0 or n_pos == gene_number:
+        if n_pos in (0, gene_number):
             continue
 
         first, second, thr = func(labels, scores_pred)

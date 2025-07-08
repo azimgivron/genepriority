@@ -24,7 +24,8 @@ from genepriority.models.flip_labels import FlipLabels
 from genepriority.models.matrix_completion_result import MatrixCompletionResult
 from genepriority.models.nega import NegaSession
 from genepriority.preprocessing.dataloader import DataLoader
-from genepriority.preprocessing.side_information_loader import SideInformationLoader
+from genepriority.preprocessing.side_information_loader import \
+    SideInformationLoader
 from genepriority.trainer.base import BaseTrainer
 from genepriority.utils import create_tb_dir
 
@@ -190,7 +191,7 @@ class NEGTrainer(BaseTrainer):
         test_mask: sp.csr_matrix,
         num_latent: int,
         save_name: Union[str, Path],
-        side_info: Tuple[sp.csr_matrix, sp.csr_matrix],
+        side_info: Tuple[np.ndarray, np.ndarray],
     ) -> NegaSession:
         """
         Create a session for model training and evaluation.
@@ -201,7 +202,7 @@ class NEGTrainer(BaseTrainer):
             test_mask (sp.csr_matrix): The test mask.
             num_latent (int): The number of latent dimensions for the model.
             save_name (Union[str, Path]): Filename or path for saving model snapshots.
-            side_info (Tuple[sp.csr_matrix, sp.csr_matrix]): The side information
+            side_info (Tuple[np.ndarray, np.ndarray]): The side information
                 for both genes and diseases.
 
         Returns:

@@ -2,57 +2,83 @@ from typing import Tuple
 
 import numpy as np
 import scipy.sparse as sp
+from sklearn.decomposition import TruncatedSVD
 
 from genepriority.models.base_nega import BaseNEGA
 
 
 class NegaSi(BaseNEGA):
     """
-    Specialized matrix completion session that incorporates side information.
-
-    Attributes:
-        gene_side_info (np.ndarray): Side information for genes (shape: n x g).
-        disease_side_info (np.ndarray): Side information for diseases (shape: m x d).
-        gene_similarity_inv (np.ndarray): Pseudoinverse of the gene-by-gene similarity
-            matrix (shape: n x n).
-        disease_similarity_inv (np.ndarray): Pseudoinverse of the disease-by-disease
-            similarity matrix (shape: m x m).
-        h1 (np.ndarray): Left latent factor matrix (shape: g x rank).
-        h2 (np.ndarray): Right latent factor matrix (shape: rank x d).
+    Matrix completion session with side information.
     """
 
     def __init__(
-        self, *args, side_info: Tuple[sp.csr_matrix, sp.csr_matrix] = None, **kwargs
+        self, *args, side_info: Tuple[np.ndarray, np.ndarray] = None, **kwargs
     ):
         """
-        Initializes the session with side information.
+        Initializes the session with side information using TruncatedSVD.
 
         Args:
-            side_info (Tuple[sp.csr_matrix, sp.csr_matrix]): Tuple containing gene and disease
-                side information matrices.
+            side_info (Tuple[np.ndarray, np.ndarray]): Tuple containing
+                (gene_feature_matrix, disease_feature_matrix).
         """
         super().__init__(*args, **kwargs)
+
         if side_info is None:
             raise ValueError("Side information must be provided for this session.")
-        gene_side_info, disease_side_info = side_info
-        if self.matrix.shape[0] != gene_side_info.shape[0]:
+
+        gene_feature_matrix, disease_feature_matrix = side_info
+
+        if self.matrix.shape[0] != gene_feature_matrix.shape[0]:
             raise ValueError(
-                "Dimension 0 of matrix does not match dimension 0 of gene side information."
+                "Number of rows in the matrix does not match gene features."
             )
-        if self.matrix.shape[1] != disease_side_info.shape[0]:
+        if self.matrix.shape[1] != disease_feature_matrix.shape[0]:
             raise ValueError(
-                "Dimension 1 of matrix does not match dimension 0 of disease side information."
+                "Number of columns in the matrix does not match disease features."
             )
 
-        self.gene_side_info = gene_side_info
-        self.disease_side_info = disease_side_info
+        self.gene_side_info = gene_feature_matrix
+        self.disease_side_info = disease_feature_matrix
 
-        # Initialize factor matrices based on side information dimensions.
-        self.h1 = np.random.randn(self.gene_side_info.shape[1], self.rank)
-        self.h2 = np.random.randn(self.rank, self.disease_side_info.shape[1])
+        # Masked matrix: only use observed training values
+        observed_matrix = np.zeros_like(self.matrix)
+        observed_matrix[self.train_mask] = self.matrix[self.train_mask]
+
+        # Low-rank approximation via Truncated SVD
+        svd = TruncatedSVD(n_components=self.rank, n_iter=7, random_state=0)
+        gene_embeddings = svd.fit_transform(observed_matrix)  # shape: (n_genes, rank)
+        singular_values = svd.singular_values_  # shape: (rank,)
+        disease_embeddings = svd.components_  # shape: (rank, n_diseases)
+
+        # Distribute square root of singular values to factor matrices
+        left_projection = gene_embeddings @ np.diag(
+            np.sqrt(singular_values)
+        )  # shape: (n_genes, rank)
+        right_projection = (
+            np.diag(np.sqrt(singular_values)) @ disease_embeddings
+        )  # shape: (rank, n_diseases)
+
+        # Backsolve for h1 and h2 using pseudoinverses
+        gene_features = gene_feature_matrix  # shape: (n_genes, gene_feat_dim)
+        disease_features = (
+            disease_feature_matrix
+        )  # shape: (n_diseases, disease_feat_dim)
+
+        gene_features_pinv = np.linalg.pinv(
+            gene_features
+        )  # shape: (gene_feat_dim, n_genes)
+        disease_features_pinv = np.linalg.pinv(
+            disease_features
+        )  # shape: (disease_feat_dim, n_diseases)
+
+        self.h1 = gene_features_pinv @ left_projection  # shape: (gene_feat_dim, rank)
+        self.h2 = (
+            right_projection @ disease_features_pinv
+        )  # shape: (rank, disease_feat_dim)
 
         self.logger.debug(
-            "Initialized h1 with shape %s and h2 with shape %s",
+            "Initialized h1 with shape %s and h2 with shape %s using SVD with side information",
             self.h1.shape,
             self.h2.shape,
         )
@@ -136,7 +162,8 @@ class NegaSi(BaseNEGA):
         grad_f_W_k: np.ndarray,
     ) -> Tuple[np.ndarray, float]:
         """
-        Performs a single non-Euclidean Bregman-proximal update step for the side-information kernel.
+        Performs a single non-Euclidean Bregman-proximal update step for
+        the side-information kernel.
 
         Given the current stacked latent W_k = [h1_k; h2_kᵀ], with
             h1_k ∈ R^{gxr},   h2_k ∈ R^{rxd},

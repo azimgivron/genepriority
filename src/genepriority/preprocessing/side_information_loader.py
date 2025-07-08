@@ -148,11 +148,13 @@ class SideInformationLoader:
                 "`%s` is a matrix of shape %s with non-zero entries level of %.3f%%.",
                 dataframe.name,
                 side_info_mat.shape,
-                side_info_mat.nnz / (side_info_mat.shape[0]*side_info_mat.shape[1]) * 100,
+                side_info_mat.nnz
+                / (side_info_mat.shape[0] * side_info_mat.shape[1])
+                * 100,
             )
         stacked = sp.hstack(side_info)
         normalized = stacked / sp.linalg.norm(stacked, ord="fro")
-        return normalized
+        return normalized.toarray()
 
     def process_side_info(
         self,
@@ -170,12 +172,12 @@ class SideInformationLoader:
 
         """
         names = [path.stem for path in gene_side_info_paths + disease_side_info_paths]
-        
+
         def read(path: Path) -> pd.DataFrame:
-            df = pd.read_csv(path)
-            df.name = path.stem
-            return df
-        
+            dataframe = pd.read_csv(path)
+            dataframe.name = path.stem
+            return dataframe
+
         gene_dataframes = [read(path) for path in gene_side_info_paths]
         disease_dataframes = [read(path) for path in disease_side_info_paths]
         shapes = [dataframe.shape for dataframe in gene_dataframes + disease_dataframes]
@@ -204,9 +206,7 @@ class SideInformationLoader:
                     self.gene_side_info.shape[1],
                     min(self.max_dims, self.gene_side_info.shape[1]),
                 )
-                svd = TruncatedSVD(
-                    n_components=self.max_dims
-                )
+                svd = TruncatedSVD(n_components=self.max_dims)
                 self.gene_side_info = svd.fit_transform(self.gene_side_info)
             if self.disease_side_info.shape[1] > self.max_dims:
                 self.logger.debug(
@@ -214,12 +214,11 @@ class SideInformationLoader:
                     self.disease_side_info.shape[1],
                     min(self.max_dims, self.disease_side_info.shape[1]),
                 )
-                svd = TruncatedSVD(
-                    n_components=self.max_dims
-                )
+                svd = TruncatedSVD(n_components=self.max_dims)
                 self.disease_side_info = svd.fit_transform(self.disease_side_info)
         self.logger.debug(
-            "Processed gene-side information of shape %s and disease-side information of shape %s successfully.",
+            ("Processed gene-side information of shape %s and disease-side"
+            " information of shape %s successfully."),
             self.gene_side_info.shape,
-            self.disease_side_info.shape
+            self.disease_side_info.shape,
         )
