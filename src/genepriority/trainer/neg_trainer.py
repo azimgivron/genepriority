@@ -209,7 +209,7 @@ class NEGTrainer(BaseTrainer):
         """
         kwargs = self.neg_session_kwargs
         if self.flip_fraction is not None:
-            ones_indices = np.argwhere((self.dataloader.omim * train_mask) == 1)
+            ones_indices = np.argwhere(self.dataloader.omim.multiply(train_mask))
             kwargs["flip_labels"] = FlipLabels(
                 self.flip_fraction, self.flip_frequency, ones_indices
             )
