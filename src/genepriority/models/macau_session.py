@@ -137,8 +137,8 @@ class MacauSession:
                 """
                 start_time = time.time()
                 self.init()
-                rmse: list[float] = []
-                loss: list[float] = []
+                rmse = []
+                loss = []
                 status_item = self.step()
                 while status_item is not None:
                     if self.writer is not None and status_item.phase == "Sample":
