@@ -6,11 +6,29 @@ Macau Module
 This module provides an extension of the `smurff.MacauSession` class to include additional
 logging capabilities for TensorBoard. The extension enables tracking training and testing
 losses during matrix completion. If `smurff` is not installed, the class cannot be instantiated.
+
+Classes:
+    MacauSession:
+        A dynamically defined subclass of `smurff.MacauSession` that integrates TensorBoard logging.
+
+        Attributes:
+            writer (tf.summary.SummaryWriter | None): TensorBoard SummaryWriter for logging metrics.
+            num_latent (int): Number of latent dimensions.
+            nsamples (int): Number of posterior samples.
+            burnin (int): Number of burn-in iterations.
+            direct (bool): Flag for solver type (Cholesky vs CG).
+            univariate (bool): Flag for sampling method.
+
+Methods:
+    __new__(*args: Any, **kwargs: Any) -> Any:
+        Creates an instance of the internal `_MacauSession` subclass if `smurff` is available.
+
+    run() -> MatrixCompletionResult:
+        Executes matrix completion and logs metrics to TensorBoard if a writer is set.
 """
 
 import time
-from typing import Any, Optional
-
+from typing import Any
 import scipy.sparse as sp
 import tensorflow as tf
 
@@ -30,6 +48,14 @@ class MacauSession:
 
     This wrapper allows import of the class regardless of whether `smurff` is installed.
     However, instantiation will raise an ImportError if `smurff` is missing.
+
+    Attributes:
+        writer (tf.summary.SummaryWriter | None): TensorBoard SummaryWriter for logging metrics.
+        num_latent (int): Number of latent dimensions.
+        nsamples (int): Number of posterior samples.
+        burnin (int): Number of burn-in iterations.
+        direct (bool): Flag for solver type (Cholesky vs CG).
+        univariate (bool): Flag for sampling method.
     """
 
     def __new__(cls, *args: Any, **kwargs: Any) -> Any:
@@ -40,7 +66,7 @@ class MacauSession:
             ImportError: If the `smurff` library is not installed.
 
         Returns:
-            An instance of a subclass of `smurff.MacauSession` with logging capabilities.
+            _MacauSession: A subclass of `smurff.MacauSession` with logging capabilities.
         """
         if not _has_smurff:
             raise ImportError("The 'smurff' library is required to instantiate MacauSession.")
@@ -59,7 +85,7 @@ class MacauSession:
                 univariate: bool,
                 Ytrain: sp.csr_matrix,
                 Ytest: sp.csr_matrix,
-                writer: Optional[tf.summary.SummaryWriter] = None,
+                writer: tf.summary.SummaryWriter = None,
                 center: bool = False,
                 **kwargs: Any,
             ) -> None:
@@ -68,15 +94,15 @@ class MacauSession:
 
                 Args:
                     num_latent (int): Number of latent dimensions in the model.
-                    nsamples (int): The number of posterior samples to draw during training.
-                    burnin (int): The number of burn-in iterations.
+                    nsamples (int): Number of posterior samples to draw during training.
+                    burnin (int): Number of burn-in iterations.
                     direct (bool): Whether to use a Cholesky or CG solver.
                     univariate (bool): Whether to use univariate or multivariate sampling.
-                    Ytrain (sp.csr_matrix): Training matrix.
-                    Ytest (sp.csr_matrix): Testing matrix.
-                    writer (tf.summary.SummaryWriter, optional): TensorBoard writer.
+                    Ytrain (sp.csr_matrix): Training sparse matrix.
+                    Ytest (sp.csr_matrix): Testing sparse matrix.
+                    writer (tf.summary.SummaryWriter | None): TensorBoard SummaryWriter instance.
                     center (bool): Whether to center the data before training.
-                    **kwargs: Additional keyword arguments for `smurff.MacauSession`.
+                    **kwargs (Any): Additional keyword arguments for `smurff.MacauSession`.
                 """
                 if center:
                     Ytrain, global_mean, _ = smurff.center_and_scale(
@@ -94,20 +120,20 @@ class MacauSession:
                     Ytest=Ytest,
                     **kwargs,
                 )
-                self.num_latent: int = num_latent
-                self.nsamples: int = nsamples
-                self.burnin: int = burnin
-                self.direct: bool = direct
-                self.univariate: bool = univariate
-                self.writer: Optional[tf.summary.SummaryWriter] = writer
+                self.num_latent = num_latent
+                self.nsamples = nsamples
+                self.burnin = burnin
+                self.direct = direct
+                self.univariate = univariate
+                self.writer = writer
 
             def run(self) -> MatrixCompletionResult:
                 """
-                Executes matrix factorization and logs metrics to TensorBoard if a writer is set.
+                Executes matrix completion and logs training and testing metrics to TensorBoard.
 
                 Returns:
-                    MatrixCompletionResult: Contains training loss, RMSE history,
-                    total iterations, and elapsed runtime.
+                    MatrixCompletionResult: Contains training loss history, RMSE history,
+                    total iterations, and runtime.
                 """
                 start_time = time.time()
                 self.init()
@@ -117,8 +143,16 @@ class MacauSession:
                 while status_item is not None:
                     if self.writer is not None and status_item.phase == "Sample":
                         with self.writer.as_default():
-                            tf.summary.scalar("training_loss", status_item.train_rmse, step=status_item.iter)
-                            tf.summary.scalar("testing_loss", status_item.rmse_avg, step=status_item.iter)
+                            tf.summary.scalar(
+                                "training_loss",
+                                status_item.train_rmse,
+                                step=status_item.iter,
+                            )
+                            tf.summary.scalar(
+                                "testing_loss",
+                                status_item.rmse_avg,
+                                step=status_item.iter,
+                            )
                             tf.summary.flush()
                     iterations_count = status_item.iter
                     rmse.append(status_item.rmse_avg)
