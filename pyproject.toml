@@ -7,7 +7,7 @@ name = "genepriority"
 readme = "README.md"
 description = "Implements matrix completion algorithms for gene prioritization on the OMIM gene-disease matrix"
 classifiers = ["Programming Language :: Python :: 3.11"]
-requires-python = ">=3.11"
+requires-python = ">=3.11,<3.13"
 dynamic = ["version", "dependencies"]
 
 [project.scripts]
