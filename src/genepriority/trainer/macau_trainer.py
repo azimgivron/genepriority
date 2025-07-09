@@ -18,7 +18,7 @@ import pandas as pd
 import scipy.sparse as sp
 import tensorflow as tf
 
-from genepriority.models.macau import MacauSession
+from genepriority.models.macau_session import MacauSession
 from genepriority.models.matrix_completion_result import MatrixCompletionResult
 from genepriority.preprocessing.dataloader import DataLoader
 from genepriority.preprocessing.side_information_loader import \
