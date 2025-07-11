@@ -12,12 +12,12 @@ Hey there! Welcome to **genepriority** – your go-to repo for rocking matrix co
 
 ## Algorithms in Action
 
-We’re using two awesome methods:
+We’re using a family of matrix completion models:
 
-1. **Non-Euclidean Gradient Algorithm (NEGA2)**  
-   Check out the paper *"Non-Euclidean Gradient Methods: Convergence, Complexity, and Applications"* for all the math magic.
-2. **GeneHound**  
-   Based on *"Gene prioritization using Bayesian matrix factorization with genomic and phenotypic side information"* ([Zakeri et al., 2018](https://pubmed.ncbi.nlm.nih.gov/29949967/)).
+1. **Non-Euclidean Gradient Algorithm (NEGA2)** – the core optimizer for standard matrix completion.
+2. **NEGA‑IMC** – NEGA coupled with *Inductive Matrix Completion* to exploit gene and disease features.
+3. **NEGA‑GeneHound** – NEGA using GeneHound-style Bayesian priors on the latent factors.
+4. **GeneHound** – the original Bayesian matrix factorization method ([Zakeri et al., 2018](https://pubmed.ncbi.nlm.nih.gov/29949967/)).
 
 ### Complete References
 - Ghaderi, S., Moreau, Y., & Ahookhosh, M. (2022). *Non-Euclidean Gradient Methods: Convergence, Complexity, and Applications*. JMLR, 23(2022):1-44.
@@ -36,7 +36,7 @@ We tackle gene prioritization as a **matrix completion** challenge. In simple te
 Our goal is to optimize:
 
 $$
-\min_{W, H} \quad \frac{1}{2}\bigl\|B \odot (R - W H^T)\bigr\|^2_2 + \lambda_1 \|W\|_F^2 + \lambda_2 \|H\|_F^2
+\min_{W, H} \quad \frac{1}{2}\bigl\|B \odot (R - W H^T)\bigr\|^2_2 + \lambda_W \|W\|_F^2 + \lambda_H \|H\|_F^2
 $$
 
 where:  
@@ -78,22 +78,37 @@ This formulation keeps the update step convex and ensures we gradually converge 
 
 ## NEGA with Side Info 🤩
 
-We've taken NEGA to the next level by adding some extra flavor – incorporating genomic and phenotypic side info! This upgrade means our model not only leverages the primary association matrix but also taps into additional gene and disease characteristics to boost prioritization performance. 🚀
+We've taken NEGA to the next level by incorporating genomic and phenotypic side info! This upgrade allows the model to exploit additional gene and disease characteristics to boost prioritization performance. 🚀
 
-The updated objective function now becomes:
+### Inductive Matrix Completion
+
+The IMC-based formulation augments the reconstruction with feature matrices:
 
 $$
-\min_{W, H} \quad \frac{1}{2}\Bigl\|B \odot \Bigl(R - X W H^T Y^T\Bigr)\Bigr\|^2_2 + \lambda_1 \|W\|_F^2 + \lambda_2 \|H\|_F^2
+\min_{W,H} \quad \frac{1}{2}\Bigl\|B \odot \bigl(R - X W H^T Y^T\bigr)\Bigr\|_2^2 + \lambda_W \|W\|_F^2 + \lambda_H \|H\|_F^2
 $$
 
-where:  
-- **X** is the gene feature matrix – representing the genomic side info.  
-- **Y** is the disease feature matrix – bringing in the phenotypic details.
+where:
+- **X** is the gene feature matrix – genomic side info.
+- **Y** is the disease feature matrix – phenotypic details.
 
-This enhancement helps the model pick up on subtle cues, ultimately leading to smarter gene prioritization! 🔬
+This approach is based on:
+- Nagarajan Natarajan, Inderjit S. Dhillon, *Inductive matrix completion for predicting gene–disease associations*, Bioinformatics 30(12), 2014.
 
-This formulation from:
-- Nagarajan Natarajan, Inderjit S. Dhillon, Inductive matrix completion for predicting gene–disease associations, Bioinformatics, Volume 30, Issue 12, June 2014, Pages i60–i68, https://doi.org/10.1093/bioinformatics/btu269
+### GeneHound Formulation
+
+GeneHound-style side info introduces link matrices that tie the latent factors to the features:
+
+$$
+\min_{W,H,A,C}\; \frac{1}{2}\Bigl\|B \odot (R - W H^T)\Bigr\|_2^2 + \lambda_W \|W - X A\|_F^2 + \lambda_H \|H - Y C\|_F^2 + \lambda_A \|A\|_F^2 + \lambda_C \|C\|_F^2
+$$
+
+Here **A** and **C** map features to the latent space. The additional regularization terms ensure these mappings stay well-behaved.
+
+We offer two flavours for side information:
+
+1. **NEGA‑IMC** – directly uses the feature matrices `X` and `Y` as in the IMC formula above.
+2. **NEGA‑GeneHound** – incorporates link matrices `A` and `C` as shown in the GeneHound objective.
 
 ---
 
@@ -187,7 +202,7 @@ pip install genepriority git+https://github.com/azimgivron/genepriority.git@main
 
 ```bash
 genepriority/
-├── models/                # NEGA2 algorithm implementation
+├── models/                # NEGA variants and GeneHound implementations
 ├── evaluation/            # Tools for evaluation metrics
 ├── preprocessing/         # DataLoader for gene-disease data
 ├── scripts/
@@ -213,7 +228,7 @@ usage: genepriority [-h] {genehound,nega-tuning,nega,post} ...
 **Subcommands:**
 - **genehound:** Run GeneHound with cross-validation on the OMIM dataset.
 - **nega-tuning:** Find the best hyperparameters for NEGA.
-- **nega:** Train and evaluate the NEGA model using cross-validation.
+- **nega:** Train and evaluate the appropriate NEGA variant (standard, IMC, or GeneHound) using cross-validation depending on the provided options.
 
 For more details, run:
 ```bash
