@@ -147,7 +147,6 @@ class DataLoader:
             len(self.omim_masks.finetuning_mask.data),
             np.mean([len(mask.flatten()) for mask in self.omim_masks.testing_masks]),
         )
-
         self.logger.debug("Processed OMIM dataset. Shape: %s", self.omim.shape)
         counts = compute_statistics(self.omim, self.omim_masks)
         self.logger.debug("Disease count statistics:\n%s", counts)

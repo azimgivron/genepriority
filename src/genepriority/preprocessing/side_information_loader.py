@@ -113,7 +113,7 @@ class SideInformationLoader:
 
     def __call__(
         self, side_info_dataframes: List[pd.DataFrame], rows: int
-    ) -> np.ndarray:
+    ) -> sp.csr_matrix:
         """
         Process and convert datasets into sparse matrices in CSR format.
 
@@ -128,7 +128,7 @@ class SideInformationLoader:
             rows (int): Number of rows for the resulting sparse matrices.
 
         Returns:
-            np.ndarray: A dense matrix representing processed normalized side information.
+            sp.csr_matrix: A sparse matrix representing processed normalized side information.
 
         """
         side_info = []
@@ -154,7 +154,7 @@ class SideInformationLoader:
             )
         stacked = sp.hstack(side_info)
         normalized = stacked / sp.linalg.norm(stacked, ord="fro")
-        return normalized.toarray()
+        return normalized
 
     def process_side_info(
         self,
@@ -208,6 +208,9 @@ class SideInformationLoader:
                 )
                 svd = TruncatedSVD(n_components=self.max_dims)
                 self.gene_side_info = svd.fit_transform(self.gene_side_info)
+            else:
+                self.gene_side_info = self.gene_side_info.toarray()
+                
             if self.disease_side_info.shape[1] > self.max_dims:
                 self.logger.debug(
                     "Using TruncatedSVD to reduce disease features from %d to %d",
@@ -216,6 +219,8 @@ class SideInformationLoader:
                 )
                 svd = TruncatedSVD(n_components=self.max_dims)
                 self.disease_side_info = svd.fit_transform(self.disease_side_info)
+            else:
+                self.disease_side_info = self.disease_side_info.toarray()     
         self.logger.debug(
             (
                 "Processed gene-side information of shape %s and disease-side"

@@ -213,6 +213,16 @@ class NegaBase(metaclass=abc.ABCMeta):
             float: tau value.
         """
         raise NotImplementedError
+    
+    @abc.abstractmethod
+    def init_Wk(self) -> np.ndarray:
+        """
+        Initialize weight block matrix.
+
+        Returns:
+            np.ndarray: The weight block matrix.
+        """
+        raise NotImplementedError
 
     def cardano(self, tau: float, delta: float) -> float:
         """
@@ -470,7 +480,7 @@ class NegaBase(metaclass=abc.ABCMeta):
         rmse = [testing_loss]
 
         # Stack h1 and h2 for optimization
-        W_k = np.vstack([self.h1, self.h2.T])
+        W_k = self.init_Wk()
         step_size = 1 / self.smoothness_parameter
         tau = self.init_tau()
         self.logger.debug(

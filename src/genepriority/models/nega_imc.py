@@ -128,6 +128,15 @@ class NegaIMC(NegaBase):
             float: tau value.
         """
         return np.linalg.norm(self.matrix, ord="fro") / 3
+    
+    def init_Wk(self) -> np.ndarray:
+        """
+        Initialize weight block matrix.
+
+        Returns:
+            np.ndarray: The weight block matrix.
+        """
+        return np.vstack([self.h1, self.h2.T])
 
     def kernel(self, W: np.ndarray, tau: float) -> float:
         """

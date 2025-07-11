@@ -128,7 +128,7 @@ class TrainValTestMasks:
             test_mask = np.ones_like(data.toarray(), dtype=bool)
             remove_mask = (
                 self.finetuning_mask + self.validation_mask + train_mask
-            ).toarray()
+            ).toarray().astype(bool)
             test_mask[remove_mask] = False
             self.testing_masks.append(test_mask)
 

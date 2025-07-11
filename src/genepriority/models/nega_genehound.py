@@ -87,9 +87,18 @@ class NegaGeneHound(NegaBase):
         Initialize the tau parameter used in the kernel function.
 
         Returns:
-            float: Initial tau value, set to ||R||_F / 3.
+            float: Initial tau value, set to ||X||_F / 3.
         """
         return np.linalg.norm(self.matrix, ord="fro") / 3
+    
+    def init_Wk(self) -> np.ndarray:
+        """
+        Initialize weight block matrix.
+
+        Returns:
+            np.ndarray: The weight block matrix.
+        """
+        return np.vstack([self.h1, self.h2.T, self.beta_g, self.beta_d])
 
     def kernel(self, W: np.ndarray, tau: float) -> float:
         """
@@ -173,7 +182,7 @@ class NegaGeneHound(NegaBase):
             )
             + self.side_information_reg * self.beta_d
         )
-        return np.vstack(
+        grad_Wk_next = np.vstack(
             [
                 grad_h1,
                 grad_h2.T,
@@ -181,6 +190,7 @@ class NegaGeneHound(NegaBase):
                 grad_beta_d,
             ]
         )
+        return grad_Wk_next
 
     def substep(
         self,
@@ -211,7 +221,7 @@ class NegaGeneHound(NegaBase):
         nb_genes, nb_diseases = self.matrix.shape
         gene_feat_dim = self.beta_g.shape[0]
         self.h1 = W_next[0:nb_genes, :]
-        self.h2 = W_next[nb_genes : nb_genes + nb_diseases, :]
+        self.h2 = W_next[nb_genes : nb_genes + nb_diseases, :].T
         self.beta_g = W_next[
             nb_genes + nb_diseases : nb_genes + nb_diseases + gene_feat_dim, :
         ]
