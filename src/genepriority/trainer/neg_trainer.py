@@ -338,7 +338,7 @@ class NEGTrainer(BaseTrainer):
             iterations: int,
             threshold: int,
             matrix: sp.csr_matrix,
-            side_info: sp.csr_matrix,
+            side_info: np.ndarray,
             train_mask: sp.csr_matrix,
             test_mask: sp.csr_matrix,
         ) -> float:

@@ -1,25 +1,11 @@
 # pylint: disable=C0103,R0913,R0914,R0915,R0902,R0903
 """
-Structured Matrix Completion Module
-====================================
+Non-Euclidean Matrix Completion Algorithm
+==========================================
 
-This module implements matrix completion algorithms using adaptive step size optimization.
-The API is designed to be straightforward and intuitive, offering configurable parameters
-for training, evaluation, and prediction of low-rank approximations.
-
-Key Components:
-- BaseNEGA: An abstract base class that encapsulates the common configuration,
-  training routines, and evaluation metrics for matrix completion.
-- NegaSi: A specialized session that integrates auxiliary side information
-  (e.g., gene and disease features) into the matrix completion process.
-- Nega: A standard implementation for matrix completion without side
-    information.
-
-Features:
-- Adaptive optimization with dynamic step size adjustment.
-- Label noise simulation via controlled flipping of positive entries.
-- Comprehensive evaluation using RMSE and loss metrics.
-- Optional TensorBoard logging for monitoring training progress.
+This module implements Non-Euclidean Matrix Completion Algorithm using adaptive step
+size optimization. The API is designed to be straightforward and intuitive, offering
+configurable parameters for training, evaluation, and prediction of low-rank approximations.
 """
 import abc
 import logging
@@ -38,7 +24,7 @@ from genepriority.models.utils import check_save_name, tsne_plot_to_tensor
 from genepriority.utils import calculate_auroc_auprc, serialize
 
 
-class BaseNEGA(metaclass=abc.ABCMeta):
+class NegaBase(metaclass=abc.ABCMeta):
     """
     Manages the configuration, training, and evaluation of a matrix completion model.
 

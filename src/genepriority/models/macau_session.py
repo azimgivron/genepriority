@@ -29,6 +29,7 @@ Methods:
 
 import time
 from typing import Any
+
 import scipy.sparse as sp
 import tensorflow as tf
 
@@ -36,6 +37,7 @@ from genepriority.models.matrix_completion_result import MatrixCompletionResult
 
 try:
     import smurff
+
     _has_smurff = True
 except ImportError:
     smurff = None
@@ -69,7 +71,9 @@ class MacauSession:
             _MacauSession: A subclass of `smurff.MacauSession` with logging capabilities.
         """
         if not _has_smurff:
-            raise ImportError("The 'smurff' library is required to instantiate MacauSession.")
+            raise ImportError(
+                "The 'smurff' library is required to instantiate MacauSession."
+            )
 
         class _MacauSession(smurff.MacauSession):
             """

@@ -65,7 +65,7 @@ class BaselineTrainer(BaseTrainer):
         test_mask: sp.csr_matrix,
         num_latent: int,
         save_name: Union[str, Path],
-        side_info: Tuple[sp.csr_matrix, sp.csr_matrix],
+        side_info: Tuple[np.ndarray, np.ndarray],
     ) -> BaselineSession:
         """
         Create and configure a BaselineSession for a specific training fold.
@@ -76,7 +76,7 @@ class BaselineTrainer(BaseTrainer):
             test_mask (sp.csr_matrix): Sparse mask indicating test entries.
             num_latent (int): Number of latent dimensions for the baseline model.
             save_name (Union[str, Path]): Filename or path prefix for saving the session.
-            side_info (Tuple[sp.csr_matrix, sp.csr_matrix]): Optional side information
+            side_info (Tuple[np.ndarray, np.ndarray]): Optional side information
                 for genes and diseases (unused by BaselineSession).
 
         Returns:

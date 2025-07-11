@@ -334,7 +334,9 @@ def process_phen_terms(raw: Path, cfg: FileConfig) -> pd.DataFrame:
     """
     raw_terms = load_mat(raw / cfg.phen_terms, "omim_terms")
     terms = [t.item() for t in raw_terms.squeeze()]
-    df = pd.DataFrame({"Phenotypic term ID": np.arange(len(terms)), "Phenotype term": terms})
+    df = pd.DataFrame(
+        {"Phenotypic term ID": np.arange(len(terms)), "Phenotype term": terms}
+    )
     return df
 
 
