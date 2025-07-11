@@ -255,6 +255,8 @@ def nega(args: argparse.Namespace):
             tensorboard_dir=args.tensorboard_dir,
             results_filename=args.results_filename,
             side_info_loader=side_info_loader,
+            side_information_reg=args.side_info_reg,
+            svd_init=args.svd_init
         )
     else:
         raise ValueError(
