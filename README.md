@@ -100,7 +100,7 @@ This approach is based on:
 GeneHound-style side info introduces link matrices that tie the latent factors to the features:
 
 $$
-\min_{W,H,A,C}\; \frac{1}{2}\Bigl\|B \odot (R - W H^T)\Bigr\|_2^2 + \lambda_W \|W - X A\|_F^2 + \lambda_H \|H - Y C\|_F^2 + \lambda_A \|A\|_F^2 + \lambda_C \|C\|_F^2
+\min_{W,H,A,C} \quad \frac{1}{2}\Bigl\|B \odot (R - W H^T)\Bigr\|_2^2 + \lambda_W \|W - X A\|_F^2 + \lambda_H \|H - Y C\|_F^2 + \lambda_A \|A\|_F^2 + \lambda_C \|C\|_F^2
 $$
 
 Here **A** and **C** map features to the latent space. The additional regularization terms ensure these mappings stay well-behaved.
