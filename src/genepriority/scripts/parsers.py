@@ -346,6 +346,24 @@ def parse_nega(subparsers: argparse._SubParsersAction):
         default="results.pickle",
         help="Filename for serialized results (default: %(default)s).",
     )
+    cv_parser.add_argument(
+        "--side-info-reg",
+        type=float,
+        default=None,
+        help=(
+        "The regularization coefficient on the side information "
+        "coefficient when using the Bayesian formulation for NEGA (default: %(default)s)."
+        ),
+    )
+    cv_parser.add_argument(
+        "--svd-init",
+        type=bool,
+        default=False,
+        help=(
+        "Whether to instanciate the matrix factorization using SVD decomposition "
+        "rather than an random initialization (default: %(default)s)."
+        ),
+    )
 
     # Additional arguments specific to the "fine-tune" subcommand
     fine_tune_parser.add_argument(

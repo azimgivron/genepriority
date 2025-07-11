@@ -32,6 +32,7 @@ class NegaSession:
         *args,
         side_info: Tuple[np.ndarray, np.ndarray] = None,
         side_information_reg: float = None,
+        svd_init: bool = False,
         **kwargs,
     ) -> NegaSessionType:
         """
@@ -43,6 +44,8 @@ class NegaSession:
                 for genes and diseases.
             side_information_reg (float, optional): Regularization weight for
                 for the side information.
+            svd_init (bool, optional): Whether to initialize the latent
+                matrices with SVD decomposition. Default to False.
             **kwargs: Keyword arguments for the underlying session class.
 
         Returns:
@@ -50,9 +53,9 @@ class NegaSession:
                 SideInfoMatrixCompletion based on the presence of side_info.
         """
         if side_info is None:
-            return Nega(*args, **kwargs)
+            return Nega(*args, svd_init=svd_init, **kwargs)
         if side_information_reg is None:
-            return NegaIMC(*args, side_info=side_info, **kwargs)
+            return NegaIMC(*args, side_info=side_info, svd_init=svd_init, **kwargs)
         return NegaGeneHound(
             *args,
             side_info=side_info,

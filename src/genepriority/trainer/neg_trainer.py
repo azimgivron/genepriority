@@ -11,7 +11,7 @@ models, generating predictions, and computing evaluation metrics.
 
 import logging
 from pathlib import Path
-from typing import Dict, Tuple, Union
+from typing import Any, Dict, Tuple, Union
 
 import numpy as np
 import optuna
@@ -70,6 +70,7 @@ class NEGTrainer(BaseTrainer):
         path: str,
         seed: int,
         regularization_parameter: float = None,
+        side_information_reg: float = None,
         iterations: int = None,
         symmetry_parameter: float = None,
         smoothness_parameter: float = None,
@@ -79,6 +80,7 @@ class NEGTrainer(BaseTrainer):
         flip_fraction: float = None,
         flip_frequency: int = None,
         patience: int = None,
+        svd_init: bool = None,
         side_info_loader: SideInformationLoader = None,
         tensorboard_dir: Path = None,
     ):
@@ -92,6 +94,8 @@ class NEGTrainer(BaseTrainer):
             seed (int): Random seed to ensure reproducibility.
             regularization_parameter (float, optional): Regularization parameter.
                 Defaults to None.
+            side_information_reg (float): Regularization weight for
+                for the side information. Defaults to None.
             iterations (int), optional: Maximum number of iterations for the optimization process.
                 Defaults to None.
             symmetry_parameter (float, optional): Regularization parameter for gradient adjustments.
@@ -113,9 +117,11 @@ class NEGTrainer(BaseTrainer):
             patience (int, optional): The number of recent epochs/iterations to consider when
                 evaluating the stopping condition. Default is None, meaning no early stopping
                 is used.
+            svd_init (bool): Whether to initialize the latent
+                matrices with SVD decomposition. Defaults to None.
             side_info_loader (SideInformationLoader, optional): Loader for additional side
                 information. Defaults to None.
-           tensorboard_dir (Path, optional): The base directory path where
+            tensorboard_dir (Path, optional): The base directory path where
                 TensorBoard log files are saved. If None, TensorBoard logging is
                 disabled. Defaults to None.
         """
@@ -143,11 +149,13 @@ class NEGTrainer(BaseTrainer):
         self.flip_fraction = flip_fraction
         self.flip_frequency = flip_frequency
         self.patience = patience
+        self.side_information_reg = side_information_reg
+        self.svd_init = svd_init
         self.tensorboard_dir = tensorboard_dir
         self.writer = None
 
     @property
-    def neg_session_kwargs(self) -> Dict[str, any]:
+    def neg_session_kwargs(self) -> Dict[str, Any]:
         """
         Generates keyword arguments for configuring the NEG session.
 
@@ -164,6 +172,8 @@ class NEGTrainer(BaseTrainer):
             "rho_increase": self.rho_increase,
             "rho_decrease": self.rho_decrease,
             "threshold": self.threshold,
+            "side_information_reg": self.side_information_reg,
+            "svd_init": self.svd_init
         }
 
     def predict(

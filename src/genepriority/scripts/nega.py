@@ -106,6 +106,8 @@ def train_eval(
     rho_decrease: float,
     tensorboard_dir: Path,
     results_filename: str,
+    side_information_reg: float,
+    svd_init: bool
 ):
     """
     Trains the NEGA model on the training set and evaluates it on the test set.
@@ -134,7 +136,10 @@ def train_eval(
         rho_decrease (float): Rho decrease factor.
         tensorboard_dir (Path): Directory for TensorBoard logs.
         results_filename (str): Filename to use for saving results.
-
+        side_information_reg (float): Regularization weight for
+            for the side information.
+        svd_init (bool): Whether to initialize the latent
+                matrices with SVD decomposition.
     """
     trainer = NEGTrainer(
         dataloader=dataloader,
@@ -152,6 +157,8 @@ def train_eval(
         rho_increase=rho_increase,
         rho_decrease=rho_decrease,
         tensorboard_dir=tensorboard_dir,
+        side_information_reg=side_information_reg,
+        svd_init=svd_init
     )
     results_path = output_path / str(rank)
     results_path.mkdir(parents=True, exist_ok=True)
