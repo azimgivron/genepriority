@@ -94,7 +94,7 @@ class BaseTrainer(metaclass=ABCMeta):
         test_mask: sp.csr_matrix,
         num_latent: int,
         save_name: Union[str, Path],
-        side_info: Tuple[sp.csr_matrix, sp.csr_matrix],
+        side_info: Tuple[np.ndarray, np.ndarray],
     ) -> Any:
         """
         Create a session for model training and evaluation.
@@ -105,7 +105,7 @@ class BaseTrainer(metaclass=ABCMeta):
             test_mask (sp.csr_matrix): The test mask.
             num_latent (int): The number of latent dimensions for the model.
             save_name (Union[str, Path]): Filename or path for saving model snapshots.
-            side_info (Tuple[sp.csr_matrix, sp.csr_matrix]): The side information
+            side_info (Tuple[np.ndarray, np.ndarray]): The side information
                 for both genes and diseases.
 
         Returns:

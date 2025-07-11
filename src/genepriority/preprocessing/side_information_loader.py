@@ -27,8 +27,8 @@ class SideInformationLoader:
     and transform them into a format suitable for machine learning tasks like gene prioritization.
 
     Attributes:
-        gene_side_info (sp.csr_matrix): The gene-related side information.
-        disease_side_info (List[sp.coo_matrix]): The disease-related side information.
+        gene_side_info (np.ndarray): The gene-related side information.
+        disease_side_info (np.ndarray): The disease-related side information.
         logger (logging.Logger): Logger instance for recording information, warnings,
             and errors.
         nb_genes (int): Number of genes defining the dimensions of gene-side sparse matrices.
@@ -60,11 +60,11 @@ class SideInformationLoader:
         self.disease_side_info = None
 
     @property
-    def side_info(self) -> Tuple[sp.csr_matrix, sp.csr_matrix]:
+    def side_info(self) -> Tuple[np.ndarray, np.ndarray]:
         """Getter of the side information for each dimensions.
 
         Returns:
-            Tuple[sp.csr_matrix, sp.csr_matrix]: The side information
+            Tuple[np.ndarray, np.ndarray]: The side information
                 for both genes and diseases.
         """
         return [self.gene_side_info, self.disease_side_info]
@@ -113,7 +113,7 @@ class SideInformationLoader:
 
     def __call__(
         self, side_info_dataframes: List[pd.DataFrame], rows: int
-    ) -> sp.csr_matrix:
+    ) -> np.ndarray:
         """
         Process and convert datasets into sparse matrices in CSR format.
 
@@ -128,7 +128,7 @@ class SideInformationLoader:
             rows (int): Number of rows for the resulting sparse matrices.
 
         Returns:
-            sp.csr_matrix: A CSR matrix representing processed normalized side information.
+            np.ndarray: A dense matrix representing processed normalized side information.
 
         """
         side_info = []
@@ -217,8 +217,10 @@ class SideInformationLoader:
                 svd = TruncatedSVD(n_components=self.max_dims)
                 self.disease_side_info = svd.fit_transform(self.disease_side_info)
         self.logger.debug(
-            ("Processed gene-side information of shape %s and disease-side"
-            " information of shape %s successfully."),
+            (
+                "Processed gene-side information of shape %s and disease-side"
+                " information of shape %s successfully."
+            ),
             self.gene_side_info.shape,
             self.disease_side_info.shape,
         )
