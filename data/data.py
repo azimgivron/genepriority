@@ -500,6 +500,9 @@ def main():
     parser.add_argument(
         "--overwrite", action="store_true", help="Overwrite existing files"
     )
+    parser.add_argument(
+        "--filter", action="store_true", help="Filter the diseases to only keep those with more 10 known associations"
+    )
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
@@ -520,6 +523,34 @@ def main():
         cfg.out_phen_terms: process_phen_terms(raw, cfg),
         cfg.out_gene_literature: process_text_data(raw, cfg),
     }
+    
+    if args.filter:
+        # 1) Keep only genes linked to ≥ min_gene_nb distinct diseases
+        min_gene_nb = 10
+        gd_df = datasets[cfg.out_gene_disease]
+        filtered_gd = (
+            gd_df
+            .groupby("Disease ID")
+            .filter(lambda grp: grp["Gene ID"].count() >= min_gene_nb)
+            .reset_index(drop=True)
+        )
+
+        # 2) Re‐index Disease IDs from 0…N–1
+        unique_old_ids = filtered_gd["Disease ID"].unique()
+        mapping = {old_id: new_id for new_id, old_id in enumerate(unique_old_ids)}
+        filtered_gd["Disease ID"] = filtered_gd["Disease ID"].map(mapping)
+
+        datasets[cfg.out_gene_disease] = filtered_gd
+
+        # 3) Filter and re‐map in the phenotype tables
+        valid_old_ids = set(unique_old_ids)
+        df = datasets[cfg.out_phen]
+        # keep only rows whose old Disease ID survived filtering
+        df = df[df["Disease ID"].isin(valid_old_ids)].copy()
+        # remap to new contiguous IDs
+        df["Disease ID"] = df["Disease ID"].map(mapping)
+        datasets[cfg.out_phen] = df.reset_index(drop=True)
+
     for key, df in datasets.items():
         logging.info(
             "First column IDs in %s ranges from %d to %d.",

@@ -6,25 +6,6 @@ Macau Module
 This module provides an extension of the `smurff.MacauSession` class to include additional
 logging capabilities for TensorBoard. The extension enables tracking training and testing
 losses during matrix completion. If `smurff` is not installed, the class cannot be instantiated.
-
-Classes:
-    MacauSession:
-        A dynamically defined subclass of `smurff.MacauSession` that integrates TensorBoard logging.
-
-        Attributes:
-            writer (tf.summary.SummaryWriter | None): TensorBoard SummaryWriter for logging metrics.
-            num_latent (int): Number of latent dimensions.
-            nsamples (int): Number of posterior samples.
-            burnin (int): Number of burn-in iterations.
-            direct (bool): Flag for solver type (Cholesky vs CG).
-            univariate (bool): Flag for sampling method.
-
-Methods:
-    __new__(*args: Any, **kwargs: Any) -> Any:
-        Creates an instance of the internal `_MacauSession` subclass if `smurff` is available.
-
-    run() -> MatrixCompletionResult:
-        Executes matrix completion and logs metrics to TensorBoard if a writer is set.
 """
 
 import time
@@ -172,6 +153,5 @@ class MacauSession:
                     runtime=runtime,
                 )
 
-        instance = object.__new__(_MacauSession)
-        instance.__init__(*args, **kwargs)
+        instance = _MacauSession(*args, **kwargs)
         return instance

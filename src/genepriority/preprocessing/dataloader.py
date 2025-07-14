@@ -170,3 +170,4 @@ class DataLoader:
             f"{np.sum(matrix.data == 1):_}",
         )
         self.logger.debug("Non-zero data in OMIM: %s", f"{matrix.nnz:_}")
+        self.logger.debug("Sparsity in OMIM: %s%%", f"{matrix.sum()/(matrix.shape[0]*matrix.shape[1])*100:.3f}")
