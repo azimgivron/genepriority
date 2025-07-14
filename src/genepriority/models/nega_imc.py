@@ -1,4 +1,3 @@
-# pylint: disable=C0103,R0913,R0914,R0915,R0902,R0903
 """
 NEGA with Side Information following the IMC formulation Module.
 =================================================================
@@ -22,7 +21,7 @@ class NegaIMC(NegaBase):
     This model solves the following optimization problem:
 
         Minimize:
-            0.5 * || M ⊙ (X @ h1 @ h2 @ Y.T - R) ||_F^2
+            0.5 * || B ⊙ (X @ h1 @ h2 @ Y.T - R) ||_F^2
             + 0.5 * λ * || h1 ||_F^2
             + 0.5 * λ * || h2 ||_F^2
 

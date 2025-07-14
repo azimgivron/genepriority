@@ -1,4 +1,4 @@
-# pylint: disable=C0103,R0914
+# pylint: disable=C0103,R0914,R0801
 """
 NEGA with Side Information following the Bayesian formulation Module.
 =====================================================================

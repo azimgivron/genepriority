@@ -1,4 +1,3 @@
-# pylint: disable=C0103,R0913,R0914,R0915,R0902,R0903
 """
 NEGA Module
 ==================
@@ -19,7 +18,7 @@ class Nega(NegaBase):
     This model solves the following optimization problem:
 
         Minimize:
-            0.5 * || M ⊙ (h1 @ h2 - R) ||_F^2
+            0.5 * || B ⊙ (h1 @ h2 - R) ||_F^2
             + 0.5 * λ * || h1 ||_F^2
             + 0.5 * λ * || h2 ||_F^2
 
