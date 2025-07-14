@@ -24,7 +24,10 @@ import pandas as pd
 import scipy.sparse as sp
 
 from genepriority.preprocessing.preprocessing import (
-    compute_statistics, convert_dataframe_to_sparse_matrix, sample_zeros)
+    compute_statistics,
+    convert_dataframe_to_sparse_matrix,
+    sample_zeros,
+)
 from genepriority.preprocessing.train_val_test_mask import TrainValTestMasks
 
 
@@ -147,7 +150,6 @@ class DataLoader:
             len(self.omim_masks.finetuning_mask.data),
             np.mean([len(mask.flatten()) for mask in self.omim_masks.testing_masks]),
         )
-
         self.logger.debug("Processed OMIM dataset. Shape: %s", self.omim.shape)
         counts = compute_statistics(self.omim, self.omim_masks)
         self.logger.debug("Disease count statistics:\n%s", counts)

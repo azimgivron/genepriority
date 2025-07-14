@@ -1,4 +1,4 @@
-# pylint: disable=R0903,R0801,R0913
+# pylint: disable=R0903,R0801,R0913,R0914
 """
 TrainValTestMasks module
 ========================
@@ -127,8 +127,10 @@ class TrainValTestMasks:
             self.training_masks.append(train_mask)
             test_mask = np.ones_like(data.toarray(), dtype=bool)
             remove_mask = (
-                self.finetuning_mask + self.validation_mask + train_mask
-            ).toarray()
+                (self.finetuning_mask + self.validation_mask + train_mask)
+                .toarray()
+                .astype(bool)
+            )
             test_mask[remove_mask] = False
             self.testing_masks.append(test_mask)
 

@@ -1,3 +1,4 @@
+# pylint: disable=R0903
 """
 EarlyStopping Module
 ======================
@@ -38,11 +39,11 @@ class EarlyStopping:
         self.since_improved = 0
         self.best_weights = None
 
-    def __call__(self, loss: float, h1: np.ndarray, h2: np.ndarray) -> bool:
+    def __call__(self, loss: float, weight_matrix: np.ndarray) -> bool:
         """
         Update the early stopping criteria with a new loss and model weights.
 
-        On each call, the new loss and a copy of the provided weights (h1 and h2)
+        On each call, the new loss and a copy of the provided weights
         are compared against the best observed metrics. If the loss improves, the
         best_loss, since_improved counter, and best_weights are updated. If no
         improvement is observed for more than 'patience' iterations, early stopping
@@ -50,8 +51,7 @@ class EarlyStopping:
 
         Args:
             loss (float): The latest computed loss value.
-            h1 (np.ndarray): The first set of model parameters (or weights) to track.
-            h2 (np.ndarray): The second set of model parameters (or weights) to track.
+            weight_matrix (np.ndarray): The weight matrix.
 
         Returns:
             bool: True if early stopping condition is met (i.e., no improvement observed
@@ -61,7 +61,7 @@ class EarlyStopping:
             self.best_loss = loss
             self.since_improved = 0
             # Store copies of the weights at the best observed loss
-            self.best_weights = (h1.copy(), h2.copy())
+            self.best_weights = weight_matrix.copy()
         else:
             self.since_improved += 1
 

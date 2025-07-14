@@ -1,3 +1,4 @@
+# pylint: disable=C0103,R0914,R0801
 """
 NEGA with Side Information following the Bayesian formulation Module.
 =====================================================================
@@ -10,6 +11,7 @@ from typing import Tuple
 import numpy as np
 
 from genepriority.models.nega_base import NegaBase
+from genepriority.models.utils import init_from_svd
 
 
 class NegaGeneHound(NegaBase):
@@ -20,7 +22,7 @@ class NegaGeneHound(NegaBase):
     This model solves the following optimization problem:
 
         Minimize:
-            0.5 * || M ⊙ (h1 @ h2 - R) ||_F^2
+            0.5 * || B ⊙ (h1 @ h2 - R) ||_F^2
             + 0.5 * λ * || h1 - 1 @ μ_h1 - G @ β_G ||_F^2
             + 0.5 * λ * || h2 - 1 @ μ_h2 - β_D.T @ D.T ||_F^2
             + 0.5 * λ' * || β_G ||_F^2
@@ -40,6 +42,7 @@ class NegaGeneHound(NegaBase):
         *args,
         side_info: Tuple[np.ndarray, np.ndarray],
         side_information_reg: float,
+        svd_init: bool = False,
         **kwargs,
     ):
         """
@@ -52,6 +55,8 @@ class NegaGeneHound(NegaBase):
                 G (n x g) and disease side information D (m x d).
             side_information_reg (float): Regularization weight for
                 for the side information.
+            svd_init (bool, optional): Whether to initialize the latent
+                matrices with SVD decomposition. Default to False.
             **kwargs: Additional keyword arguments forwarded to BaseNEGA.
 
         Raises:
@@ -73,12 +78,19 @@ class NegaGeneHound(NegaBase):
         self.gene_side_info = gene_side_info
         self.disease_side_info = disease_side_info
 
-        nb_genes, nb_diseases = self.matrix.shape
+        if svd_init:
+            # Apply the train mask: unobserved entries are set to zero
+            observed_matrix = np.zeros_like(self.matrix)
+            observed_matrix[self.train_mask] = self.matrix[self.train_mask]
+
+            self.h1, self.h2 = init_from_svd(observed_matrix, self.rank)
+        else:
+            nb_genes, nb_diseases = self.matrix.shape
+            self.h1 = np.random.randn(nb_genes, self.rank)
+            self.h2 = np.random.randn(self.rank, nb_diseases)
+
         nb_gene_features = gene_side_info.shape[1]
         nb_disease_features = disease_side_info.shape[1]
-
-        self.h1 = np.random.randn(nb_genes, self.rank)
-        self.h2 = np.random.randn(self.rank, nb_diseases)
         self.beta_g = np.random.randn(nb_gene_features, self.rank)
         self.beta_d = np.random.randn(nb_disease_features, self.rank)
 
@@ -87,9 +99,34 @@ class NegaGeneHound(NegaBase):
         Initialize the tau parameter used in the kernel function.
 
         Returns:
-            float: Initial tau value, set to ||R||_F / 3.
+            float: Initial tau value, set to ||X||_F / 3.
         """
         return np.linalg.norm(self.matrix, ord="fro") / 3
+
+    def init_Wk(self) -> np.ndarray:
+        """
+        Initialize weight block matrix.
+
+        Returns:
+            np.ndarray: The weight block matrix.
+        """
+        return np.vstack([self.h1, self.h2.T, self.beta_g, self.beta_d])
+
+    def set_weights(self, weight_matrix: np.ndarray):
+        """
+        Set the weights individually from the stacked block matrix.
+
+        Args:
+            weight_matrix (np.ndarray): The stacked block matrix.
+        """
+        nb_genes, nb_diseases = self.matrix.shape
+        gene_feat_dim = self.beta_g.shape[0]
+        self.h1 = weight_matrix[0:nb_genes, :]
+        self.h2 = weight_matrix[nb_genes : nb_genes + nb_diseases, :].T
+        self.beta_g = weight_matrix[
+            nb_genes + nb_diseases : nb_genes + nb_diseases + gene_feat_dim, :
+        ]
+        self.beta_d = weight_matrix[(nb_genes + nb_diseases + gene_feat_dim) :, :]
 
     def kernel(self, W: np.ndarray, tau: float) -> float:
         """
@@ -173,7 +210,7 @@ class NegaGeneHound(NegaBase):
             )
             + self.side_information_reg * self.beta_d
         )
-        return np.vstack(
+        grad_Wk_next = np.vstack(
             [
                 grad_h1,
                 grad_h2.T,
@@ -181,41 +218,4 @@ class NegaGeneHound(NegaBase):
                 grad_beta_d,
             ]
         )
-
-    def substep(
-        self,
-        W_k: np.ndarray,
-        tau: float,
-        step_size: float,
-        grad_f_W_k: np.ndarray,
-    ) -> Tuple[np.ndarray, float]:
-        """
-        Perform the NEGA Bregman-proximal update and unpack variables.
-
-        Args:
-            W_k (np.ndarray): Current stacked variable matrix.
-            tau (float): Kernel regularization term.
-            step_size (float): Gradient step size.
-            grad_f_W_k (np.ndarray): Gradient of the objective at W_k.
-
-        Returns:
-            Tuple[np.ndarray, float]: Updated stacked variable matrix W_next and the current loss.
-        """
-        step = (
-            np.linalg.norm(W_k, ord="fro") ** 2 + tau
-        ) * W_k - step_size * grad_f_W_k
-        delta = np.linalg.norm(step, ord="fro") ** 2
-        t_k = self.cardano(tau, delta)
-        W_next = step / t_k
-
-        nb_genes, nb_diseases = self.matrix.shape
-        gene_feat_dim = self.beta_g.shape[0]
-        self.h1 = W_next[0:nb_genes, :]
-        self.h2 = W_next[nb_genes : nb_genes + nb_diseases, :]
-        self.beta_g = W_next[
-            nb_genes + nb_diseases : nb_genes + nb_diseases + gene_feat_dim, :
-        ]
-        self.beta_d = W_next[(nb_genes + nb_diseases + gene_feat_dim) :, :]
-
-        loss = self.calculate_loss()
-        return W_next, loss
+        return grad_Wk_next

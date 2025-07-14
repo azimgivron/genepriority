@@ -115,7 +115,10 @@ def compute_statistics(
     """
     counts = []
     for _, test_mask, _, _ in folds:
-        count = sparse_matrix.toarray()[test_mask].sum()
+        matrix = sparse_matrix.toarray()
+        mask = test_mask & (matrix == 1)
+        counts_per_col = mask.sum(axis=0)
+        count = (counts_per_col > 0).sum()
         counts.append(count)
     average_count = np.mean(counts)
     variance_count = np.std(counts)

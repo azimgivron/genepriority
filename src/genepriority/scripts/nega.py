@@ -12,13 +12,13 @@ or a single train/test cycle (train-eval).
 import argparse
 import logging
 from pathlib import Path
+from typing import Literal
 
 import pint
 import yaml
 
 from genepriority.preprocessing.dataloader import DataLoader
-from genepriority.preprocessing.side_information_loader import \
-    SideInformationLoader
+from genepriority.preprocessing.side_information_loader import SideInformationLoader
 from genepriority.scripts.utils import pre_processing
 from genepriority.trainer.neg_trainer import NEGTrainer
 from genepriority.utils import serialize
@@ -38,6 +38,8 @@ def finetune(
     seed: int,
     n_trials: int,
     timeout: float,
+    svd_init: bool,
+    formulation: Literal["imc", "genehound"],
 ):
     """
     Search for hyperparameter tuning of the NEGA model.
@@ -57,8 +59,10 @@ def finetune(
         patience (int): Number of recent epochs/iterations considered for early stopping.
         seed (int): Random seed for reproducibility.
         n_trials (int): Number of trials for the hyperparameter search.
-        timeout (float, optional): Time out in hours.
-
+        timeout (float): Time out in hours.
+        svd_init (bool): Whether to initialize the latent matrices with SVD decomposition.
+        formulation (Literal["imc", "genehound"]): The type of loss formualtion, either
+            "imc" or "genehound".
     """
     trainer = NEGTrainer(
         dataloader=dataloader,
@@ -70,6 +74,8 @@ def finetune(
         flip_fraction=flip_fraction,
         flip_frequency=flip_frequency,
         patience=patience,
+        svd_init=svd_init,
+        formulation=formulation,
     )
     timeout_seconds = pint.Quantity(timeout, "h").to("s").m
     optuna_study = trainer.fine_tune(
@@ -77,7 +83,7 @@ def finetune(
         timeout=timeout_seconds,
         num_latent=rank,
     )
-    filename = f"nega-finetune-rank{rank}"
+    filename = f"nega-{formulation}-finetune-rank{rank}"
     if side_info_loader is None:
         filename += "-no-side-info"
     if not dataloader.zero_sampling_factor > 0:
@@ -106,6 +112,9 @@ def train_eval(
     rho_decrease: float,
     tensorboard_dir: Path,
     results_filename: str,
+    side_information_reg: float,
+    svd_init: bool,
+    formulation: Literal["imc", "genehound"],
 ):
     """
     Trains the NEGA model on the training set and evaluates it on the test set.
@@ -134,7 +143,12 @@ def train_eval(
         rho_decrease (float): Rho decrease factor.
         tensorboard_dir (Path): Directory for TensorBoard logs.
         results_filename (str): Filename to use for saving results.
-
+        side_information_reg (float): Regularization weight for
+            for the side information.
+        svd_init (bool): Whether to initialize the latent
+                matrices with SVD decomposition.
+        formulation (Literal["imc", "genehound"]): The type of loss formualtion, either
+            "imc" or "genehound".
     """
     trainer = NEGTrainer(
         dataloader=dataloader,
@@ -152,13 +166,16 @@ def train_eval(
         rho_increase=rho_increase,
         rho_decrease=rho_decrease,
         tensorboard_dir=tensorboard_dir,
+        side_information_reg=side_information_reg,
+        svd_init=svd_init,
+        formulation=formulation,
     )
     results_path = output_path / str(rank)
     results_path.mkdir(parents=True, exist_ok=True)
     trainer.path = results_path
     result = trainer.train_test_cross_validation(
         rank,
-        save_name=f"nega:latent={rank}.pickle",
+        save_name=f"nega-{formulation}:latent={rank}.pickle",
     )
     serialize(result, results_path / results_filename)
     logger.debug("Serialized results for latent dimension %s saved successfully.", rank)
@@ -204,26 +221,29 @@ def nega(args: argparse.Namespace):
             patience=args.patience,
             n_trials=args.n_trials,
             timeout=args.timeout,
+            svd_init=args.svd_init,
+            formulation=args.formulation,
         )
     elif args.nega_command == "cv":
         logger.debug("Loading configuration file: %s", args.config_path)
         with args.config_path.open("r", encoding="utf-8") as stream:
             config = yaml.safe_load(stream)
         if "side_info" in args and args.side_info is not None and args.side_info:
-            config = config["side-info"]
-            logger.debug("‘side-info‘ configuration loaded.")
+            key = (
+                "side-info-imc" if args.formulation == "imc" else "side-info-genehound"
+            )
         elif (
             "zero_sampling_factor" in args
             and args.zero_sampling_factor is not None
             and args.zero_sampling_factor > 0
         ):
-            config = config["0s"]
-            logger.debug("‘0s‘ configuration loaded.")
+            key = "with-zeros"
         else:
-            config = config["1s"]
-            logger.debug("‘1s‘ configuration loaded.")
-
+            key = "ones-only"
+        config = config[key]
+        logger.debug("‘%s‘ configuration loaded.", key)
         regularization_parameter = config.get("regularization_parameter")
+        side_info_reg = config.get("side_info_regularization", None)
         symmetry_parameter = config.get("symmetry_parameter")
         smoothness_parameter = config.get("smoothness_parameter")
         rho_increase = config.get("rho_increase")
@@ -248,6 +268,9 @@ def nega(args: argparse.Namespace):
             tensorboard_dir=args.tensorboard_dir,
             results_filename=args.results_filename,
             side_info_loader=side_info_loader,
+            side_information_reg=side_info_reg,
+            svd_init=args.svd_init,
+            formulation=args.formulation,
         )
     else:
         raise ValueError(

@@ -293,42 +293,38 @@ def build_curves_per_disease(
             - 1D array of thresholds.
     """
     scores = []
+    thr = np.linspace(0, 1, 1000)
     for labels, scores_pred in zip(y_true, y_pred):
         n_pos = int(labels.sum())
         if n_pos in (0, gene_number):
             continue
 
-        first, second, thr = func(labels, scores_pred)
-        if len(thr) < len(first):
-            first = first[:-1]
-            second = second[:-1]
-        scores.append((first, second, thr))
+        first, second, _ = func(labels, scores_pred)
+        scores.append((first, second))
 
     final = interpolate(scores, thr)
     return final, thr
 
 
 def interpolate(
-    scores: List[Tuple[np.ndarray, np.ndarray, np.ndarray]], thresholds: List[float]
+    scores: List[Tuple[np.ndarray, np.ndarray]], grid: List[float]
 ) -> np.ndarray:
     """
     Linearly interpolate metric values (e.g., TPR/FPR or Precision/Recall)
-        across a shared threshold grid.
+        across a common grid.
 
     Args:
-        scores (List[Tuple[np.ndarray, np.ndarray, np.ndarray]]):
-            Per-disease tuples of (first_metric, second_metric, thresholds).
-        thresholds (List[float]):
-            Sorted list of unique thresholds to interpolate across.
+        scores (List[Tuple[np.ndarray, np.ndarray]]):
+            Per-disease tuples of (first_metric, second_metric).
+        grid (List[float]): Interpolation grid.
 
     Returns:
         np.ndarray:
-            2D array of shape [2, n_thresholds] containing
+            2D array of shape [2, grid_bins] containing
                 interpolated metrics.
     """
     final = []
-    for first, second, thr in scores:
-        first_interp = np.interp(thresholds, thr, first)
-        second_interp = np.interp(thresholds, thr, second)
-    final.append([first_interp, second_interp])
+    for first, second in scores:
+        second_interp = np.interp(grid, first, second)
+        final.append([grid, second_interp])
     return np.array(final).mean(0)
