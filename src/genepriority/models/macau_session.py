@@ -1,4 +1,4 @@
-# pylint: disable=R0913
+# pylint: disable=R0913,R0903
 """
 Macau Module
 ========================
@@ -38,10 +38,10 @@ from genepriority.models.matrix_completion_result import MatrixCompletionResult
 try:
     import smurff
 
-    _has_smurff = True
+    HAS_SMURFF = True
 except ImportError:
     smurff = None
-    _has_smurff = False
+    HAS_SMURFF = False
 
 
 class MacauSession:
@@ -70,7 +70,7 @@ class MacauSession:
         Returns:
             _MacauSession: A subclass of `smurff.MacauSession` with logging capabilities.
         """
-        if not _has_smurff:
+        if not HAS_SMURFF:
             raise ImportError(
                 "The 'smurff' library is required to instantiate MacauSession."
             )

@@ -11,7 +11,7 @@ models, generating predictions, and computing evaluation metrics.
 
 import logging
 from pathlib import Path
-from typing import Any, Dict, Tuple, Union
+from typing import Any, Dict, Literal, Tuple, Union
 
 import numpy as np
 import optuna
@@ -24,8 +24,7 @@ from genepriority.models.flip_labels import FlipLabels
 from genepriority.models.matrix_completion_result import MatrixCompletionResult
 from genepriority.models.nega_session import NegaSession
 from genepriority.preprocessing.dataloader import DataLoader
-from genepriority.preprocessing.side_information_loader import \
-    SideInformationLoader
+from genepriority.preprocessing.side_information_loader import SideInformationLoader
 from genepriority.trainer.base import BaseTrainer
 from genepriority.utils import create_tb_dir
 
@@ -43,6 +42,8 @@ class NEGTrainer(BaseTrainer):
         dataloader (DataLoader): The data loader containing training and testing data.
         path (str): Directory path where model snapshots and results will be saved.
         regularization_parameter (float): Regularization parameter.
+        side_information_reg (float): Regularization weight for
+            for the side information.
         iterations (int): Maximum number of optimization iterations.
         symmetry_parameter (float): Regularization parameter for gradient adjustments.
         smoothness_parameter (float): Initial smoothness parameter.
@@ -56,12 +57,16 @@ class NEGTrainer(BaseTrainer):
             positive entries in the training mask to be flipped to negatives.
         patience (int): The number of recent epochs/iterations to consider when
             evaluating the stopping condition. If None, no early stopping is used.
+        svd_init (bool): Whether to initialize the latent
+                matrices with SVD decomposition.
         seed (int): Random seed for reproducibility.
         side_info_loader (SideInformationLoader): Loader for additional side information.
         logger (logging.Logger): Logger instance for tracking progress and debugging.
         tensorboard_dir (Path): The base directory path where
             TensorBoard log files are saved.
         writer (tf.summary.SummaryWriter): A tensorflow log writer.
+        formulation (Literal["IMC", "GeneHound"]): The type of loss formualtion,
+                either "IMC" or "GeneHound".
     """
 
     def __init__(
@@ -83,6 +88,7 @@ class NEGTrainer(BaseTrainer):
         svd_init: bool = None,
         side_info_loader: SideInformationLoader = None,
         tensorboard_dir: Path = None,
+        formulation: Literal["imc", "genehound"] = "imc",
     ):
         """
         Initializes the NEGTrainer class with the provided configuration.
@@ -117,13 +123,15 @@ class NEGTrainer(BaseTrainer):
             patience (int, optional): The number of recent epochs/iterations to consider when
                 evaluating the stopping condition. Default is None, meaning no early stopping
                 is used.
-            svd_init (bool): Whether to initialize the latent
+            svd_init (bool, optional): Whether to initialize the latent
                 matrices with SVD decomposition. Defaults to None.
             side_info_loader (SideInformationLoader, optional): Loader for additional side
                 information. Defaults to None.
             tensorboard_dir (Path, optional): The base directory path where
                 TensorBoard log files are saved. If None, TensorBoard logging is
                 disabled. Defaults to None.
+            formulation (Literal["imc", "genehound"], optional): The type of loss formualtion,
+                either "imc" or "genehound". Default to "imc".
         """
         super().__init__(
             dataloader=dataloader,
@@ -153,6 +161,7 @@ class NEGTrainer(BaseTrainer):
         self.svd_init = svd_init
         self.tensorboard_dir = tensorboard_dir
         self.writer = None
+        self.formulation = formulation
 
     @property
     def neg_session_kwargs(self) -> Dict[str, Any]:
@@ -173,7 +182,8 @@ class NEGTrainer(BaseTrainer):
             "rho_decrease": self.rho_decrease,
             "threshold": self.threshold,
             "side_information_reg": self.side_information_reg,
-            "svd_init": self.svd_init
+            "svd_init": self.svd_init,
+            "formulation": self.formulation,
         }
 
     def predict(
@@ -238,14 +248,14 @@ class NEGTrainer(BaseTrainer):
 
     def pre_training_callback(
         self,
-        session: MatrixCompletionResult,
+        session: NegaSession,
         run_name: str,
     ):
         """
         Pre training callback used for monitoring and debugging purposes.
 
         Args:
-            session (smurff.MacauSession): Model session to train.
+            session (NegaSession): Model session to train.
             run_name (str): Custom run name for this training session.
         """
         if self.tensorboard_dir is not None:
@@ -263,6 +273,7 @@ class NEGTrainer(BaseTrainer):
                         session.rho_increase,
                         session.rho_decrease,
                         session.threshold,
+                        self.svd_init,
                     ]
                 ]
                 columns = [
@@ -273,10 +284,20 @@ class NEGTrainer(BaseTrainer):
                     "Rho Increase Factor",
                     "Rho Decrease Factor",
                     "Inner Loop Threshold",
+                    "svd_init",
                 ]
+                if self.side_info_loader is not None:
+                    data[0].insert(0, self.formulation)
+                    columns.insert(0, "Formulation")
                 if session.flip_labels is not None:
                     data[0].append(session.flip_labels.fraction)
                     columns.append("Positive Flip Fraction")
+                if hasattr(session, "patience"):
+                    data[0].append(session.patience)
+                    columns.append("Patience")
+                if hasattr(session, "side_information_reg"):
+                    data[0].append(session.side_information_reg)
+                    columns.append("Side Information Regularization")
                 hyperparameter_table = pd.DataFrame(
                     data,
                     columns=columns,
@@ -373,6 +394,13 @@ class NEGTrainer(BaseTrainer):
             rho_decrease = trial.suggest_float(
                 "Factor for decreasing the step size dynamically.", 0.1, 0.9, step=0.1
             )
+            if self.formulation == "genehound":
+                side_information_reg = trial.suggest_float(
+                    "Regularization coefficient on the side information.",
+                    1e-5,
+                    1e5,
+                    log=True,
+                )
             session = NegaSession(
                 regularization_parameter=regularization_parameter,
                 iterations=iterations,
@@ -386,6 +414,9 @@ class NEGTrainer(BaseTrainer):
                 side_info=side_info,
                 train_mask=train_mask,
                 test_mask=test_mask,
+                svd_init=self.svd_init,
+                side_information_reg=side_information_reg,
+                formulation=self.formulation,
             )
             training_status = session.run()
             trial.set_user_attr("rmse on test set", training_status.rmse_history)

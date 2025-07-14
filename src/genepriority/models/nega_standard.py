@@ -1,9 +1,15 @@
-from typing import Tuple
+# pylint: disable=C0103,R0913,R0914,R0915,R0902,R0903
+"""
+NEGA Module
+==================
 
+This module implements Non-Euclidean Matrix Completion Algorithm following the
+Inductive Matrix Completion formulation.
+"""
 import numpy as np
-from sklearn.decomposition import TruncatedSVD
 
 from genepriority.models.nega_base import NegaBase
+from genepriority.models.utils import init_from_svd
 
 
 class Nega(NegaBase):
@@ -38,16 +44,7 @@ class Nega(NegaBase):
             observed_matrix = np.zeros_like(self.matrix)
             observed_matrix[self.train_mask] = self.matrix[self.train_mask]
 
-            # Perform Truncated SVD on the observed matrix
-            svd = TruncatedSVD(n_components=self.rank, n_iter=7, random_state=0)
-            row_embeddings = svd.fit_transform(observed_matrix)  # shape: (n_rows, rank)
-            singular_values = svd.singular_values_  # shape: (rank,)
-            column_embeddings = svd.components_  # shape: (rank, n_cols)
-
-            # Distribute singular values evenly across the two factor matrices
-            sqrt_singular_values = np.diag(np.sqrt(singular_values))
-            self.h1 = row_embeddings @ sqrt_singular_values  # shape: (n_rows, rank)
-            self.h2 = sqrt_singular_values @ column_embeddings  # shape: (rank, n_cols)
+            self.h1, self.h2 = init_from_svd(observed_matrix, self.rank)
         else:
             nb_genes, nb_diseases = self.matrix.shape
             self.h1 = np.random.randn(nb_genes, self.rank)
@@ -67,7 +64,7 @@ class Nega(NegaBase):
             float: tau value.
         """
         return np.linalg.norm(self.matrix, ord="fro") / 3
-    
+
     def init_Wk(self) -> np.ndarray:
         """
         Initialize weight block matrix.
@@ -76,6 +73,17 @@ class Nega(NegaBase):
             np.ndarray: The weight block matrix.
         """
         return np.vstack([self.h1, self.h2.T])
+
+    def set_weights(self, weight_matrix: np.ndarray):
+        """
+        Set the weights individually from the stacked block matrix.
+
+        Args:
+            weight_matrix (np.ndarray): The stacked block matrix.
+        """
+        nb_genes = self.h1.shape[0]
+        self.h1 = weight_matrix[:nb_genes, :]
+        self.h2 = weight_matrix[nb_genes:, :].T
 
     def kernel(self, W: np.ndarray, tau: float) -> float:
         """
@@ -130,71 +138,3 @@ class Nega(NegaBase):
         grad_h1 = residual @ self.h2.T + self.regularization_parameter * self.h1
         grad_h2 = self.h1.T @ residual + self.regularization_parameter * self.h2
         return np.vstack([grad_h1, grad_h2.T])
-
-    def substep(
-        self,
-        W_k: np.ndarray,
-        tau: float,
-        step_size: float,
-        grad_f_W_k: np.ndarray,
-    ) -> Tuple[np.ndarray, float]:
-        """
-        Performs a single substep in the optimization process to update the factor matrices.
-
-        This substep calculates the next iterate W_{k+1} using the gradient of the objective
-        function and an adaptive step size.
-
-        Steps in the Substep Process:
-
-        1. Compute the Gradient Step:
-           grad = (||W_k||_F^2 + tau) * W_k - step_size * grad_f_W_k
-
-           - ||W_k||_F: Frobenius norm of the current matrix W_k.
-           - tau: Regularization parameter.
-           - step_size: Learning rate for the gradient step.
-           - grad_f_W_k: Gradient of the objective function at W_k.
-
-        2. Solve the Cubic Equation for the Step Size t:
-           Δ = tau_2^2 + (tau1/3)^3
-           if Δ >= 0:
-
-           t = (tau / 3) + cube_root(T_1) + cube_root(T_2)
-
-           - T_1 = -tau_2 + sqrt(Δ)
-           - T_2 = -tau_2 - sqrt(Δ)
-           - tau_2 = (-2 * tau^3 - 27 * ||grad||_F^2) / 27
-
-           The cubic root function ensures stability, even for negative T_1 and T_2.
-
-        3. Update the Next Iterate W_{k+1}:
-           W_{k+1} = (1 / t) * grad
-
-        4. Split W_{k+1} into Factor Matrices h1 and h2:
-           - h1 = W_{k+1}[:m, :]
-           - h2 = W_{k+1}[m:, :].T
-
-        Args:
-            W_k (np.ndarray): Current stacked factor matrices.
-            tau (float): Regularization parameter.
-            step_size (float): Learning rate for the gradient step.
-            grad_f_W_k (np.ndarray): Gradient of the objective function at W_k.
-
-        Returns:
-            Tuple[np.ndarray, float]:
-                - Updated stacked matrix W_{k+1}.
-                - New loss value f(W_{k+1}).
-        """
-        step = (np.linalg.norm(W_k, ord="fro") ** 2 + tau) * W_k - (
-            step_size * grad_f_W_k
-        )
-        delta = np.linalg.norm(step, ord="fro") ** 2
-        # Solve the cubic s³ – τ s² – Δ = 0 by Cardano
-        t_k = self.cardano(tau, delta)
-
-        W_k_next = (1 / t_k) * step
-        nb_genes = self.h1.shape[0]
-        self.h1 = W_k_next[:nb_genes, :]
-        self.h2 = W_k_next[nb_genes:, :].T
-
-        loss = self.calculate_loss()
-        return W_k_next, loss

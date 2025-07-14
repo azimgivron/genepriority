@@ -1,3 +1,4 @@
+# pylint: disable=R0913, R0914
 """
 Utilities Module
 ================
@@ -9,12 +10,48 @@ logging with tf.summary.image. Additional utility functions may be added in the 
 """
 import io
 from pathlib import Path
-from typing import Any
+from typing import Any, Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
+from sklearn.decomposition import TruncatedSVD
 from sklearn.manifold import TSNE
+
+
+def init_from_svd(
+    observed_matrix: np.ndarray, rank: int
+) -> Tuple[np.ndarray, np.ndarray]:
+    """Initialize low-rank factors from a truncated SVD of the observed matrix.
+
+    Performs a rank-truncated singular value decomposition (SVD) on
+    the given matrix and distributes the singular values evenly
+    across two factor matrices.
+
+    Args:
+        observed_matrix (np.ndarray): The input matrix of shape `(n_rows, n_cols)`
+            to factorize.
+        rank (int): The number of singular values (and corresponding singular
+            vectors) to retain.
+
+    Returns:
+        Tuple[np.ndarray, np.ndarray]:
+            - left_factor (np.ndarray): Matrix of shape `(n_rows, rank)` such that
+              `left_factor @ right_factor` approximates `observed_matrix`.
+            - right_factor (np.ndarray): Matrix of shape `(rank, n_cols)` such
+              that `left_factor @ right_factor` approximates `observed_matrix`.
+    """
+    svd_model = TruncatedSVD(n_components=rank, n_iter=7, random_state=0)
+    row_embeddings = svd_model.fit_transform(observed_matrix)  # (n_rows, rank)
+    singular_values = svd_model.singular_values_  # (rank,)
+    column_embeddings = svd_model.components_  # (rank, n_cols)
+
+    # Distribute singular values evenly across the two factor matrices
+    sqrt_sigma = np.diag(np.sqrt(singular_values))
+    left_factor = row_embeddings @ sqrt_sigma  # (n_rows, rank)
+    right_factor = sqrt_sigma @ column_embeddings  # (rank, n_cols)
+
+    return left_factor, right_factor
 
 
 def tsne_plot_to_tensor(
@@ -65,10 +102,10 @@ def tsne_plot_to_tensor(
     )
     low_dim_embedding = tsne.fit_transform(high_dim_embeddings)
 
-    fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
-    ax.scatter(low_dim_embedding[:, 0], low_dim_embedding[:, 1], c=color)
-    ax.set_xlabel("Component 1")
-    ax.set_ylabel("Component 2")
+    fig, axis = plt.subplots(figsize=figsize, dpi=dpi)
+    axis.scatter(low_dim_embedding[:, 0], low_dim_embedding[:, 1], c=color)
+    axis.set_xlabel("Component 1")
+    axis.set_ylabel("Component 2")
 
     buf = io.BytesIO()
     plt.savefig(buf, format="png", bbox_inches="tight")

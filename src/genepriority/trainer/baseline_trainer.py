@@ -1,3 +1,4 @@
+# pylint: disable=R0913
 """
 Baseline Module
 ================
@@ -13,7 +14,7 @@ from typing import Any, Tuple, Union
 import numpy as np
 import scipy.sparse as sp
 
-from genepriority.models.baseline import BaselineSession
+from genepriority.models.baseline_session import BaselineSession
 from genepriority.preprocessing.dataloader import DataLoader
 from genepriority.trainer.base import BaseTrainer
 

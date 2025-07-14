@@ -319,6 +319,23 @@ def parse_nega(subparsers: argparse._SubParsersAction):
             ],
             help="Paths to one or more disease-side information CSV files (default: %(default)s).",
         )
+        parser.add_argument(
+            "--svd-init",
+            action="store_true",
+            help=(
+                "Instanciate the matrix factorization using SVD decomposition "
+                "rather than an random initialization (default: %(default)s)."
+            ),
+        )
+        parser.add_argument(
+            "--formulation",
+            choices=["imc", "genehound"],
+            default="imc",
+            help=(
+                "Whether to use the Genehound-like or IMC-like objective function"
+                " formulation of NEGA (default: %(default)s)."
+            ),
+        )
 
     # Additional arguments specific to the "cv" subcommand
     cv_parser.add_argument(
@@ -345,24 +362,6 @@ def parse_nega(subparsers: argparse._SubParsersAction):
         type=str,
         default="results.pickle",
         help="Filename for serialized results (default: %(default)s).",
-    )
-    cv_parser.add_argument(
-        "--side-info-reg",
-        type=float,
-        default=None,
-        help=(
-        "The regularization coefficient on the side information "
-        "coefficient when using the Bayesian formulation for NEGA (default: %(default)s)."
-        ),
-    )
-    cv_parser.add_argument(
-        "--svd-init",
-        type=bool,
-        default=False,
-        help=(
-        "Whether to instanciate the matrix factorization using SVD decomposition "
-        "rather than an random initialization (default: %(default)s)."
-        ),
     )
 
     # Additional arguments specific to the "fine-tune" subcommand

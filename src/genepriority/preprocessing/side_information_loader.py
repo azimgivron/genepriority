@@ -189,38 +189,42 @@ class SideInformationLoader:
             "Side information dataframes loaded successfully. \n%s\n",
             log_df.to_markdown(),
         )
-        self.gene_side_info = self(gene_dataframes, self.nb_genes)
+        gene_side_info = self(gene_dataframes, self.nb_genes)
         self.logger.debug(
             "Gene side information matrix has shape: %s",
-            self.gene_side_info.shape,
+            gene_side_info.shape,
         )
-        self.disease_side_info = self(disease_dataframes, self.nb_diseases)
+        disease_side_info = self(disease_dataframes, self.nb_diseases)
         self.logger.debug(
             "Disease side information matrix has shape: %s",
-            self.disease_side_info.shape,
+            disease_side_info.shape,
         )
         if self.max_dims is not None:
-            if self.gene_side_info.shape[1] > self.max_dims:
+            if gene_side_info.shape[1] > self.max_dims:
                 self.logger.debug(
                     "Using TruncatedSVD to reduce gene features from %d to %d",
-                    self.gene_side_info.shape[1],
-                    min(self.max_dims, self.gene_side_info.shape[1]),
+                    gene_side_info.shape[1],
+                    min(self.max_dims, gene_side_info.shape[1]),
                 )
                 svd = TruncatedSVD(n_components=self.max_dims)
-                self.gene_side_info = svd.fit_transform(self.gene_side_info)
+                self.gene_side_info = svd.fit_transform(gene_side_info)
+                self.gene_side_info /= np.linalg.norm(self.gene_side_info, ord="fro")
             else:
-                self.gene_side_info = self.gene_side_info.toarray()
-                
-            if self.disease_side_info.shape[1] > self.max_dims:
+                self.gene_side_info = gene_side_info.toarray()
+
+            if disease_side_info.shape[1] > self.max_dims:
                 self.logger.debug(
                     "Using TruncatedSVD to reduce disease features from %d to %d",
-                    self.disease_side_info.shape[1],
-                    min(self.max_dims, self.disease_side_info.shape[1]),
+                    disease_side_info.shape[1],
+                    min(self.max_dims, disease_side_info.shape[1]),
                 )
                 svd = TruncatedSVD(n_components=self.max_dims)
-                self.disease_side_info = svd.fit_transform(self.disease_side_info)
+                self.disease_side_info = svd.fit_transform(disease_side_info)
+                self.disease_side_info /= np.linalg.norm(
+                    self.disease_side_info, ord="fro"
+                )
             else:
-                self.disease_side_info = self.disease_side_info.toarray()     
+                self.disease_side_info = disease_side_info.toarray()
         self.logger.debug(
             (
                 "Processed gene-side information of shape %s and disease-side"

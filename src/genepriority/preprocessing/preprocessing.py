@@ -118,7 +118,7 @@ def compute_statistics(
         matrix = sparse_matrix.toarray()
         mask = test_mask & (matrix == 1)
         counts_per_col = mask.sum(axis=0)
-        count = (counts_per_col>0).sum()
+        count = (counts_per_col > 0).sum()
         counts.append(count)
     average_count = np.mean(counts)
     variance_count = np.std(counts)

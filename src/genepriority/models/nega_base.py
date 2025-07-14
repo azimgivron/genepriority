@@ -1,4 +1,4 @@
-# pylint: disable=C0103,R0913,R0914,R0915,R0902,R0903
+# pylint: disable=C0103,R0913,R0914,R0915,R0902,R0903,R0912
 """
 Non-Euclidean Matrix Completion Algorithm
 ==========================================
@@ -178,33 +178,6 @@ class NegaBase(metaclass=abc.ABCMeta):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def substep(
-        self,
-        W_k: np.ndarray,
-        tau: float,
-        step_size: float,
-        grad_f_W_k: np.ndarray,
-    ) -> Tuple[np.ndarray, float]:
-        """
-        Performs a single substep in the optimization process to update the factor matrices.
-
-        This substep calculates the next iterate W_{k+1} using the gradient of the objective
-        function and an adaptive step size.
-
-        Args:
-            W_k (np.ndarray): Current stacked factor matrices.
-            tau (float): Regularization parameter.
-            step_size (float): Learning rate for the gradient step.
-            grad_f_W_k (np.ndarray): Gradient of the objective function at W_k.
-
-        Returns:
-            Tuple[np.ndarray, float]:
-                - Updated stacked matrix W_{k+1}.
-                - New loss value f(W_{k+1}).
-        """
-        raise NotImplementedError
-
-    @abc.abstractmethod
     def init_tau(self) -> float:
         """
         Initialize tau value.
@@ -213,7 +186,7 @@ class NegaBase(metaclass=abc.ABCMeta):
             float: tau value.
         """
         raise NotImplementedError
-    
+
     @abc.abstractmethod
     def init_Wk(self) -> np.ndarray:
         """
@@ -221,6 +194,16 @@ class NegaBase(metaclass=abc.ABCMeta):
 
         Returns:
             np.ndarray: The weight block matrix.
+        """
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def set_weights(self, weight_matrix: np.ndarray):
+        """
+        Set the weights individually from the stacked block matrix.
+
+        Args:
+            weight_matrix (np.ndarray): The stacked block matrix.
         """
         raise NotImplementedError
 
@@ -419,6 +402,71 @@ class NegaBase(metaclass=abc.ABCMeta):
             self.logger.warning("Tensorboard logging error: %s", e)
             raise
 
+    def substep(
+        self,
+        W_k: np.ndarray,
+        tau: float,
+        step_size: float,
+        grad_f_W_k: np.ndarray,
+    ) -> Tuple[np.ndarray, float]:
+        """
+        Performs a single substep in the optimization process to update the factor matrices.
+
+        This substep calculates the next iterate W_{k+1} using the gradient of the objective
+        function and an adaptive step size.
+
+        Steps in the Substep Process:
+
+        1. Compute the Gradient Step:
+           grad = (||W_k||_F^2 + tau) * W_k - step_size * grad_f_W_k
+
+           - ||W_k||_F: Frobenius norm of the current matrix W_k.
+           - tau: Regularization parameter.
+           - step_size: Learning rate for the gradient step.
+           - grad_f_W_k: Gradient of the objective function at W_k.
+
+        2. Solve the Cubic Equation for the Step Size t:
+           Δ = tau_2^2 + (tau1/3)^3
+           if Δ >= 0:
+
+           t = (tau / 3) + cube_root(T_1) + cube_root(T_2)
+
+           - T_1 = -tau_2 + sqrt(Δ)
+           - T_2 = -tau_2 - sqrt(Δ)
+           - tau_2 = (-2 * tau^3 - 27 * ||grad||_F^2) / 27
+
+           The cubic root function ensures stability, even for negative T_1 and T_2.
+
+        3. Update the Next Iterate W_{k+1}:
+           W_{k+1} = (1 / t) * grad
+
+        4. Split W_{k+1} into Factor Matrices h1 and h2:
+           - h1 = W_{k+1}[:m, :]
+           - h2 = W_{k+1}[m:, :].T
+
+        Args:
+            W_k (np.ndarray): Current stacked factor matrices.
+            tau (float): Regularization parameter.
+            step_size (float): Learning rate for the gradient step.
+            grad_f_W_k (np.ndarray): Gradient of the objective function at W_k.
+
+        Returns:
+            Tuple[np.ndarray, float]:
+                - Updated stacked matrix W_{k+1}.
+                - New loss value f(W_{k+1}).
+        """
+        step = (np.linalg.norm(W_k, ord="fro") ** 2 + tau) * W_k - (
+            step_size * grad_f_W_k
+        )
+        delta = np.linalg.norm(step, ord="fro") ** 2
+        # Solve the cubic s³ – τ s² – Δ = 0 by Cardano
+        t_k = self.cardano(tau, delta)
+
+        W_k_next = (1 / t_k) * step
+        self.set_weights(W_k_next)
+        loss = self.calculate_loss()
+        return W_k_next, loss
+
     def run(self, log_freq: int = 10) -> MatrixCompletionResult:
         """
         Performs matrix completion using adaptive step size optimization.
@@ -578,9 +626,9 @@ class NegaBase(metaclass=abc.ABCMeta):
             rmse.append(testing_loss)
             res_norm = res_norm_next_it
             if self.early_stopping is not None and self.early_stopping(
-                testing_loss, self.h1, self.h2
+                testing_loss, W_k
             ):
-                self.h1, self.h2 = self.early_stopping.best_weights
+                self.set_weights(self.early_stopping.best_weights)
                 self.logger.debug("[Early Stopping] Training interrupted.")
                 if ith_iteration % log_freq != 0:
                     self.tb_log(ith_iteration, testing_loss, grad_f_W_k)

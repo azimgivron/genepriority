@@ -24,7 +24,10 @@ import pandas as pd
 import scipy.sparse as sp
 
 from genepriority.preprocessing.preprocessing import (
-    compute_statistics, convert_dataframe_to_sparse_matrix, sample_zeros)
+    compute_statistics,
+    convert_dataframe_to_sparse_matrix,
+    sample_zeros,
+)
 from genepriority.preprocessing.train_val_test_mask import TrainValTestMasks
 
 
