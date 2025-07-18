@@ -196,14 +196,13 @@ def process_gene_disease(raw: Path, cfg: FileConfig) -> pd.DataFrame:
         names=["Gene ID", "Disease ID"],
         dtype={"Gene ID": int, "Disease ID": int},
     )
-    if (
-        df["Gene ID"].min() > 0 and df["Gene ID"].max() >= NB_GENES
-    ):  # indexes are starting at 1
-        df["Gene ID"] -= 1
+    df["Gene ID"] -= 1
+    logging.debug("GENE-DISEASE: Gene ID shifted down by 1")
     if (
         df["Disease ID"].min() > 0 and df["Disease ID"].max() >= NB_DISEASES
     ):  # indexes are starting at 1
         df["Disease ID"] -= 1
+        logging.debug("GENE-DISEASE: Disease ID shifted down by 1")
     return df
 
 
@@ -241,8 +240,10 @@ def process_go(raw: Path, cfg: FileConfig) -> pd.DataFrame:
         df["Gene ID"].min() > 0 and df["Gene ID"].max() >= NB_GENES
     ):  # indexes are starting at 1
         df["Gene ID"] -= 1
+        logging.debug("GO: Gene ID shifted down by 1")
     if df["GO term ID"].min() > 0:  # indexes are starting at 1
         df["GO term ID"] -= 1
+        logging.debug("GO: GO term ID shifted down by 1")
     return df
 
 
@@ -265,8 +266,10 @@ def process_interpro(raw: Path, cfg: FileConfig) -> pd.DataFrame:
         df["Gene ID"].min() > 0 and df["Gene ID"].max() >= NB_GENES
     ):  # indexes are starting at 1
         df["Gene ID"] -= 1
+        logging.debug("INTERPRO: Gene ID ID shifted down by 1")
     if df["InterPro domain ID"].min() > 0:  # indexes are starting at 1
         df["InterPro domain ID"] -= 1
+        logging.debug("INTERPRO: InterPro domain ID shifted down by 1")
     return df
 
 
@@ -287,8 +290,10 @@ def process_uniprot(raw: Path, cfg: FileConfig) -> pd.DataFrame:
         df["Gene ID"].min() > 0 and df["Gene ID"].max() >= NB_GENES
     ):  # indexes are starting at 1
         df["Gene ID"] -= 1
+        logging.debug("UNIPROT: Gene ID shifted down by 1")
     if df["UniProt ID"].min() > 0:  # indexes are starting at 1
         df["UniProt ID"] -= 1
+        logging.debug("UNIPROT: UniProt ID shifted down by 1")
     return df
 
 
@@ -316,8 +321,10 @@ def process_phenotypes(raw: Path, cfg: FileConfig) -> pd.DataFrame:
         df["Disease ID"].min() > 0 and df["Disease ID"].max() > NB_DISEASES
     ):  # indexes are starting at 1
         df["Disease ID"] -= 1
+        logging.debug("PHENOTYPES: Disease ID shifted down by 1")
     if df["Phenotypic term ID"].min() > 0:  # indexes are starting at 1
         df["Phenotypic term ID"] -= 1
+        logging.debug("PHENOTYPES: Phenotypic term ID shifted down by 1")
     return df
 
 
@@ -505,7 +512,7 @@ def main():
     )
     args = parser.parse_args()
 
-    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+    logging.basicConfig(level=logging.DEBUG, format="%(levelname)s: %(message)s")
     raw, out = args.raw_dir, args.out_dir
     out.mkdir(parents=True, exist_ok=True)
 
