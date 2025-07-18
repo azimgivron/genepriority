@@ -186,7 +186,7 @@ class SideInformationLoader:
         ).map(lambda x: f"{x:_}")
         log_df.index = names
         self.logger.debug(
-            "Side information dataframes loaded successfully. \n%s\n",
+            "Side information dataframes loaded successfully. \n%s",
             log_df.to_markdown(),
         )
         gene_side_info = self(gene_dataframes, self.nb_genes)

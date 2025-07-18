@@ -51,7 +51,7 @@ def parse_genehound(subparsers: argparse.ArgumentParser):
         type=int,
         default=None,
         help=(
-            "The maximum number of dimension to use in the factorization of the side features."
+            "The maximum number of dimension to use in the factorization of the side features. "
             "Default is None, meaning no factorization is made. "
             "(default: %(default)s)."
         ),

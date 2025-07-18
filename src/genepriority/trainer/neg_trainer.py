@@ -373,33 +373,29 @@ class NEGTrainer(BaseTrainer):
             train_mask: sp.csr_matrix,
             test_mask: sp.csr_matrix,
         ) -> float:
-            regularization_parameter = trial.suggest_float(
-                "Regularization parameter for the optimization.", 1e-5, 1e0, log=True
+            regularization_parameter = trial.suggest_categorical(
+                "Regularization parameter for the optimization.",
+                choices=[1e-4, 1e-3, 1e-2, 1e-1, 1e-0]  
             )
-            symmetry_parameter = trial.suggest_float(
+            symmetry_parameter = trial.suggest_categorical(
                 "Symmetry parameter for the gradient adjustment.",
-                1e-5,
-                1e0,
-                log=True,
+                choices=[.9, .99, .999, .9999]
             )
-            smoothness_parameter = trial.suggest_float(
+            smoothness_parameter = trial.suggest_categorical(
                 "Initial smoothness parameter.",
-                1e-5,
-                1e0,
-                log=True,
+                choices=[1e-4, 1e-3, 1e-2, 1e-1, 1e-0]
             )
             rho_increase = trial.suggest_float(
-                "Factor for increasing the step size dynamically.", 2.0, 10.0, step=1.0
+                "Factor for increasing the step size dynamically.", 2.0, 5.0, step=1.0
             )
             rho_decrease = trial.suggest_float(
                 "Factor for decreasing the step size dynamically.", 0.1, 0.9, step=0.1
             )
+            kwargs = {}
             if self.formulation == "genehound":
-                side_information_reg = trial.suggest_float(
+                kwargs["side_information_reg"] = trial.suggest_categorical(
                     "Regularization coefficient on the side information.",
-                    1e-5,
-                    1e5,
-                    log=True,
+                    choices=[1e-4, 1e-3, 1e-2, 1e-1, 1e-0]
                 )
             session = NegaSession(
                 regularization_parameter=regularization_parameter,
@@ -415,8 +411,8 @@ class NEGTrainer(BaseTrainer):
                 train_mask=train_mask,
                 test_mask=test_mask,
                 svd_init=self.svd_init,
-                side_information_reg=side_information_reg,
                 formulation=self.formulation,
+                **kwargs
             )
             training_status = session.run()
             trial.set_user_attr("rmse on test set", training_status.rmse_history)
