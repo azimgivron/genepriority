@@ -15,7 +15,6 @@ flexcache==0.3
 flexparser==0.4
 fonttools==4.58.5
 gast==0.6.0
-genepriority @ file:///root/genepriority
 google-pasta==0.2.0
 greenlet==3.2.3
 grpcio==1.73.1
