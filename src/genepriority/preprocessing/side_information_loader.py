@@ -209,9 +209,6 @@ class SideInformationLoader:
                 svd = TruncatedSVD(n_components=self.max_dims)
                 self.gene_side_info = svd.fit_transform(gene_side_info)
                 self.gene_side_info /= np.linalg.norm(self.gene_side_info, ord="fro")
-            else:
-                self.gene_side_info = gene_side_info.toarray()
-
             if disease_side_info.shape[1] > self.max_dims:
                 self.logger.debug(
                     "Using TruncatedSVD to reduce disease features from %d to %d",
@@ -223,8 +220,9 @@ class SideInformationLoader:
                 self.disease_side_info /= np.linalg.norm(
                     self.disease_side_info, ord="fro"
                 )
-            else:
-                self.disease_side_info = disease_side_info.toarray()
+        else:
+            self.gene_side_info = gene_side_info.toarray()
+            self.disease_side_info = disease_side_info.toarray()
         self.logger.debug(
             (
                 "Processed gene-side information of shape %s and disease-side"

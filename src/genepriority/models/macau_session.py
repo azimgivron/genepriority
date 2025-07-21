@@ -103,6 +103,7 @@ class MacauSession:
                     univariate=univariate,
                     Ytrain=Ytrain,
                     Ytest=Ytest,
+                    threshold=.5,
                     **kwargs,
                 )
                 self.num_latent = num_latent
@@ -136,6 +137,11 @@ class MacauSession:
                             tf.summary.scalar(
                                 "testing_loss",
                                 status_item.rmse_avg,
+                                step=status_item.iter,
+                            )
+                            tf.summary.scalar(
+                                "auc",
+                                status_item.auc_avg,
                                 step=status_item.iter,
                             )
                             tf.summary.flush()

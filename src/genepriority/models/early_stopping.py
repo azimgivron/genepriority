@@ -8,7 +8,7 @@ The EarlyStopping class tracks recent losses and corresponding model weights. If
 is observed within a specified patience interval, it signals for early termination of training.
 """
 import numpy as np
-
+import logging
 
 class EarlyStopping:
     """
@@ -57,7 +57,7 @@ class EarlyStopping:
             bool: True if early stopping condition is met (i.e., no improvement observed
                   within 'patience' iterations), False otherwise.
         """
-        if loss < self.best_loss:
+        if loss < self.best_loss and not np.isclose(loss, self.best_loss, atol=1e-4):
             self.best_loss = loss
             self.since_improved = 0
             # Store copies of the weights at the best observed loss

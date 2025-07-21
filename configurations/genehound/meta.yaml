@@ -21,8 +21,8 @@
 #   num_samples: (int) Number of samples to collect after the burn-in period,
 #                 during the active period. (default: 1000).
 ---
-direct: True
-univariate: False
-save_freq: 100
-num_samples: 2000
+direct: False
+univariate: True
+save_freq: 500
+num_samples: 500
 burnin_period: 500

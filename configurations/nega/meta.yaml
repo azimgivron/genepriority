@@ -15,27 +15,27 @@
 # - rho_decrease (float): Specifies the factor for decreasing the step size to help stabilize convergence.
 #
 "ones-only":
-  regularization_parameter: 1.398e-03
-  symmetry_parameter: 1.349e-04
-  smoothness_parameter: 1.496e-02
+  regularization_parameter: 1.0e-03
+  symmetry_parameter: 1.0e-04
+  smoothness_parameter: 1.0e-02
   rho_increase: 7.0
   rho_decrease: 0.3
 "with-zeros":
-  regularization_parameter: 3.397e-03
-  symmetry_parameter: 1.246e-02
-  smoothness_parameter: 1.679e-02
+  regularization_parameter: 1.0e-03
+  symmetry_parameter: 1.0e-02
+  smoothness_parameter: 1.0e-02
   rho_increase: 10.0
   rho_decrease: 0.3
 "side-info-imc":
-  regularization_parameter: 6.690e-05
-  symmetry_parameter: 5.448e-05
-  smoothness_parameter: 1.000e-05
-  rho_increase: 7.0
-  rho_decrease: 0.7
+  regularization_parameter: 1.0e-04
+  symmetry_parameter: 0.99
+  smoothness_parameter: 1.0e-04
+  rho_increase: 3.0
+  rho_decrease: 0.6
 "side-info-genehound":
-  regularization_parameter: 8.463e-01
-  side_info_regularization: 7.871e-01
-  symmetry_parameter: 1.163e-05
-  smoothness_parameter: 1.141e-05
-  rho_increase: 2.0
-  rho_decrease: 0.5
+  side_info_regularization: 1.0e+01
+  regularization_parameter: 1.0e+01
+  symmetry_parameter: 0.99
+  smoothness_parameter: 1.0e+03
+  rho_increase: 4.0
+  rho_decrease: 0.8

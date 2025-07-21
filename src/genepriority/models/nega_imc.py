@@ -178,7 +178,7 @@ class NegaIMC(NegaBase):
         - ∇_h1 = X.T @ (R @ (Y @ h2.T)) + λ * h1,
         - ∇_h2 = ((X @ h1).T @ R) @ Y + λ * h2
 
-        with R = (mask ⊙ ((X @ h1) @ (h2 @ Y.T) - M))
+        with R = (B ⊙ ((X @ h1) @ (h2 @ Y.T) - M))
 
         Returns:
             np.ndarray: The gradient of the latents ((g+d) x rank)

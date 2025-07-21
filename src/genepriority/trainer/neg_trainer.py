@@ -362,7 +362,7 @@ class NEGTrainer(BaseTrainer):
         Returns:
             optuna.study.Study: The study object containing the results of the optimization.
         """
-
+        kwargs = {}
         def objective(
             trial: optuna.Trial,
             rank: int,
@@ -373,17 +373,23 @@ class NEGTrainer(BaseTrainer):
             train_mask: sp.csr_matrix,
             test_mask: sp.csr_matrix,
         ) -> float:
-            regularization_parameter = trial.suggest_categorical(
+            regularization_parameter = trial.suggest_float(
                 "Regularization parameter for the optimization.",
-                choices=[1e-4, 1e-3, 1e-2, 1e-1, 1e-0]  
+                low=1e-4,
+                high=1e+2,
+                log=True
             )
-            symmetry_parameter = trial.suggest_categorical(
+            symmetry_parameter = trial.suggest_float(
                 "Symmetry parameter for the gradient adjustment.",
-                choices=[.9, .99, .999, .9999]
+                low=1e-5,
+                high=1.,
+                log=True
             )
-            smoothness_parameter = trial.suggest_categorical(
+            smoothness_parameter = trial.suggest_float(
                 "Initial smoothness parameter.",
-                choices=[1e-4, 1e-3, 1e-2, 1e-1, 1e-0]
+                low=1e-5,
+                high=1.,
+                log=True
             )
             rho_increase = trial.suggest_float(
                 "Factor for increasing the step size dynamically.", 2.0, 5.0, step=1.0
@@ -391,12 +397,15 @@ class NEGTrainer(BaseTrainer):
             rho_decrease = trial.suggest_float(
                 "Factor for decreasing the step size dynamically.", 0.1, 0.9, step=0.1
             )
-            kwargs = {}
             if self.formulation == "genehound":
-                kwargs["side_information_reg"] = trial.suggest_categorical(
+                kwargs["side_information_reg"] = trial.suggest_float(
                     "Regularization coefficient on the side information.",
-                    choices=[1e-4, 1e-3, 1e-2, 1e-1, 1e-0]
+                    low=1e-4,
+                    high=1e+2,
+                    log=True
                 )
+            if self.patience is not None:
+                kwargs["early_stopping"] = EarlyStopping(self.patience)
             session = NegaSession(
                 regularization_parameter=regularization_parameter,
                 iterations=iterations,

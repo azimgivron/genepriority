@@ -128,7 +128,7 @@ class Nega(NegaBase):
         - ∇_h1 = R @ h2.T + λ * h1,
         - ∇_h2 = h1.T @ R + λ * h2
 
-        with R = (mask ⊙ (h1 @ h2 - M))
+        with R = (B ⊙ (h1 @ h2 - M))
 
         Returns:
             np.ndarray: The gradient of the latents ((n+m) x rank)

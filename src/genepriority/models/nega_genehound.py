@@ -23,10 +23,14 @@ class NegaGeneHound(NegaBase):
 
         Minimize:
             0.5 * || B ⊙ (h1 @ h2 - R) ||_F^2
-            + 0.5 * λ * || h1 - 1 @ μ_h1 - G @ β_G ||_F^2
-            + 0.5 * λ * || h2 - 1 @ μ_h2 - β_D.T @ D.T ||_F^2
+            + 0.5 * λ * || P_n h1 - G @ β_G ||_F^2
+            + 0.5 * λ * || h2 P_m - β_D.T @ D.T ||_F^2
             + 0.5 * λ' * || β_G ||_F^2
             + 0.5 * λ' * || β_D ||_F^2
+          
+        where:  
+            P_n = I_n - (1/n) * 1_n @ 1_n.T
+            P_m = I_m - (1/m) * 1_m @ 1_m.T
 
     Attributes:
         gene_side_info (np.ndarray): Side information for genes (G ∈ R^{n x g}).
@@ -158,56 +162,50 @@ class NegaGeneHound(NegaBase):
         grad_f_W_k = (∇_h1, ∇_h2.T, ∇_beta_g, ∇_beta_d).T
 
         with:
-            - ∇_h1 = R @ h2.T + λ * (h1 - G @ β_G - 1 @ μ_{h1_res})
-            - ∇_h2 = h1.T @ R + λ * (h2 - β_D.T @ D.T - μ_{h2_res} @ 1.T)
-            - ∇_beta_g = λ′ * G.T @ (G @ β_G + 1 @ μ_h1 - h1) + λ′ * β_G
-            - ∇_beta_d = λ′ * D.T @ (D @ β_D + 1 @ μ_h2.T - h2.T) + λ′ * β_D
+            - ∇_h1 = R @ h2.T + λ * P_n @ (h1 - G @ β_G)
+            - ∇_h2 = h1.T @ R + λ * (h2 - β_D.T @ D.T) @ P_m
+            - ∇_beta_g = λ * G.T @ (P_n @ (h1 - G @ β_G)) + λ′ * β_G
+            - ∇_beta_d = λ * D.T @ ((h2 - β_D.T @ D.T) @ P_m).T + λ′ * β_D
 
         where
-            R = mask ⊙ (h1 @ h2 - M)
-            μ_{h1_res} = row mean of (h1 - G @ β_G), shape (1, k)
-            μ_{h2_res} = column mean of (h2 - β_D.T @ D.T), shape (k, 1)
-            1 = vector of ones
+            R = B ⊙ (h1 @ h2 - M)
+            P_n = I_n - (1/n) * 1_n @ 1_n.T
+            P_m = I_m - (1/m) * 1_m @ 1_m.T
         """
         residuals = self.calculate_training_residual()  # shape (nb_genes, nb_diseases)
         nb_genes, nb_diseases = self.matrix.shape
+        
         gene_prediction = self.gene_side_info @ self.beta_g  # (nb_genes, k)
         h1_residual = self.h1 - gene_prediction  # (nb_genes, k)
-        mu_h1_residual = h1_residual.mean(axis=0, keepdims=True)  # (1, k)
-        centered_h1 = (
-            h1_residual - np.ones((nb_genes, 1)) @ mu_h1_residual
-        )  # (nb_genes, k)
-
-        grad_h1 = residuals @ self.h2.T + self.regularization_parameter * centered_h1
-
+        
         disease_prediction = (
             self.beta_d.T @ self.disease_side_info.T
         )  # (k, nb_diseases)
         h2_residual = self.h2 - disease_prediction  # (k, nb_diseases)
-        mu_h2_residual = h2_residual.mean(axis=1, keepdims=True)  # (k, 1)
-        centered_h2 = h2_residual - mu_h2_residual @ np.ones(
-            (1, nb_diseases)
-        )  # (k, nb_diseases)
-
-        grad_h2 = self.h1.T @ residuals + self.regularization_parameter * centered_h2
-
-        mu_h1 = self.h1.mean(axis=0, keepdims=True)  # (1, k)
+        
+        # centering operators
+        gene_centering = np.eye(nb_genes) - np.ones((nb_genes, nb_genes)) / nb_genes
+        disease_centering = np.eye(nb_diseases) - np.ones((nb_diseases, nb_diseases)) / nb_diseases
+        
+        h1_residual_centered = gene_centering @ h1_residual # P_n @ (h1 - G @ β_G)
+        h2_residual_centered = h2_residual @ disease_centering # (h2 - β_D.T @ D.T) @ P_m
+        
+        grad_h1 = (
+            residuals @ self.h2.T
+            + self.regularization_parameter * h1_residual_centered
+        )
+        grad_h2 = (
+            self.h1.T @ residuals
+            + self.regularization_parameter * h2_residual_centered
+        )
         grad_beta_g = (
             self.regularization_parameter
-            * self.gene_side_info.T
-            @ (gene_prediction + np.ones((nb_genes, 1)) @ mu_h1 - self.h1)
+            * self.gene_side_info.T @ h1_residual_centered
             + self.side_information_reg * self.beta_g
         )
-
-        mu_h2 = self.h2.mean(axis=1, keepdims=True)  # (k, 1)
         grad_beta_d = (
             self.regularization_parameter
-            * self.disease_side_info.T
-            @ (
-                self.disease_side_info @ self.beta_d
-                + np.ones((nb_diseases, 1)) @ mu_h2.T
-                - self.h2.T
-            )
+            * self.disease_side_info.T @ h2_residual_centered.T
             + self.side_information_reg * self.beta_d
         )
         grad_Wk_next = np.vstack(

@@ -64,8 +64,6 @@ def finetune(
         formulation (Literal["imc", "genehound"]): The type of loss formualtion, either
             "imc" or "genehound".
     """
-    print(iterations)
-    exit()
     trainer = NEGTrainer(
         dataloader=dataloader,
         side_info_loader=side_info_loader,

@@ -404,6 +404,7 @@ def process_text_data(raw: Path, cfg: FileConfig) -> pd.DataFrame:
     # 4) Remap sparse indices -> canonical Gene ID
     map_df = load_csv(raw / cfg.gene_ids, header=None).reset_index()
     map_df.columns = ["Gene ID Map", "Gene ID"]
+    map_df["Gene ID"] -= 1 #shift index
 
     merged = df.merge(
         map_df,

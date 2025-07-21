@@ -171,9 +171,6 @@ class BaseTrainer(metaclass=ABCMeta):
             Evaluation: Aggregated evaluation results across all splits.
         """
         results = []
-        mask_train = []
-        mask_val = []
-        mask_test = []
         for i, (train_mask, test_mask, validation_mask, _) in tqdm(
             enumerate(self.dataloader.omim_masks),
             desc="Fold",
@@ -197,10 +194,7 @@ class BaseTrainer(metaclass=ABCMeta):
                 run_name += "-no-0s"
             run_name += f"-{self.__class__.__name__}"
             self.pre_training_callback(session, run_name)
-
-            mask_train.append(train_mask.toarray())
-            mask_val.append(validation_mask.toarray())
-            mask_test.append(test_mask)
+            
             training_status = session.run()
 
             self.post_training_callback(training_status, session, validation_mask)

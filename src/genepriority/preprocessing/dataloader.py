@@ -136,7 +136,7 @@ class DataLoader:
         )
         train_size = (self.num_folds - 1) / self.num_folds * (1 - self.validation_size)
         self.logger.debug(
-            "Random splits created: %.2f%% for validation (50%% for validation, 50%% for"
+            "Random splits created: %.2f%% for validation (50%% for validation, 50%% for "
             "fine tuning), %.2f%% for training, %.2f%% for testing.",
             self.validation_size * 100,
             train_size * 100,
