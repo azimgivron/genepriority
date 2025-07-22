@@ -34,15 +34,9 @@ def init_from_svd(
             - left_factor: shape (n_rows, rank)
             - right_factor: shape (rank, n_cols)
     """
-    U, S, Vt = np.linalg.svd(observed_matrix, full_matrices=False)
-    U_r = U[:, :rank] # shape (n_rows, rank)
-    S_r = S[:rank] # shape (rank,)
-    Vt_r = Vt[:rank, :] # shape (rank, n_cols)
-
-    sqrt_S = np.sqrt(S_r)
-    left_factor = U_r * sqrt_S # shape (n_rows, rank)
-    right_factor = sqrt_S[:, None] * Vt_r # shape (rank, n_cols)
-
+    left, sigma, right = np.linalg.svd(observed_matrix, full_matrices=False)
+    left_factor = left[:, :rank] * sigma[:rank] # shape: (n_rows, rank)
+    right_factor = right[:rank, :] # shape: (rank, n_cols)
     return left_factor, right_factor
 
 
