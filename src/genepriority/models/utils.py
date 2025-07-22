@@ -22,34 +22,30 @@ from sklearn.manifold import TSNE
 def init_from_svd(
     observed_matrix: np.ndarray, rank: int
 ) -> Tuple[np.ndarray, np.ndarray]:
-    """Initialize low-rank factors from a truncated SVD of the observed matrix.
-
-    Performs a rank-truncated singular value decomposition (SVD) on
-    the given matrix and distributes the singular values evenly
-    across two factor matrices.
+    """
+    Initialize low-rank factors from a truncated SVD of the observed matrix.
 
     Args:
-        observed_matrix (np.ndarray): The input matrix of shape `(n_rows, n_cols)`
-            to factorize.
-        rank (int): The number of singular values (and corresponding singular
-            vectors) to retain.
+        observed_matrix (np.ndarray): Matrix of shape (n_rows, n_cols).
+        rank (int): Target rank for the approximation.
 
     Returns:
         Tuple[np.ndarray, np.ndarray]:
-            - left_factor (np.ndarray): Matrix of shape `(n_rows, rank)` such that
-              `left_factor @ right_factor` approximates `observed_matrix`.
-            - right_factor (np.ndarray): Matrix of shape `(rank, n_cols)` such
-              that `left_factor @ right_factor` approximates `observed_matrix`.
+            - left_factor: shape (n_rows, rank)
+            - right_factor: shape (rank, n_cols)
     """
-    svd_model = TruncatedSVD(n_components=rank, n_iter=7, random_state=0)
-    row_embeddings = svd_model.fit_transform(observed_matrix)  # (n_rows, rank)
-    singular_values = svd_model.singular_values_  # (rank,)
-    column_embeddings = svd_model.components_  # (rank, n_cols)
+    # Full SVD decomposition
+    U, S, Vt = np.linalg.svd(observed_matrix, full_matrices=False)
 
-    # Distribute singular values evenly across the two factor matrices
-    sqrt_sigma = np.diag(np.sqrt(singular_values))
-    left_factor = row_embeddings @ sqrt_sigma  # (n_rows, rank)
-    right_factor = sqrt_sigma @ column_embeddings  # (rank, n_cols)
+    # Truncate to desired rank
+    U_r = U[:, :rank]                    # (n_rows, rank)
+    S_r = S[:rank]                       # (rank,)
+    Vt_r = Vt[:rank, :]                  # (rank, n_cols)
+
+    # Distribute sqrt of singular values across the factors
+    sqrt_S = np.sqrt(S_r)
+    left_factor = U_r * sqrt_S          # Broadcasting (n_rows, rank)
+    right_factor = sqrt_S[:, None] * Vt_r  # Broadcasting (rank, n_cols)
 
     return left_factor, right_factor
 
