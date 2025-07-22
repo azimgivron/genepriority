@@ -33,9 +33,9 @@
   rho_increase: 3.0
   rho_decrease: 0.3
 "side-info-genehound":
-  side_info_regularization: 1.0e+01
-  regularization_parameter: 1.0e+01
-  symmetry_parameter: 0.99
-  smoothness_parameter: 1.0e+03
-  rho_increase: 4.0
-  rho_decrease: 0.8
+  side_info_regularization: 71.92255177749553
+  regularization_parameter: 19.24367251303746
+  symmetry_parameter: 0.27801339693679833
+  smoothness_parameter: 0.0010445991263624262
+  rho_increase: 5.0
+  rho_decrease: 0.4
