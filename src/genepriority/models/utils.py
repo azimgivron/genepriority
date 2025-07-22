@@ -34,18 +34,14 @@ def init_from_svd(
             - left_factor: shape (n_rows, rank)
             - right_factor: shape (rank, n_cols)
     """
-    # Full SVD decomposition
     U, S, Vt = np.linalg.svd(observed_matrix, full_matrices=False)
+    U_r = U[:, :rank] # shape (n_rows, rank)
+    S_r = S[:rank] # shape (rank,)
+    Vt_r = Vt[:rank, :] # shape (rank, n_cols)
 
-    # Truncate to desired rank
-    U_r = U[:, :rank]                    # (n_rows, rank)
-    S_r = S[:rank]                       # (rank,)
-    Vt_r = Vt[:rank, :]                  # (rank, n_cols)
-
-    # Distribute sqrt of singular values across the factors
     sqrt_S = np.sqrt(S_r)
-    left_factor = U_r * sqrt_S          # Broadcasting (n_rows, rank)
-    right_factor = sqrt_S[:, None] * Vt_r  # Broadcasting (rank, n_cols)
+    left_factor = U_r * sqrt_S # shape (n_rows, rank)
+    right_factor = sqrt_S[:, None] * Vt_r # shape (rank, n_cols)
 
     return left_factor, right_factor
 
