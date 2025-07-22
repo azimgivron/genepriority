@@ -420,7 +420,7 @@ def process_text_data(raw: Path, cfg: FileConfig) -> pd.DataFrame:
     merged = merged.reset_index()
     assert not merged.isna().any().any()
     merged = merged.dropna().drop(columns=["Gene ID Map"])
-    return merged
+    return merged[["Gene ID", "Feature ID", "Value"]]
 
 
 def write_readme(out: Path, cfg: FileConfig, rd_cfg: ReadmeConfig):
