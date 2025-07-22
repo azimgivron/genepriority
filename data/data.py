@@ -361,7 +361,8 @@ def _extract_nonzero(args):
     """
     i, line = args
     out = []
-    for j, tok in enumerate(line.rstrip("\n").split(",")):
+    splitted_line = line.rstrip("\n").split(",")
+    for j, tok in enumerate(splitted_line):
         v = float(tok)
         if v != 0.0:
             out.append((i, j, v))
@@ -399,22 +400,26 @@ def process_text_data(raw: Path, cfg: FileConfig) -> pd.DataFrame:
             data.extend(result)
 
     # 3) Build DataFrame
-    df = pd.DataFrame(data, columns=["Gene ID", "Feature ID", "Value"])
+    df = pd.DataFrame(data, columns=["Gene ID Map", "Feature ID", "Value"])
+    assert not df.isna().any().any()
+    df = df.set_index("Gene ID Map")
 
     # 4) Remap sparse indices -> canonical Gene ID
     map_df = load_csv(raw / cfg.gene_ids, header=None).reset_index()
-    map_df.columns = ["Gene ID Map", "Gene ID"]
-    map_df["Gene ID"] -= 1 #shift index
+    map_df.columns = ["Gene ID", "Gene ID Map"]
+    map_df["Gene ID Map"] -= 1 #shift index
+    map_df = map_df.set_index("Gene ID Map")
+    assert not map_df.isna().any().any()
 
     merged = df.merge(
         map_df,
-        how="right",
-        on="Gene ID",
+        how="inner",
+        left_index=True,
+        right_index=True
     )
-    merged = merged.fillna(0)
-    merged = merged.drop(columns=["Gene ID"]).rename(
-        columns={"Gene ID Map": "Gene ID"}
-    )[["Gene ID", "Feature ID", "Value"]]
+    merged = merged.reset_index()
+    assert not merged.isna().any().any()
+    merged = merged.dropna().drop(columns=["Gene ID Map"])
     return merged
 
 
