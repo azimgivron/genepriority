@@ -11,7 +11,7 @@ from typing import Tuple
 import numpy as np
 
 from genepriority.models.nega_base import NegaBase
-from genepriority.models.utils import init_from_svd
+from genepriority.utils import svd
 
 
 class NegaGeneHound(NegaBase):
@@ -27,8 +27,8 @@ class NegaGeneHound(NegaBase):
             + 0.5 * λ * || h2 P_m - β_D.T @ D.T ||_F^2
             + 0.5 * λ' * || β_G ||_F^2
             + 0.5 * λ' * || β_D ||_F^2
-          
-        where:  
+
+        where:
             P_n = I_n - (1/n) * 1_n @ 1_n.T
             P_m = I_m - (1/m) * 1_m @ 1_m.T
 
@@ -87,7 +87,7 @@ class NegaGeneHound(NegaBase):
             observed_matrix = np.zeros_like(self.matrix)
             observed_matrix[self.train_mask] = self.matrix[self.train_mask]
 
-            self.h1, self.h2 = init_from_svd(observed_matrix, self.rank)
+            self.h1, self.h2 = svd(observed_matrix, self.rank)
         else:
             nb_genes, nb_diseases = self.matrix.shape
             self.h1 = np.random.randn(nb_genes, self.rank)
@@ -174,38 +174,40 @@ class NegaGeneHound(NegaBase):
         """
         residuals = self.calculate_training_residual()  # shape (nb_genes, nb_diseases)
         nb_genes, nb_diseases = self.matrix.shape
-        
+
         gene_prediction = self.gene_side_info @ self.beta_g  # (nb_genes, k)
         h1_residual = self.h1 - gene_prediction  # (nb_genes, k)
-        
+
         disease_prediction = (
             self.beta_d.T @ self.disease_side_info.T
         )  # (k, nb_diseases)
         h2_residual = self.h2 - disease_prediction  # (k, nb_diseases)
-        
+
         # centering operators
         gene_centering = np.eye(nb_genes) - np.ones((nb_genes, nb_genes)) / nb_genes
-        disease_centering = np.eye(nb_diseases) - np.ones((nb_diseases, nb_diseases)) / nb_diseases
-        
-        h1_residual_centered = gene_centering @ h1_residual # P_n @ (h1 - G @ β_G)
-        h2_residual_centered = h2_residual @ disease_centering # (h2 - β_D.T @ D.T) @ P_m
-        
+        disease_centering = (
+            np.eye(nb_diseases) - np.ones((nb_diseases, nb_diseases)) / nb_diseases
+        )
+
+        h1_residual_centered = gene_centering @ h1_residual  # P_n @ (h1 - G @ β_G)
+        h2_residual_centered = (
+            h2_residual @ disease_centering
+        )  # (h2 - β_D.T @ D.T) @ P_m
+
         grad_h1 = (
-            residuals @ self.h2.T
-            + self.regularization_parameter * h1_residual_centered
+            residuals @ self.h2.T + self.regularization_parameter * h1_residual_centered
         )
         grad_h2 = (
-            self.h1.T @ residuals
-            + self.regularization_parameter * h2_residual_centered
+            self.h1.T @ residuals + self.regularization_parameter * h2_residual_centered
         )
         grad_beta_g = (
-            self.regularization_parameter
-            * self.gene_side_info.T @ h1_residual_centered
+            self.regularization_parameter * self.gene_side_info.T @ h1_residual_centered
             + self.side_information_reg * self.beta_g
         )
         grad_beta_d = (
             self.regularization_parameter
-            * self.disease_side_info.T @ h2_residual_centered.T
+            * self.disease_side_info.T
+            @ h2_residual_centered.T
             + self.side_information_reg * self.beta_d
         )
         grad_Wk_next = np.vstack(

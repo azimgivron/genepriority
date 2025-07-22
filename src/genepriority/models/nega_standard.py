@@ -5,10 +5,11 @@ NEGA Module
 This module implements Non-Euclidean Matrix Completion Algorithm following the
 Inductive Matrix Completion formulation.
 """
+
 import numpy as np
 
 from genepriority.models.nega_base import NegaBase
-from genepriority.models.utils import init_from_svd
+from genepriority.utils import svd
 
 
 class Nega(NegaBase):
@@ -43,7 +44,7 @@ class Nega(NegaBase):
             observed_matrix = np.zeros_like(self.matrix)
             observed_matrix[self.train_mask] = self.matrix[self.train_mask]
 
-            self.h1, self.h2 = init_from_svd(observed_matrix, self.rank)
+            self.h1, self.h2 = svd(observed_matrix, self.rank)
         else:
             nb_genes, nb_diseases = self.matrix.shape
             self.h1 = np.random.randn(nb_genes, self.rank)

@@ -7,8 +7,10 @@ Provides tools for monitoring validation loss and early stopping for machine lea
 The EarlyStopping class tracks recent losses and corresponding model weights. If no improvement
 is observed within a specified patience interval, it signals for early termination of training.
 """
-import numpy as np
 import logging
+
+import numpy as np
+
 
 class EarlyStopping:
     """

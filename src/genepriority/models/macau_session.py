@@ -103,7 +103,7 @@ class MacauSession:
                     univariate=univariate,
                     Ytrain=Ytrain,
                     Ytest=Ytest,
-                    threshold=.5,
+                    threshold=0.5,
                     **kwargs,
                 )
                 self.num_latent = num_latent

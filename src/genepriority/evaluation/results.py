@@ -3,6 +3,7 @@ Results module
 ==============
 Encapsulates the results of a prediction task.
 """
+
 from typing import List
 
 import numpy as np

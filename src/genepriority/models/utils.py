@@ -10,40 +10,12 @@ logging with tf.summary.image. Additional utility functions may be added in the 
 """
 import io
 from pathlib import Path
-from typing import Any, Tuple
+from typing import Any
 
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
-from sklearn.decomposition import TruncatedSVD
 from sklearn.manifold import TSNE
-
-
-def init_from_svd(
-    observed_matrix: np.ndarray, rank: int
-) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    Initialize low-rank factors from a truncated SVD of the observed matrix.
-
-    Args:
-        observed_matrix (np.ndarray): Matrix of shape (n_rows, n_cols).
-        rank (int): Target rank for the approximation.
-
-    Returns:
-        Tuple[np.ndarray, np.ndarray]:
-            - left_factor: shape (n_rows, rank)
-            - right_factor: shape (rank, n_cols)
-    """
-    U, S, Vt = np.linalg.svd(observed_matrix, full_matrices=False)
-    U_r = U[:, :rank] # shape (n_rows, rank)
-    S_r = S[:rank] # shape (rank,)
-    Vt_r = Vt[:rank, :] # shape (rank, n_cols)
-
-    sqrt_S = np.sqrt(S_r)
-    left_factor = U_r * sqrt_S # shape (n_rows, rank)
-    right_factor = sqrt_S[:, None] * Vt_r # shape (rank, n_cols)
-
-    return left_factor, right_factor
 
 
 def tsne_plot_to_tensor(

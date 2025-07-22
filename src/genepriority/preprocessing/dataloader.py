@@ -3,8 +3,8 @@
 DataLoader module
 =================
 
-This module contains the `DataLoader` class for preprocessing and preparing gene-disease 
-association data for gene prioritization tasks. It includes functionality for handling 
+This module contains the `DataLoader` class for preprocessing and preparing gene-disease
+association data for gene prioritization tasks. It includes functionality for handling
 sparse matrices, random splits, cross-validation folds, and filtering based on association
 thresholds.
 
@@ -24,10 +24,7 @@ import pandas as pd
 import scipy.sparse as sp
 
 from genepriority.preprocessing.preprocessing import (
-    compute_statistics,
-    convert_dataframe_to_sparse_matrix,
-    sample_zeros,
-)
+    compute_statistics, convert_dataframe_to_sparse_matrix, sample_zeros)
 from genepriority.preprocessing.train_val_test_mask import TrainValTestMasks
 
 
@@ -170,4 +167,7 @@ class DataLoader:
             f"{np.sum(matrix.data == 1):_}",
         )
         self.logger.debug("Non-zero data in OMIM: %s", f"{matrix.nnz:_}")
-        self.logger.debug("Sparsity in OMIM: %s%%", f"{matrix.sum()/(matrix.shape[0]*matrix.shape[1])*100:.3f}")
+        self.logger.debug(
+            "Sparsity in OMIM: %s%%",
+            f"{matrix.sum()/(matrix.shape[0]*matrix.shape[1])*100:.3f}",
+        )

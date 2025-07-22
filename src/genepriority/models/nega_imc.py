@@ -5,12 +5,13 @@ NEGA with Side Information following the IMC formulation Module.
 This module implements Non-Euclidean Matrix Completion Algorithm following the
 Inductive Matrix Completion formulation.
 """
+
 from typing import Tuple
 
 import numpy as np
 
 from genepriority.models.nega_base import NegaBase
-from genepriority.models.utils import init_from_svd
+from genepriority.utils import svd
 
 
 class NegaIMC(NegaBase):
@@ -73,23 +74,13 @@ class NegaIMC(NegaBase):
             observed_matrix = np.zeros_like(self.matrix)
             observed_matrix[self.train_mask] = self.matrix[self.train_mask]
 
-            left_projection, right_projection = init_from_svd(
-                observed_matrix, self.rank
-            )
+            left_projection, right_projection = svd(observed_matrix, self.rank)
 
             # Backsolve for h1 and h2 using pseudoinverses
-            gene_features_pinv = np.linalg.pinv(
-                gene_feature_matrix
-            )  # shape: (gene_feat_dim, n_genes)
-            disease_features_pinv = np.linalg.pinv(
-                disease_feature_matrix
-            )  # shape: (disease_feat_dim, n_diseases)
-            self.h1 = (
-                gene_features_pinv @ left_projection
-            )  # shape: (gene_feat_dim, rank)
-            self.h2 = (
-                right_projection @ disease_features_pinv
-            )  # shape: (rank, disease_feat_dim)
+            # shape: (gene_feat_dim, rank)
+            self.h1 = np.linalg.pinv(gene_feature_matrix) @ left_projection
+            # shape: (rank, disease_feat_dim)
+            self.h2 = right_projection @ np.linalg.pinv(disease_feature_matrix)
         else:
             gene_feat_dim = self.gene_side_info.shape[1]
             disease_feat_dim = self.disease_side_info.shape[1]

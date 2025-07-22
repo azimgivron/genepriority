@@ -6,6 +6,7 @@ This module provides the `BaselineSession` class, a stochastic baseline model fo
 random prediction matrices in the NEGA pipeline. It simulates binary predictions based on a
 zero-sampling factor and supports serialization of session outputs.
 """
+
 from pathlib import Path
 
 import numpy as np

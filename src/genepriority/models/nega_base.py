@@ -393,11 +393,15 @@ class NegaBase(metaclass=abc.ABCMeta):
                     fig_h1 = tsne_plot_to_tensor(
                         self.h1, color="#E69F00"
                     )  # shape: (N x rank) or (g x rank)
-                    tf.summary.image("t-SNE: Gene embedding", fig_h1, step=ith_iteration)
+                    tf.summary.image(
+                        "t-SNE: Gene embedding", fig_h1, step=ith_iteration
+                    )
                     fig_h2 = tsne_plot_to_tensor(
                         self.h2.T, color="#009E73"
                     )  # shape: (M x rank) or (d x rank)
-                    tf.summary.image("t-SNE: Disease embedding", fig_h2, step=ith_iteration)
+                    tf.summary.image(
+                        "t-SNE: Disease embedding", fig_h2, step=ith_iteration
+                    )
                 tf.summary.flush()
         except ValueError as e:
             self.logger.warning("Tensorboard logging error: %s", e)

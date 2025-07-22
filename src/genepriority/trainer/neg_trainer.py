@@ -4,7 +4,7 @@ NEGTrainer module
 =================
 
 Facilitates the training and evaluation of Non-Euclidean Gradient (NEG)-based predictive models
-for gene prioritization. The trainer supports workflows involving train-test splits and 
+for gene prioritization. The trainer supports workflows involving train-test splits and
 cross-validation, with optional integration of side information. It provides methods for training
 models, generating predictions, and computing evaluation metrics.
 """
@@ -24,7 +24,8 @@ from genepriority.models.flip_labels import FlipLabels
 from genepriority.models.matrix_completion_result import MatrixCompletionResult
 from genepriority.models.nega_session import NegaSession
 from genepriority.preprocessing.dataloader import DataLoader
-from genepriority.preprocessing.side_information_loader import SideInformationLoader
+from genepriority.preprocessing.side_information_loader import \
+    SideInformationLoader
 from genepriority.trainer.base import BaseTrainer
 from genepriority.utils import create_tb_dir
 
@@ -363,6 +364,7 @@ class NEGTrainer(BaseTrainer):
             optuna.study.Study: The study object containing the results of the optimization.
         """
         kwargs = {}
+
         def objective(
             trial: optuna.Trial,
             rank: int,
@@ -376,20 +378,17 @@ class NEGTrainer(BaseTrainer):
             regularization_parameter = trial.suggest_float(
                 "Regularization parameter for the optimization.",
                 low=1e-4,
-                high=1e+2,
-                log=True
+                high=1e2,
+                log=True,
             )
             symmetry_parameter = trial.suggest_float(
                 "Symmetry parameter for the gradient adjustment.",
                 low=1e-5,
-                high=1.,
-                log=True
+                high=1.0,
+                log=True,
             )
             smoothness_parameter = trial.suggest_float(
-                "Initial smoothness parameter.",
-                low=1e-5,
-                high=1.,
-                log=True
+                "Initial smoothness parameter.", low=1e-5, high=1.0, log=True
             )
             rho_increase = trial.suggest_float(
                 "Factor for increasing the step size dynamically.", 2.0, 5.0, step=1.0
@@ -401,8 +400,8 @@ class NEGTrainer(BaseTrainer):
                 kwargs["side_information_reg"] = trial.suggest_float(
                     "Regularization coefficient on the side information.",
                     low=1e-4,
-                    high=1e+2,
-                    log=True
+                    high=1e2,
+                    log=True,
                 )
             if self.patience is not None:
                 kwargs["early_stopping"] = EarlyStopping(self.patience)
@@ -421,7 +420,7 @@ class NEGTrainer(BaseTrainer):
                 test_mask=test_mask,
                 svd_init=self.svd_init,
                 formulation=self.formulation,
-                **kwargs
+                **kwargs,
             )
             training_status = session.run()
             trial.set_user_attr("rmse on test set", training_status.rmse_history)

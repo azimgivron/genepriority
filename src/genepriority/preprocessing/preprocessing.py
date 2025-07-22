@@ -3,8 +3,8 @@
 Preprocessing module
 =====================
 
-Provides utilities for data preprocessing, including dataset index management, 
-train-test splitting, data format conversions, and statistical analysis, 
+Provides utilities for data preprocessing, including dataset index management,
+train-test splitting, data format conversions, and statistical analysis,
 streamlining data preparation workflows.
 """
 from __future__ import annotations

@@ -4,8 +4,8 @@ MACAUTrainer module
 =================
 
 Facilitates the training and evaluation of MACAU-based predictive models for gene
-prioritization. Supports workflows with train-test splits and cross-validation, 
-integrates side information, and computes performance metrics. Evaluation results 
+prioritization. Supports workflows with train-test splits and cross-validation,
+integrates side information, and computes performance metrics. Evaluation results
 and model snapshots can be saved for reproducibility.
 """
 
@@ -21,13 +21,11 @@ import tensorflow as tf
 from genepriority.models.macau_session import MacauSession
 from genepriority.models.matrix_completion_result import MatrixCompletionResult
 from genepriority.preprocessing.dataloader import DataLoader
-from genepriority.preprocessing.side_information_loader import SideInformationLoader
+from genepriority.preprocessing.side_information_loader import \
+    SideInformationLoader
 from genepriority.trainer.base import BaseTrainer
-from genepriority.utils import (
-    calculate_auroc_auprc,
-    create_tb_dir,
-    mask_sparse_containing_0s,
-)
+from genepriority.utils import (calculate_auroc_auprc, create_tb_dir,
+                                mask_sparse_containing_0s)
 
 
 class MACAUTrainer(BaseTrainer):

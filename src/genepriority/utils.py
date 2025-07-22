@@ -4,14 +4,35 @@ Utils module
 
 This module defines the utility functions.
 """
+
 import pickle
 from pathlib import Path
-from typing import Any
+from typing import Any, Tuple
 
 import numpy as np
 import scipy.sparse as sp
 import tensorflow as tf
 from sklearn import metrics
+from sklearn.decomposition import TruncatedSVD
+
+
+def svd(matrix: np.ndarray, rank: int) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Initialize low-rank factors from a truncated SVD of the matrix.
+
+    Args:
+        matrix (np.ndarray): Matrix of shape (n_rows, n_cols).
+        rank (int): Target rank for the approximation.
+
+    Returns:
+        Tuple[np.ndarray, np.ndarray]:
+            - left_factor: shape (n_rows, rank)
+            - right_factor: shape (rank, n_cols)
+    """
+    svd_decomposition = TruncatedSVD(n_components=rank, n_iter=30, random_state=0)
+    left_factor = svd_decomposition.fit_transform(matrix)
+    right_factor = svd_decomposition.components_
+    return left_factor, right_factor
 
 
 def calculate_auroc_auprc(

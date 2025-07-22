@@ -2,6 +2,7 @@
 Parser Module
 =============
 """
+
 import argparse
 
 from genepriority.scripts.utils import csv_file, output_dir, yaml_file

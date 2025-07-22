@@ -5,6 +5,7 @@ Matrix Completion Result Module
 This module provides an data stucture to
 storing training results.
 """
+
 from dataclasses import dataclass
 from typing import List
 
