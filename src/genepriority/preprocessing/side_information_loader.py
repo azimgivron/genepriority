@@ -200,20 +200,23 @@ class SideInformationLoader:
             disease_side_info.shape,
         )
         if self.max_dims is not None:
+            min_dim = np.min([self.max_dims, *gene_side_info.shape])
             self.logger.debug(
                 "Using TruncatedSVD to reduce gene features from %d to %d",
                 gene_side_info.shape[1],
-                min(self.max_dims, gene_side_info.shape[1]),
+                min_dim,
             )
-            svd = TruncatedSVD(n_components=self.max_dims)
+            svd = TruncatedSVD(n_components=min_dim)
             self.gene_side_info = svd.fit_transform(gene_side_info)
             self.gene_side_info /= np.linalg.norm(self.gene_side_info, ord="fro")
             self.logger.debug(
                 "Using TruncatedSVD to reduce disease features from %d to %d",
                 disease_side_info.shape[1],
-                min(self.max_dims, disease_side_info.shape[1]),
+                min_dim,
             )
-            svd = TruncatedSVD(n_components=self.max_dims)
+            
+            min_dim = np.min([self.max_dims, *disease_side_info.shape])
+            svd = TruncatedSVD(n_components=min_dim)
             self.disease_side_info = svd.fit_transform(disease_side_info)
             self.disease_side_info /= np.linalg.norm(
                 self.disease_side_info, ord="fro"
