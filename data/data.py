@@ -407,7 +407,6 @@ def process_text_data(raw: Path, cfg: FileConfig) -> pd.DataFrame:
     # 4) Remap sparse indices -> canonical Gene ID
     map_df = load_csv(raw / cfg.gene_ids, header=None).reset_index()
     map_df.columns = ["Gene ID", "Gene ID Map"]
-    map_df["Gene ID Map"] -= 1 #shift index
     map_df = map_df.set_index("Gene ID Map")
     assert not map_df.isna().any().any()
 
