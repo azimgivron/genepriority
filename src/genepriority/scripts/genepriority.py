@@ -23,8 +23,7 @@ import pytz
 from genepriority.scripts.baseline import baseline
 from genepriority.scripts.genehound import genehound
 from genepriority.scripts.nega import nega
-from genepriority.scripts.parsers import (parse_baseline, parse_genehound,
-                                          parse_nega)
+from genepriority.scripts.parsers import parse_baseline, parse_genehound, parse_nega
 
 
 def setup_logger(args: Any):
