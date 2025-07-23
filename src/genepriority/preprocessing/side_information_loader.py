@@ -15,8 +15,7 @@ import numpy as np
 import pandas as pd
 import scipy.sparse as sp
 
-from genepriority.utils import svd
-
+from sklearn.decomposition import TruncatedSVD
 
 class SideInformationLoader:
     """
@@ -203,30 +202,30 @@ class SideInformationLoader:
         gene_side_info = gene_side_info.toarray()
         disease_side_info = disease_side_info.toarray()
         if self.max_dims is not None:
-            if gene_side_info.shape[1] > self.max_dims:
-                min_dim = min(self.max_dims, gene_side_info.shape[1])
-                self.logger.debug(
-                    "Using TruncatedSVD to reduce gene features from %d to %d",
-                    gene_side_info.shape[1],
-                    min_dim,
-                )
-                left_factor, right_factor = svd(gene_side_info, min_dim)
-                self.gene_side_info = left_factor @ right_factor
-                self.gene_side_info /= np.linalg.norm(self.gene_side_info, ord="fro")
-            if disease_side_info.shape[1] > self.max_dims:
-                min_dim = min(self.max_dims, disease_side_info.shape[1])
-                self.logger.debug(
-                    "Using TruncatedSVD to reduce disease features from %d to %d",
-                    disease_side_info.shape[1],
-                    min_dim,
-                )
-                left_factor, right_factor = svd(disease_side_info, min_dim)
-                self.disease_side_info = left_factor @ right_factor
-                self.disease_side_info /= np.linalg.norm(
-                    self.disease_side_info, ord="fro"
-                )
-        from sklearn.decomposition import TruncatedSVD
-
+            min_dim = np.min([self.max_dims, *gene_side_info.shape])
+            self.logger.debug(
+                "Using TruncatedSVD to reduce gene features from %d to %d",
+                gene_side_info.shape[1],
+                min_dim,
+            )
+            svd = TruncatedSVD(n_components=min_dim)
+            self.gene_side_info = svd.fit_transform(gene_side_info)
+            self.gene_side_info /= np.linalg.norm(self.gene_side_info, ord="fro")
+            self.logger.debug(
+                "Using TruncatedSVD to reduce disease features from %d to %d",
+                disease_side_info.shape[1],
+                min_dim,
+            )
+            
+            min_dim = np.min([self.max_dims, *disease_side_info.shape])
+            svd = TruncatedSVD(n_components=min_dim)
+            self.disease_side_info = svd.fit_transform(disease_side_info)
+            self.disease_side_info /= np.linalg.norm(
+                self.disease_side_info, ord="fro"
+            )
+        else:
+            self.gene_side_info = gene_side_info.toarray()
+            self.disease_side_info = disease_side_info.toarray()
         self.logger.debug(
             (
                 "Processed gene-side information of shape %s and disease-side"
