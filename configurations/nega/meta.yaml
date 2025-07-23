@@ -15,17 +15,17 @@
 # - rho_decrease (float): Specifies the factor for decreasing the step size to help stabilize convergence.
 #
 "ones-only":
-  regularization_parameter: 1.0e-03
-  symmetry_parameter: 1.0e-04
-  smoothness_parameter: 1.0e-02
-  rho_increase: 7.0
-  rho_decrease: 0.3
+  regularization_parameter: 37.15434002668561
+  symmetry_parameter: 0.9415137523691449
+  smoothness_parameter: 0.003550751939566033
+  rho_increase: 2.0
+  rho_decrease: 0.8
 "with-zeros":
-  regularization_parameter: 1.0e-03
-  symmetry_parameter: 1.0e-02
-  smoothness_parameter: 1.0e-02
-  rho_increase: 10.0
-  rho_decrease: 0.3
+  regularization_parameter: 81.13657034677068
+  symmetry_parameter: 0.9917500333238055
+  smoothness_parameter: 0.025616821605462296
+  rho_increase: 5.0
+  rho_decrease: 0.6
 "side-info-imc":
   regularization_parameter: .0002114853485716427
   symmetry_parameter: 0.916702252328461
