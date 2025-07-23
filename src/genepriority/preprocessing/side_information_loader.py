@@ -200,26 +200,24 @@ class SideInformationLoader:
             disease_side_info.shape,
         )
         if self.max_dims is not None:
-            if gene_side_info.shape[1] > self.max_dims:
-                self.logger.debug(
-                    "Using TruncatedSVD to reduce gene features from %d to %d",
-                    gene_side_info.shape[1],
-                    min(self.max_dims, gene_side_info.shape[1]),
-                )
-                svd = TruncatedSVD(n_components=self.max_dims)
-                self.gene_side_info = svd.fit_transform(gene_side_info)
-                self.gene_side_info /= np.linalg.norm(self.gene_side_info, ord="fro")
-            if disease_side_info.shape[1] > self.max_dims:
-                self.logger.debug(
-                    "Using TruncatedSVD to reduce disease features from %d to %d",
-                    disease_side_info.shape[1],
-                    min(self.max_dims, disease_side_info.shape[1]),
-                )
-                svd = TruncatedSVD(n_components=self.max_dims)
-                self.disease_side_info = svd.fit_transform(disease_side_info)
-                self.disease_side_info /= np.linalg.norm(
-                    self.disease_side_info, ord="fro"
-                )
+            self.logger.debug(
+                "Using TruncatedSVD to reduce gene features from %d to %d",
+                gene_side_info.shape[1],
+                min(self.max_dims, gene_side_info.shape[1]),
+            )
+            svd = TruncatedSVD(n_components=self.max_dims)
+            self.gene_side_info = svd.fit_transform(gene_side_info)
+            self.gene_side_info /= np.linalg.norm(self.gene_side_info, ord="fro")
+            self.logger.debug(
+                "Using TruncatedSVD to reduce disease features from %d to %d",
+                disease_side_info.shape[1],
+                min(self.max_dims, disease_side_info.shape[1]),
+            )
+            svd = TruncatedSVD(n_components=self.max_dims)
+            self.disease_side_info = svd.fit_transform(disease_side_info)
+            self.disease_side_info /= np.linalg.norm(
+                self.disease_side_info, ord="fro"
+            )
         else:
             self.gene_side_info = gene_side_info.toarray()
             self.disease_side_info = disease_side_info.toarray()
