@@ -171,18 +171,17 @@ class BaseTrainer(metaclass=ABCMeta):
             Evaluation: Aggregated evaluation results across all splits.
         """
         results = []
+        side_info = (
+            self.side_info_loader.side_info
+            if self.side_info_loader is not None
+            else None
+        )
         for i, (train_mask, test_mask, validation_mask, _) in tqdm(
             enumerate(self.dataloader.omim_masks),
             desc="Fold",
             total=len(self.dataloader.omim_masks),
         ):
             self.logger.debug("Initiating training on fold %d", i + 1)
-
-            side_info = (
-                self.side_info_loader.side_info
-                if self.side_info_loader is not None
-                else None
-            )
             session = self.create_session(
                 i, train_mask, validation_mask, num_latent, save_name, side_info
             )
