@@ -8,34 +8,34 @@
 # The optimization parameters below control key aspects of the training process:
 #
 # - regularization_parameter (float): Regulates the strength of the regularization term to prevent overfitting.
-# - side_info_regularization (float): Regularization term on the link matrices.
-# - symmetry_parameter (float): Adjusts the gradient update to ensure symmetric behavior in the optimization process.
-# - smoothness_parameter (float): Sets the initial smoothness of the optimization landscape, influencing convergence.
+# - side_info_regularization (float): Regularization term on the regression term.
+# - symmetry_parameter (float): Quantify the asymmetry  of the bregman distance.
+# - smoothness_parameter (float): Sets the initial smoothness of the optimization landscape, influencing the step size.
 # - rho_increase (float): Determines the factor by which the step size is increased dynamically during training for acceleration.
 # - rho_decrease (float): Specifies the factor for decreasing the step size to help stabilize convergence.
 #
 "ones-only":
   regularization_parameter: 37.15434002668561
-  symmetry_parameter: 0.9415137523691449
-  smoothness_parameter: 0.003550751939566033
+  symmetry_parameter: 0.99
+  smoothness_parameter: 0.001
   rho_increase: 2.0
   rho_decrease: 0.8
 "with-zeros":
   regularization_parameter: 81.13657034677068
-  symmetry_parameter: 0.9917500333238055
-  smoothness_parameter: 0.025616821605462296
+  symmetry_parameter: 0.99
+  smoothness_parameter: 0.001
   rho_increase: 5.0
   rho_decrease: 0.6
 "side-info-imc":
-  regularization_parameter: .0002114853485716427
-  symmetry_parameter: 0.916702252328461
-  smoothness_parameter: 1.824500300021557e-05
-  rho_increase: 3.0
-  rho_decrease: 0.3
+  regularization_parameter: 0.055902850864821545
+  symmetry_parameter: 0.99
+  smoothness_parameter: 0.001
+  rho_increase: 2.0
+  rho_decrease: 0.7
 "side-info-genehound":
-  side_info_regularization: 71.92255177749553
-  regularization_parameter: 19.24367251303746
-  symmetry_parameter: 0.27801339693679833
-  smoothness_parameter: 0.0010445991263624262
-  rho_increase: 5.0
-  rho_decrease: 0.4
+  side_info_regularization: 9.913754777623938
+  regularization_parameter: 6.403938201080584
+  symmetry_parameter: 0.99
+  smoothness_parameter: 0.001
+  rho_increase: 6.0
+  rho_decrease: 0.8

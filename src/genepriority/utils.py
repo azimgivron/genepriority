@@ -13,7 +13,7 @@ import numpy as np
 import scipy.sparse as sp
 import tensorflow as tf
 from sklearn import metrics
-from sklearn.decomposition import TruncatedSVD
+from scipy as sp
 
 
 def svd(matrix: np.ndarray, rank: int) -> Tuple[np.ndarray, np.ndarray]:
@@ -29,9 +29,21 @@ def svd(matrix: np.ndarray, rank: int) -> Tuple[np.ndarray, np.ndarray]:
             - left_factor: shape (n_rows, rank)
             - right_factor: shape (rank, n_cols)
     """
-    svd_decomposition = TruncatedSVD(n_components=rank, n_iter=30, random_state=0)
-    left_factor = svd_decomposition.fit_transform(matrix)
-    right_factor = svd_decomposition.components_
+    (
+        left_singular_vectors,
+        singular_values,
+        right_singular_vectors_t,
+    ) = sp.linalg.svd(matrix, full_matrices=False)
+
+    left_vectors_truncated = left_singular_vectors[:, :rank]
+    singular_values_truncated = singular_values[:rank]
+    right_vectors_t_truncated = right_singular_vectors_t[:rank, :]
+
+    left_factor = left_vectors_truncated * singular_values_truncated[
+        np.newaxis, :
+    ]
+    right_factor = right_vectors_t_truncated
+
     return left_factor, right_factor
 
 

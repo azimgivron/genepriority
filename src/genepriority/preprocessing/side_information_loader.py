@@ -199,8 +199,6 @@ class SideInformationLoader:
             "Disease side information matrix has shape: %s",
             disease_side_info.shape,
         )
-        gene_side_info = gene_side_info.toarray()
-        disease_side_info = disease_side_info.toarray()
         if self.max_dims is not None:
             min_dim = np.min([self.max_dims, *gene_side_info.shape])
             self.logger.debug(
@@ -216,11 +214,13 @@ class SideInformationLoader:
                 disease_side_info.shape[1],
                 min_dim,
             )
-
+            
             min_dim = np.min([self.max_dims, *disease_side_info.shape])
             svd = TruncatedSVD(n_components=min_dim)
             self.disease_side_info = svd.fit_transform(disease_side_info)
-            self.disease_side_info /= np.linalg.norm(self.disease_side_info, ord="fro")
+            self.disease_side_info /= np.linalg.norm(
+                self.disease_side_info, ord="fro"
+            )
         else:
             self.gene_side_info = gene_side_info.toarray()
             self.disease_side_info = disease_side_info.toarray()

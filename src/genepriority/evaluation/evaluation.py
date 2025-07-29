@@ -56,19 +56,30 @@ class Evaluation:
                 )
         self.results = results
 
-    def compute_bedroc_scores(self) -> np.ndarray:
+    def compute_bedroc_scores(self, filtered: bool = False) -> np.ndarray:
         """
-        Computes BEDROC (Boltzmann-Enhanced Discrimination of Receiver Operating Characteristic)
-        scores for the given alpha values.
+        Calculate mean BEDROC scores over folds and diseases.
+
+        Args:
+            filtered (bool): If True, only include diseases with at least
+                `self.threshold` associations (using `y_true_filtered`
+                / `y_pred_filtered`). Defaults to False.
 
         Returns:
-            np.ndarray: A 2D array of BEDROC scores with shape `(alphas, diseases)`.
+            np.ndarray:
+                2D array of shape (len(self.alphas), D), where D is the number
+                of diseases retained. Each row corresponds to one alpha value,
+                and each column is the mean BEDROC score across folds.
         """
         bedroc = []
         masks = []
         for fold_res in self.results:
-            y_true = fold_res.y_true
-            y_pred = fold_res.y_pred
+            if filtered:
+                y_true = fold_res.y_true_filtered
+                y_pred = fold_res.y_pred_filtered
+            else:
+                y_true = fold_res.y_true
+                y_pred = fold_res.y_pred
             bedroc.append([])
             masks.append([])
             for alpha in self.alphas:
@@ -82,50 +93,69 @@ class Evaluation:
                 masks[-1].append(mask_per_fold)
 
         mask = np.stack(masks).astype(bool)
-        bedroc = np.stack(bedroc).astype(np.float64)  # shape=(fold, alphas, diseases)
+        bedroc = np.stack(bedroc).astype(np.float64)  # shape=(folds, alphas, diseases)
 
         valid = mask.any(axis=(0, 1))
         mask = mask[:, :, valid]
         bedroc = bedroc[:, :, valid]
 
         bedroc_masked = np.ma.array(bedroc, mask=~mask)
-        bedroc = bedroc_masked.mean(axis=0).data
-        return bedroc
+        return bedroc_masked.mean(axis=0).data
 
-    def compute_avg_auc(self) -> float:
+
+    def compute_avg_auc(self, filtered: bool = False) -> np.ndarray:
         """
-        Computes the average AUC for each fold, indicating the model's
-        ability to achieve perfect separation.
+        Compute per-disease average AUC across folds.
+
+        Args:
+            filtered (bool): If True, only include diseases meeting the
+                threshold criterion. Defaults to False.
 
         Returns:
-            np.ndarray: A 1D array where each element represents the AUC
-                for a disease.
+            np.ndarray:
+                1D array of mean AUC scores, one value per disease.
         """
-        return self.compute_avg_metric(auc_per_disease)
+        return self.compute_avg_metric(auc_per_disease, filtered)
 
-    def compute_avg_precision(self) -> float:
-        """
-        Computes the average Precision for each fold.
 
-        Returns:
-            np.ndarray: A 1D array where each element represents the Precision
-                for a disease.
+    def compute_avg_precision(self, filtered: bool = False) -> np.ndarray:
         """
-        return self.compute_avg_metric(avg_precision_per_disease)
+        Compute per-disease average precision across folds.
 
-    def compute_avg_metric(self, func: Callable) -> float:
-        """
-        Computes the average metric for each fold.
+        Args:
+            filtered (bool): If True, only include diseases meeting the
+                threshold criterion. Defaults to False.
 
         Returns:
-            np.ndarray: A 1D array where each element represents the metric
-                for a disease.
+            np.ndarray:
+                1D array of mean precision scores, one value per disease.
+        """
+        return self.compute_avg_metric(avg_precision_per_disease, filtered)
+
+
+    def compute_avg_metric(self, func: Callable, filtered: bool) -> np.ndarray:
+        """
+        Compute the average of a binary metric over folds for each disease.
+
+        Args:
+            func (Callable): Function that returns a tuple
+                `(metric_per_fold, mask_per_fold)` given keyword args
+                `y_true`, `y_pred`, and `gene_number`.
+            filtered (bool): If True, use filtered true/pred lists.
+
+        Returns:
+            np.ndarray:
+                1D array of mean metric values per disease, aggregated across folds.
         """
         metric = []
         masks = []
         for fold_res in self.results:
-            y_true = fold_res.y_true
-            y_pred = fold_res.y_pred
+            if filtered:
+                y_true = fold_res.y_true_filtered
+                y_pred = fold_res.y_pred_filtered
+            else:
+                y_true = fold_res.y_true
+                y_pred = fold_res.y_pred
             metric_per_fold, mask_per_fold = func(
                 y_true=y_true, y_pred=y_pred, gene_number=fold_res.gene_number
             )
@@ -133,90 +163,109 @@ class Evaluation:
             metric.append(metric_per_fold)
 
         mask = np.stack(masks).astype(bool)
-        metric = np.stack(metric).astype(np.float64)  # shape=(fold, diseases)
+        metric = np.stack(metric).astype(np.float64)  # shape=(folds, diseases)
 
         valid = mask.any(axis=0)
         mask = mask[:, valid]
         metric = metric[:, valid]
 
         metric_masked = np.ma.array(metric, mask=~mask)
-        metric = metric_masked.mean(axis=0).data
-        return metric
+        return metric_masked.mean(axis=0).data
 
-    def compute_avg_roc_curve(self) -> np.ndarray:
+
+    def compute_avg_roc_curve(self, filtered: bool = False) -> np.ndarray:
         """
-        Computes the average ROC curve across folds and diseases.
+        Compute the average ROC curve across folds and diseases.
+
+        Args:
+            filtered (bool): If True, only include diseases meeting the
+                threshold criterion. Defaults to False.
 
         Returns:
-            np.ndarray: 2D array of shape (2, n_thresholds) where:
-                - [0, :] is the mean FPR.
-                - [1, :] is the mean TPR.
+            np.ndarray:
+                2xT array where T is the number of thresholds:
+                - [0, :] is the mean false positive rate (FPR).
+                - [1, :] is the mean true positive rate (TPR).
         """
-        return self.compute_avg_metric_curve(roc_per_disease)
+        return self.compute_avg_metric_curve(roc_per_disease, filtered)
 
-    def compute_avg_pr_curve(self) -> np.ndarray:
-        """
-        Computes the average PR curve across folds and diseases.
 
-        Returns:
-            np.ndarray: 2D array of shape (2, n_thresholds) where:
-                - [0, :] is the mean Precision.
-                - [1, :] is the mean Recall.
+    def compute_avg_pr_curve(self, filtered: bool = False) -> np.ndarray:
         """
-        return self.compute_avg_metric_curve(pr_per_disease)
+        Compute the average Precision–Recall curve across folds and diseases.
 
-    def compute_avg_metric_curve(self, func: Callable) -> np.ndarray:
-        """
-        Computes the average metric curve across folds and diseases.
+        Args:
+            filtered (bool): If True, only include diseases meeting the
+                threshold criterion. Defaults to False.
 
         Returns:
-            np.ndarray: 2D array of shape (2, n_thresholds)
+            np.ndarray:
+                2xT array where T is the number of thresholds:
+                - [0, :] is the mean precision.
+                - [1, :] is the mean recall.
+        """
+        return self.compute_avg_metric_curve(pr_per_disease, filtered)
+
+
+    def compute_avg_metric_curve(self, func: Callable, filtered: bool) -> np.ndarray:
+        """
+        Compute the average metric curve (ROC or PR) over folds and diseases.
+
+        Args:
+            func (Callable): Function that returns a tuple
+                `(curve_per_fold, thresholds)` given keyword args `y_true`,
+                `y_pred`, and `gene_number`.
+            filtered (bool): If True, use filtered true/pred lists.
+
+        Returns:
+            np.ndarray:
+                2xT array of the mean metric values at T aggregated thresholds.
         """
         metric_list = []
         threshold_list = []
         cross_fold_thresholds = set()
         for fold_res in self.results:
-            y_true = fold_res.y_true
-            y_pred = fold_res.y_pred
+            if filtered:
+                y_true = fold_res.y_true_filtered
+                y_pred = fold_res.y_pred_filtered
+            else:
+                y_true = fold_res.y_true
+                y_pred = fold_res.y_pred
             metric_per_fold, thresholds = func(
                 y_true=y_true, y_pred=y_pred, gene_number=fold_res.gene_number
             )
             cross_fold_thresholds |= set(thresholds)
-            # metric_per_fold: np.ndarray of shape (2, n_thresholds)
             metric_list.append(metric_per_fold)
             threshold_list.append(thresholds)
 
-        cross_fold_thresholds = list(cross_fold_thresholds)
-        cross_fold_thresholds.sort()
-        avg = aggregate(metric_list, threshold_list, cross_fold_thresholds)
-        return avg
+        cross_fold_thresholds = sorted(cross_fold_thresholds)
+        return aggregate(metric_list, threshold_list, cross_fold_thresholds)
 
+    def aggregate(
+        scores: List[np.ndarray],
+        thresholds: List[np.ndarray],
+        target_thresholds: List[float],
+    ) -> np.ndarray:
+        """
+        Linearly interpolate metric values across a shared threshold grid
+        and average across folds.
 
-def aggregate(
-    scores: List[np.ndarray],
-    thresholds: List[np.ndarray],
-    target_thresholds: List[float],
-) -> np.ndarray:
-    """
-    Linearly interpolate metric values across a shared threshold grid
-    and average across folds.
+        Args:
+            scores (List[np.ndarray]): Arrays of shape (2, n_thresholds)
+                for each fold.
+            thresholds (List[np.ndarray]): The initial thresholds for each fold.
+            target_thresholds (List[float]):
+                Sorted list of unique thresholds to interpolate across.
 
-    Args:
-        scores (List[np.ndarray]): Arrays of shape (2, n_thresholds)
-            for each fold.
-        thresholds (List[np.ndarray]): The initial thresholds for each fold.
-        target_thresholds (List[float]):
-            Sorted list of unique thresholds to interpolate across.
-
-    Returns:
-        np.ndarray:
-            2D array of shape [2, n_thresholds] containing
-                interpolated metrics.
-    """
-    final = []
-    for score, current_thresholds in zip(scores, thresholds):
-        new_score = np.empty(shape=(2, len(target_thresholds)))
-        new_score[0] = np.interp(target_thresholds, current_thresholds, score[0])
-        new_score[1] = np.interp(target_thresholds, current_thresholds, score[1])
-        final.append(new_score)
-    return np.array(final).mean(axis=0)
+        Returns:
+            np.ndarray:
+                2D array of shape [2, n_thresholds] containing
+                    interpolated metrics.
+        """
+        final = []
+        for score, current_thresholds in zip(scores, thresholds):
+            new_score = np.empty(shape=(2, len(target_thresholds)))
+            new_score[0] = np.interp(target_thresholds, current_thresholds, score[0])
+            new_score[1] = np.interp(target_thresholds, current_thresholds, score[1])
+            final.append(new_score)
+        return np.array(final).mean(axis=0)
