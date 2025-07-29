@@ -24,7 +24,8 @@ from genepriority.models.flip_labels import FlipLabels
 from genepriority.models.matrix_completion_result import MatrixCompletionResult
 from genepriority.models.nega_session import NegaSession
 from genepriority.preprocessing.dataloader import DataLoader
-from genepriority.preprocessing.side_information_loader import SideInformationLoader
+from genepriority.preprocessing.side_information_loader import \
+    SideInformationLoader
 from genepriority.trainer.base import BaseTrainer
 from genepriority.utils import create_tb_dir
 
@@ -377,20 +378,13 @@ class NEGTrainer(BaseTrainer):
             regularization_parameter = trial.suggest_float(
                 "Regularization parameter for the optimization.",
                 low=1e-4,
-                high=1e2,
+                high=1e1,
                 log=True,
             )
-            symmetry_parameter = trial.suggest_float(
-                "Symmetry parameter for the gradient adjustment.",
-                low=1e-5,
-                high=1.0,
-                log=True,
-            )
-            smoothness_parameter = trial.suggest_float(
-                "Initial smoothness parameter.", low=1e-5, high=1.0, log=True
-            )
+            symmetry_parameter = 0.99
+            smoothness_parameter = 0.001
             rho_increase = trial.suggest_float(
-                "Factor for increasing the step size dynamically.", 2.0, 5.0, step=1.0
+                "Factor for increasing the step size dynamically.", 1.0, 10.0, step=1.0
             )
             rho_decrease = trial.suggest_float(
                 "Factor for decreasing the step size dynamically.", 0.1, 0.9, step=0.1
@@ -399,7 +393,7 @@ class NEGTrainer(BaseTrainer):
                 kwargs["side_information_reg"] = trial.suggest_float(
                     "Regularization coefficient on the side information.",
                     low=1e-4,
-                    high=1e2,
+                    high=1e1,
                     log=True,
                 )
             if self.patience is not None:

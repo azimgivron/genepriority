@@ -26,7 +26,7 @@ class Results:
         y_true: np.ndarray,
         y_pred: np.ndarray,
         mask: np.ndarray,
-        threshold: int = 0
+        threshold: int = 0,
     ):
         """
         Initialize Results with data matrices and filtering criteria.
@@ -51,8 +51,9 @@ class Results:
             List[np.ndarray]: Length D list of 1D arrays where each array contains
             y_true[:, i] at positions where mask[:, i] is True.
         """
-        return [self._y_true[:, i][self.mask[:, i]]
-                for i in range(self._y_true.shape[1])]
+        return [
+            self._y_true[:, i][self.mask[:, i]] for i in range(self._y_true.shape[1])
+        ]
 
     @property
     def y_pred(self) -> List[np.ndarray]:
@@ -63,8 +64,9 @@ class Results:
             List[np.ndarray]: Length D list of 1D arrays where each array contains
             y_pred[:, i] at positions where mask[:, i] is True.
         """
-        return [self._y_pred[:, i][self.mask[:, i]]
-                for i in range(self._y_pred.shape[1])]
+        return [
+            self._y_pred[:, i][self.mask[:, i]] for i in range(self._y_pred.shape[1])
+        ]
 
     @property
     def y_true_filtered(self) -> List[np.ndarray]:
@@ -76,8 +78,11 @@ class Results:
             total positives (sum of y_true) >= threshold.
         """
         valid = self._y_true.sum(axis=0) >= self.threshold
-        return [self._y_true[:, i][self.mask[:, i]]
-                for i in range(self._y_true.shape[1]) if valid[i]]
+        return [
+            self._y_true[:, i][self.mask[:, i]]
+            for i in range(self._y_true.shape[1])
+            if valid[i]
+        ]
 
     @property
     def y_pred_filtered(self) -> List[np.ndarray]:
@@ -89,8 +94,11 @@ class Results:
             total true positives >= threshold.
         """
         valid = self._y_true.sum(axis=0) >= self.threshold
-        return [self._y_pred[:, i][self.mask[:, i]]
-                for i in range(self._y_pred.shape[1]) if valid[i]]
+        return [
+            self._y_pred[:, i][self.mask[:, i]]
+            for i in range(self._y_pred.shape[1])
+            if valid[i]
+        ]
 
     @property
     def gene_number(self) -> int:

@@ -10,13 +10,10 @@ from typing import Callable, Dict, List
 
 import numpy as np
 
-from genepriority.evaluation.metrics import (
-    auc_per_disease,
-    avg_precision_per_disease,
-    bedroc_per_disease,
-    pr_per_disease,
-    roc_per_disease,
-)
+from genepriority.evaluation.metrics import (auc_per_disease,
+                                             avg_precision_per_disease,
+                                             bedroc_per_disease,
+                                             pr_per_disease, roc_per_disease)
 from genepriority.evaluation.results import Results
 
 
@@ -102,7 +99,6 @@ class Evaluation:
         bedroc_masked = np.ma.array(bedroc, mask=~mask)
         return bedroc_masked.mean(axis=0).data
 
-
     def compute_avg_auc(self, filtered: bool = False) -> np.ndarray:
         """
         Compute per-disease average AUC across folds.
@@ -117,7 +113,6 @@ class Evaluation:
         """
         return self.compute_avg_metric(auc_per_disease, filtered)
 
-
     def compute_avg_precision(self, filtered: bool = False) -> np.ndarray:
         """
         Compute per-disease average precision across folds.
@@ -131,7 +126,6 @@ class Evaluation:
                 1D array of mean precision scores, one value per disease.
         """
         return self.compute_avg_metric(avg_precision_per_disease, filtered)
-
 
     def compute_avg_metric(self, func: Callable, filtered: bool) -> np.ndarray:
         """
@@ -172,7 +166,6 @@ class Evaluation:
         metric_masked = np.ma.array(metric, mask=~mask)
         return metric_masked.mean(axis=0).data
 
-
     def compute_avg_roc_curve(self, filtered: bool = False) -> np.ndarray:
         """
         Compute the average ROC curve across folds and diseases.
@@ -189,7 +182,6 @@ class Evaluation:
         """
         return self.compute_avg_metric_curve(roc_per_disease, filtered)
 
-
     def compute_avg_pr_curve(self, filtered: bool = False) -> np.ndarray:
         """
         Compute the average Precision–Recall curve across folds and diseases.
@@ -205,7 +197,6 @@ class Evaluation:
                 - [1, :] is the mean recall.
         """
         return self.compute_avg_metric_curve(pr_per_disease, filtered)
-
 
     def compute_avg_metric_curve(self, func: Callable, filtered: bool) -> np.ndarray:
         """

@@ -6,7 +6,6 @@ Contains utility functions for scripts.
 """
 
 import argparse
-
 # pylint: disable=R0913
 import logging
 from pathlib import Path
@@ -15,7 +14,8 @@ from typing import List, Tuple
 import yaml
 
 from genepriority.preprocessing.dataloader import DataLoader
-from genepriority.preprocessing.side_information_loader import SideInformationLoader
+from genepriority.preprocessing.side_information_loader import \
+    SideInformationLoader
 
 
 def load_omim_meta(omim_meta_path: Path) -> Tuple[int, int]:
