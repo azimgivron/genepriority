@@ -20,10 +20,9 @@ from typing import Any
 
 import pytz
 
-from genepriority.scripts.baseline import baseline
 from genepriority.scripts.genehound import genehound
 from genepriority.scripts.nega import nega
-from genepriority.scripts.parsers import (parse_baseline, parse_genehound,
+from genepriority.scripts.parsers import (parse_genehound,
                                           parse_nega)
 
 
@@ -86,7 +85,6 @@ def main():
     subparsers = parser.add_subparsers(dest="algorithm_command", required=True)
 
     # Set up subparsers for each subcommand
-    parse_baseline(subparsers)
     parse_genehound(subparsers)
     parse_nega(subparsers)
 
@@ -98,9 +96,6 @@ def main():
         elif "nega" in args.algorithm_command:
             setup_logger(args)
             nega(args)
-        elif "baseline" in args.algorithm_command:
-            setup_logger(args)
-            baseline(args)
         else:
             raise ValueError(f"No such command: {args.algorithm_command}")
     except Exception as exception:

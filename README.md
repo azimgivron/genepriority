@@ -1,23 +1,13 @@
 # genepriority 🚀
 
-[![codecov](https://codecov.io/gh/azimgivron/genepriority/branch/main/graph/badge.svg?token=QSAKYRC4EH)](https://codecov.io/gh/azimgivron/genepriority)
-
-<p align="center">
-  <img width="40%" src=".images/genepriority-logo.png" alt="genepriority logo">
-</p>
-
-Hey there! Welcome to **genepriority** – your go-to repo for rocking matrix completion algorithms on the *Online Mendelian Inheritance in Man* (OMIM) dataset. Our mission? To hunt down disease-associated genes and level up accuracy by throwing in extra genomic and phenotypic info. Let’s dive in! 😎
-
----
-
-## Algorithms in Action
+## Algorithm
 
 We’re using a family of matrix completion models:
 
-1. **Non-Euclidean Gradient Algorithm (NEGA2)** – the core optimizer for standard matrix completion.
-2. **NEGA‑IMC** – NEGA coupled with *Inductive Matrix Completion* to exploit gene and disease features.
-3. **NEGA‑GeneHound** – NEGA using GeneHound-style Bayesian priors on the latent factors.
-4. **GeneHound** – the original Bayesian matrix factorization method ([Zakeri et al., 2018](https://pubmed.ncbi.nlm.nih.gov/29949967/)).
+1. **Non-Euclidean Gradient Algorithm (NEGA)** – the original optimizer for standard matrix completion ([Ghaderi et al., 2022]()).
+2. **NEGA-GPFS** – NEGA with factorization in the feature spaces.
+3. **NEGA-GPR** – NEGA wit side information in regularization.
+4. **GeneHound** – A Bayesian matrix factorization method ([Zakeri et al., 2018](https://pubmed.ncbi.nlm.nih.gov/29949967/)).
 
 ### Complete References
 - Ghaderi, S., Moreau, Y., & Ahookhosh, M. (2022). *Non-Euclidean Gradient Methods: Convergence, Complexity, and Applications*. JMLR, 23(2022):1-44.
@@ -27,122 +17,6 @@ We’re using a family of matrix completion models:
 
 ## Overview 🔍
 
-### What’s the Deal?
-
-We tackle gene prioritization as a **matrix completion** challenge. In simple terms, we fill in the missing pieces in a giant gene-disease puzzle. Neat, right?
-
-### Objective Function 🎯
-
-Our goal is to optimize:
-
-$$
-\min_{W, H} \quad \frac{1}{2}\bigl\|B \odot (R - W H^T)\bigr\|^2_2 + \lambda_W \|W\|_F^2 + \lambda_H \|H\|_F^2
-$$
-
-where:  
-- **W** and **H** are the learnable matrices.  
-- **B** is a binary mask.  
-- **R** is our gene-disease association matrix.
-
-This problem is nonconvex (yup, it's a tough nut to crack) due to the quartic term from $W H^T$, and the gradient might not be Lipschitz continuous (so regular step sizes can be tricky).
-
-### NEGA (Non-Euclidean Gradient Algorithm) 😎
-
-To overcome these issues, NEGA uses **relative smoothness**. That means we compare our function to a distance-generating kernel that vibes with the problem’s geometry.
-
-#### Bregman Distance & Relative Smoothness
-
-We say a function $f$ is $L_f$-smooth relative to a kernel $h$ if:
-
-$$
-\left| f(x) - f(y) - \langle \nabla f(y), x-y \rangle \right| \leq L_f \mathcal{D}_h(x,y)
-$$
-
-with the Bregman distance defined as:
-
-$$
-\mathcal{D}_h(x,y) = h(x) - h(y) - \langle \nabla h(y), x-y \rangle
-$$
-
-#### How It Works 🤖
-
-The NEGA update rule is:
-
-$$
-x^{k+1} = \arg\min_x  \{  \langle \nabla f(x^k), x - x^k \rangle + \frac{1}{\alpha_k} \mathcal{D}_h(x,x^k)  \}
-$$
-
-This formulation keeps the update step convex and ensures we gradually converge to a local optimum—even when the gradient isn’t exactly well-behaved.
-
----
-
-## NEGA with Side Info 🤩
-
-We've taken NEGA to the next level by incorporating genomic and phenotypic side info! This upgrade allows the model to exploit additional gene and disease characteristics to boost prioritization performance. 🚀
-
-### Inductive Matrix Completion
-
-The IMC-based formulation augments the reconstruction with feature matrices:
-
-$$
-\min_{W,H} \quad \frac{1}{2}\Bigl\|B \odot \bigl(R - X W H^T Y^T\bigr)\Bigr\|_2^2 + \lambda_W \|W\|_F^2 + \lambda_H \|H\|_F^2
-$$
-
-where:
-- **X** is the gene feature matrix – genomic side info.
-- **Y** is the disease feature matrix – phenotypic details.
-
-This approach is based on:
-- Nagarajan Natarajan, Inderjit S. Dhillon, *Inductive matrix completion for predicting gene–disease associations*, Bioinformatics 30(12), 2014.
-
-### GeneHound Formulation
-
-GeneHound-style side info introduces link matrices that tie the latent factors to the features:
-
-$$
-\min_{W,H,A,C} \quad \frac{1}{2}\Bigl\|B \odot (R - W H^T)\Bigr\|_2^2 + \lambda_W \|W - X A\|_F^2 + \lambda_H \|H - Y C\|_F^2 + \lambda_A \|A\|_F^2 + \lambda_C \|C\|_F^2
-$$
-
-Here **A** and **C** map features to the latent space. The additional regularization terms ensure these mappings stay well-behaved.
-
-We offer two flavours for side information:
-
-1. **NEGA‑IMC** – directly uses the feature matrices `X` and `Y` as in the IMC formula above.
-2. **NEGA‑GeneHound** – incorporates link matrices `A` and `C` as shown in the GeneHound objective.
-
----
-
-## Experimental Setup 🧪
-
-### Datasets & Info Sources
-
-- **Gene-Disease Association Matrix**:  
-  Extracted from OMIM 2013 and post-processed as per the GeneHound paper.  
-  - **Genes:** 14,196  
-  - **Diseases:** 315  
-  - **Known Positives:** 2,625 (backed by experimental evidence)  
-  - **Association Density:** 0.06%
-
-- **Side Info Sources**:
-  
-  | **Dataset** | **Number of Positive Entries** |
-  |-------------|--------------------------------|
-  | Phen Text   | 66,883                         |
-  | UniProt     | 164,125                        |
-  | InterPro    | 51,499                         |
-  | GO          | 1,365,393                      |
-
-*Note:* Before merging, each genomic data matrix is normalized by its Frobenius norm so no single source dominates.
-
-### Evaluation Strategy 📊
-
-We split the data into:
-- **90%** for cross-validation
-- **10%** for hyperparameter fine tuning
-
-Then use five-fold cross-validation on the main split (72% training, 18% testing per fold). We monitor metrics like **RMSE**, **ROC/AUROC**, **BEDROC**, and **PR Curve/AUPRC**. Also, negative sampling (5 negatives per positive) is used to mirror the real-life imbalance in biology.
-
----
 
 ## Installation 🚀
 
@@ -175,7 +49,7 @@ pip install genepriority git+https://github.com/azimgivron/genepriority.git@main
    docker compose down
    ```
 
-*Note:* Docker is preconfigured to handle permission issues, and TensorBoard logs live at `/home/TheGreatestCoder/code/logs` inside the container.
+*Note:* TensorBoard logs live at `/home/TheGreatestCoder/code/logs` inside the container.
 
 ---
 
@@ -189,16 +63,7 @@ pip install genepriority git+https://github.com/azimgivron/genepriority.git@main
 
 ## Repository Structure 🗂️
 
-### What's Inside?
-
-- **`genepriority/`**: Main modules for preprocessing, matrix operations, and evaluation.
-- **`requirements.txt`**: Lists all project dependencies.
-- **`Dockerfile`**: For containerized deployment.
-- **`pyproject.toml`**: Build and dependency info.
-- **`.gitignore`**: Files and directories to ignore.
-- **`LICENSE`**: MIT License details.
-
-### Folder Breakdown
+### Folder Structure
 
 ```bash
 genepriority/
