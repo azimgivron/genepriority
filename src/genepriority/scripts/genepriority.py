@@ -21,9 +21,11 @@ from typing import Any
 import pytz
 
 from genepriority.scripts.genehound import genehound
+from genepriority.scripts.ncf import ncf
 from genepriority.scripts.nega import nega
-from genepriority.scripts.parsers import (parse_genehound,
-                                          parse_nega)
+from genepriority.scripts.parsers import (parse_genehound, parse_nega,
+                                          parse_nn, parse_post)
+from genepriority.scripts.post import post
 
 
 def setup_logger(args: Any):
@@ -87,6 +89,8 @@ def main():
     # Set up subparsers for each subcommand
     parse_genehound(subparsers)
     parse_nega(subparsers)
+    parse_post(subparsers)
+    parse_nn(subparsers)
 
     args: Any = parser.parse_args()
     try:
@@ -96,6 +100,11 @@ def main():
         elif "nega" in args.algorithm_command:
             setup_logger(args)
             nega(args)
+        elif "post" in args.algorithm_command:
+            post(args)
+        elif "ncf" in args.algorithm_command:
+            setup_logger(args)
+            ncf(args)
         else:
             raise ValueError(f"No such command: {args.algorithm_command}")
     except Exception as exception:

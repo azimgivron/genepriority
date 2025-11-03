@@ -18,10 +18,10 @@ import optuna
 import pandas as pd
 import scipy.sparse as sp
 import tensorflow as tf
-
+from negaWsi import Result
 from negaWsi.early_stopping import EarlyStopping
 from negaWsi.flip_labels import FlipLabels
-from negaWsi import Result
+
 from genepriority.models.nega_session import NegaSession
 from genepriority.preprocessing.dataloader import DataLoader
 from genepriority.preprocessing.side_information_loader import \
@@ -240,9 +240,9 @@ class NEGTrainer(BaseTrainer):
         return NegaSession(
             **kwargs,
             rank=num_latent,
-            matrix=self.dataloader.omim,
-            train_mask=train_mask,
-            test_mask=test_mask,
+            matrix=self.dataloader.omim.toarray(),
+            train_mask=train_mask.toarray().astype(bool),
+            test_mask=test_mask.toarray().astype(bool),
             save_name=str(self.path / f"{iteration}:{save_name}"),
             side_info=side_info,
         )
@@ -407,10 +407,10 @@ class NEGTrainer(BaseTrainer):
                 rho_decrease=rho_decrease,
                 threshold=threshold,
                 rank=rank,
-                matrix=matrix,
+                matrix=matrix.toarray(),
                 side_info=side_info,
-                train_mask=train_mask,
-                test_mask=test_mask,
+                train_mask=train_mask.toarray().astype(bool),
+                test_mask=test_mask.toarray().astype(bool),
                 svd_init=self.svd_init,
                 formulation=self.formulation,
                 **kwargs,

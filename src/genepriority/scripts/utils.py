@@ -59,17 +59,17 @@ def pre_processing(
     max_dims: int,
 ) -> Tuple[DataLoader, SideInformationLoader]:
     """
-    Loads configuration parameters, gene–disease association data, and side information.
+    Loads configuration parameters, gene-disease association data, and side information.
 
     This function performs the following:
       - Loads OMIM metadata (number of genes, diseases, and minimum associations).
-      - Initializes a DataLoader to load gene–disease association data.
+      - Initializes a DataLoader to load gene-disease association data.
       - If side_info is True, initializes a SideInformationLoader to process side information
         files.
 
     Args:
         gene_disease_path (Path):
-            Path to the CSV file containing gene–disease associations.
+            Path to the CSV file containing gene-disease associations.
         seed (int):
             Random seed for reproducibility.
         omim_meta_path (Path):
@@ -92,14 +92,14 @@ def pre_processing(
 
     Returns:
         Tuple[DataLoader, SideInformationLoader]:
-            - dataloader: DataLoader instance for gene–disease association loading.
+            - dataloader: DataLoader instance for gene-disease association loading.
             - side_info_loader: SideInformationLoader instance if side_info=True; otherwise None.
     """
     logger = logging.getLogger("pre_processing")
     logger.debug("Loading OMIM metadata.")
     nb_genes, nb_diseases = load_omim_meta(omim_meta_path)
 
-    # Load gene–disease association data.
+    # Load gene-disease association data.
     dataloader = DataLoader(
         nb_genes=nb_genes,
         nb_diseases=nb_diseases,

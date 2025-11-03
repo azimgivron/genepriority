@@ -4,6 +4,9 @@ Parser Module
 """
 
 import argparse
+from pathlib import Path
+
+import numpy as np
 
 from genepriority.scripts.utils import csv_file, output_dir, yaml_file
 
@@ -19,32 +22,21 @@ DEFAULT_PATHS = {
         "/home/TheGreatestCoder/code/input/medgen.csv",
         "/home/TheGreatestCoder/code/input/mondo.csv",
     ],
-    "OMIM": "/home/TheGreatestCoder/code/input/gene_disease.csv"
+    "OMIM": "/home/TheGreatestCoder/code/input/gene_disease.csv",
 }
 
-def parse_genehound(subparsers: argparse.ArgumentParser):
-    """
-    Parses command-line arguments for the GeneHound reproduction pipeline.
+
+def data_info(parser: argparse.ArgumentParser):
+    """Parse data related information
 
     Args:
-        parser (argparse.ArgumentParser): The parser for genehound.
+        parser (argparse.ArgumentParser): The parser.
     """
-    parser = subparsers.add_parser(
-        "genehound",
-        help="Run GeneHound on OMIM dataset in the cross-validation setting.",
-    )
     parser.add_argument(
         "--num-folds",
         type=int,
         required=True,
         help="Number of folds for cross-validation.",
-    )
-    parser.add_argument(
-        "--output-path",
-        metavar="FILE",
-        type=output_dir,
-        required=True,
-        help="Directory to save output results.",
     )
     parser.add_argument(
         "--zero-sampling-factor",
@@ -82,20 +74,30 @@ def parse_genehound(subparsers: argparse.ArgumentParser):
         metavar="FILE",
         nargs="+",
         type=csv_file,
-        default=[
-            csv_file(file)
-            for file in DEFAULT_PATHS["DISEASE"]
-        ],
+        default=[csv_file(file) for file in DEFAULT_PATHS["DISEASE"]],
         help="Paths to one or more disease-side information CSV files (default: %(default)s).",
     )
     parser.add_argument(
         "--gene-disease-path",
         metavar="FILE",
         type=csv_file,
-        default=csv_file(
-            DEFAULT_PATHS["OMIM"]
-        ),
+        default=csv_file(DEFAULT_PATHS["OMIM"]),
         help="Path of the gene disease matrix (default: %(default)s).",
+    )
+    parser.add_argument(
+        "--validation-size",
+        type=float,
+        default=0.1,
+        help=(
+            "Proportion of data for validation (unused for comparison with NEGA)"
+            " (default: %(default)s)."
+        ),
+    )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=42,
+        help="Random seed for reproducibility (default: %(default)s).",
     )
     parser.add_argument(
         "--omim-meta-path",
@@ -106,6 +108,27 @@ def parse_genehound(subparsers: argparse.ArgumentParser):
         ),
         help="Path to the OMIM metadata file (default: %(default)s).",
     )
+
+
+def parse_genehound(subparsers: argparse._SubParsersAction):
+    """
+    Parses command-line arguments for the GeneHound reproduction pipeline.
+
+    Args:
+        parser (argparse._SubParsersAction): The parser for genehound.
+    """
+    parser = subparsers.add_parser(
+        "genehound",
+        help="Run GeneHound on OMIM dataset in the cross-validation setting.",
+    )
+    parser.add_argument(
+        "--output-path",
+        metavar="FILE",
+        type=output_dir,
+        required=True,
+        help="Directory to save output results.",
+    )
+    data_info(parser)
     parser.add_argument(
         "--log-filename",
         type=str,
@@ -141,21 +164,6 @@ def parse_genehound(subparsers: argparse.ArgumentParser):
         default=40,
         help="Size of the latent dimension (default: %(default)s).",
     )
-    parser.add_argument(
-        "--validation-size",
-        type=float,
-        default=0.1,
-        help=(
-            "Proportion of data for validation (unused for comparison with NEGA)"
-            " (default: %(default)s)."
-        ),
-    )
-    parser.add_argument(
-        "--seed",
-        type=int,
-        default=42,
-        help="Random seed for reproducibility (default: %(default)s).",
-    )
 
 
 def parse_nega(subparsers: argparse._SubParsersAction):
@@ -189,44 +197,13 @@ def parse_nega(subparsers: argparse._SubParsersAction):
     # Add common arguments to both "cv" and "fine-tune"
     for parser in [fine_tune_parser, cv_parser]:
         parser.add_argument(
-            "--num-folds",
-            type=int,
-            required=True,
-            help="Number of folds.",
-        )
-        parser.add_argument(
             "--output-path",
             metavar="FILE",
             type=output_dir,
             required=True,
             help="Directory to save output results.",
         )
-        parser.add_argument(
-            "--zero-sampling-factor",
-            type=int,
-            required=True,
-            help=(
-                "Factor for zero sampling (number of zeros = factor * number of ones)."
-            ),
-        )
-        parser.add_argument(
-            "--gene-disease-path",
-            metavar="FILE",
-            type=csv_file,
-            default=csv_file(
-                DEFAULT_PATHS["OMIM"]
-            ),
-            help="Path of the gene disease matrix (default: %(default)s).",
-        )
-        parser.add_argument(
-            "--omim-meta-path",
-            metavar="FILE",
-            type=yaml_file,
-            default=yaml_file(
-                "/home/TheGreatestCoder/code/genepriority/configurations/omim.yaml"
-            ),
-            help="Path to the OMIM metadata file (default: %(default)s).",
-        )
+        data_info(parser)
         parser.add_argument(
             "--log-filename",
             type=str,
@@ -278,52 +255,6 @@ def parse_nega(subparsers: argparse._SubParsersAction):
                 "condition. Default is None, meaning no early stopping is used. "
                 "(default: %(default)s)."
             ),
-        )
-        parser.add_argument(
-            "--max_dims",
-            type=int,
-            default=None,
-            help=(
-                "The maximum number of dimension to use in the factorization of the side features."
-                "Default is None, meaning no factorization is made. "
-                "(default: %(default)s)."
-            ),
-        )
-        parser.add_argument(
-            "--validation-size",
-            type=float,
-            default=0.1,
-            help="Proportion of data to use for validation (default: %(default)s).",
-        )
-        parser.add_argument(
-            "--seed",
-            type=int,
-            default=42,
-            help="Random seed for reproducibility (default: %(default)s).",
-        )
-        parser.add_argument(
-            "--side-info",
-            action="store_true",
-            help="Include side information for genes and diseases.",
-        )
-        parser.add_argument(
-            "--gene-side-info-paths",
-            metavar="FILE",
-            nargs="+",
-            type=csv_file,
-            default=[csv_file(file) for file in DEFAULT_PATHS["GENE"]],
-            help="Paths to one or more gene-side information CSV files (default: %(default)s).",
-        )
-        parser.add_argument(
-            "--disease-side-info-paths",
-            metavar="FILE",
-            nargs="+",
-            type=csv_file,
-            default=[
-                csv_file(file)
-                for file in DEFAULT_PATHS["DISEASE"]
-            ],
-            help="Paths to one or more disease-side information CSV files (default: %(default)s).",
         )
         parser.add_argument(
             "--svd-init",
@@ -382,4 +313,167 @@ def parse_nega(subparsers: argparse._SubParsersAction):
         type=int,
         default=12,
         help="Number of hours after which to stop the search (default: %(default)s).",
+    )
+
+
+def parse_post(subparsers: argparse._SubParsersAction):
+    """
+    This command loads serialized Evaluation objects, a YAML configuration file
+    containing alpha values, and then produces metric
+    plots and tables. It ensures that the number of evaluation paths matches
+    the number of provided model names.
+
+    Args:
+        subparsers (argparse._SubParsersAction): The subparsers object to which
+            the NEGA command will be added.
+    """
+    parser = subparsers.add_parser(
+        "post",
+        help="Run Post Processing.",
+    )
+    parser.add_argument(
+        "--output-path",
+        metavar="FILE",
+        type=output_dir,
+        required=True,
+        help="Directory to save output results.",
+    )
+    parser.add_argument(
+        "--evaluation-paths",
+        type=str,
+        nargs="+",
+        required=True,
+        help="One or more paths to serialized `Evaluation` objects.",
+    )
+    parser.add_argument(
+        "--model-names",
+        type=str,
+        nargs="+",
+        required=True,
+        help="One or more model names corresponding to the evaluation paths (in the same order).",
+    )
+    parser.add_argument(
+        "--post-config-path",
+        metavar="FILE",
+        type=yaml_file,
+        default=yaml_file(
+            "/home/TheGreatestCoder/code/genepriority/configurations/post.yaml"
+        ),
+        help=(
+            "Path to the post-processing configuration file containing alpha values."
+            " (default: %(default)s)"
+        ),
+    )
+    parser.add_argument(
+        "--no-sharey",
+        action="store_false",
+        help="Whether to share the y axis for BEDROC boxplots (default: %(default)s).",
+    )
+    parser.add_argument(
+        "--full",
+        action="store_false",
+        help=(
+            "If flagged, assessment is made on whole completed matrix instead of the"
+            " test set only (default: %(default)s)."
+        ),
+    )
+
+
+def parse_nn(subparsers: argparse._SubParsersAction):
+    """
+    This command run the Deep matrix completion algorithm: Neural Collaborative Filtering.
+
+    Args:
+        subparsers (argparse._SubParsersAction): The subparsers object to which
+            the NEGA command will be added.
+    """
+    parser = subparsers.add_parser(
+        "ncf",
+        help="Run NNeural Collaborative FilteringEGA on OMIM dataset in the cross-validation setting.",
+    )
+    parser.add_argument(
+        "--output-path",
+        type=Path,
+        required=True,
+        help="Base output directory for results.",
+    )
+    parser.add_argument(
+        "--log-filename",
+        type=str,
+        default="pipeline.log",
+        help="Filename for log output (default: %(default)s).",
+    )
+    data_info(parser)
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=64,
+        help="The batch size (default: %(default)s).",
+    )
+    parser.add_argument(
+        "--lr",
+        type=float,
+        default=1e-3,
+        help="The learning rate (default: %(default)s).",
+    )
+    parser.add_argument(
+        "--lr_patience",
+        type=int,
+        default=50,
+        help="The learning rate patience before reducing it (default: %(default)s).",
+    )
+    parser.add_argument(
+        "--lr_factor",
+        type=float,
+        default=1 / np.sqrt(10),
+        help="The learning rate reduing factor (default: %(default)s).",
+    )
+    parser.add_argument(
+        "--epochs",
+        type=int,
+        default=1000,
+        help="The number of epochs (default: %(default)s).",
+    )
+    parser.add_argument(
+        "--patience",
+        type=int,
+        default=100,
+        help="The patience for early stopping (default: %(default)s).",
+    )
+    parser.add_argument(
+        "--dropout",
+        type=float,
+        default=0.3,
+        help="The dropout probability (default: %(default)s).",
+    )
+    parser.add_argument(
+        "--log-dir",
+        type=Path,
+        default=Path("/home/TheGreatestCoder/code/logs"),
+        help="Base TensorBoard log directory (default: %(default)s).",
+    )
+    parser.add_argument(
+        "--embedding-dim",
+        type=int,
+        default=128,
+        help="Embedding dimension (default: %(default)s).",
+    )
+    parser.add_argument(
+        "--hidden-dims",
+        type=int,
+        nargs="+",
+        default=[128, 64, 32],
+        help="List of MLP hidden layer sizes (default: %(default)s).",
+    )
+    parser.add_argument(
+        "--load-model",
+        type=Path,
+        default=None,
+        help="Path to a .pt/.pth checkpoint to load before training.",
+    )
+    parser.add_argument(
+        "--save-model",
+        type=Path,
+        default=None,
+        help="Path where to save the trained model state_dict.",
     )

@@ -16,6 +16,34 @@ from genepriority.evaluation.metrics import (auc_per_disease,
                                              pr_per_disease, roc_per_disease)
 from genepriority.evaluation.results import Results
 
+def aggregate(
+        scores: List[np.ndarray],
+        thresholds: List[np.ndarray],
+        target_thresholds: List[float],
+    ) -> np.ndarray:
+        """
+        Linearly interpolate metric values across a shared threshold grid
+        and average across folds.
+
+        Args:
+            scores (List[np.ndarray]): Arrays of shape (2, n_thresholds)
+                for each fold.
+            thresholds (List[np.ndarray]): The initial thresholds for each fold.
+            target_thresholds (List[float]):
+                Sorted list of unique thresholds to interpolate across.
+
+        Returns:
+            np.ndarray:
+                2D array of shape [2, n_thresholds] containing
+                    interpolated metrics.
+        """
+        final = []
+        for score, current_thresholds in zip(scores, thresholds):
+            new_score = np.empty(shape=(2, len(target_thresholds)))
+            new_score[0] = np.interp(target_thresholds, current_thresholds, score[0])
+            new_score[1] = np.interp(target_thresholds, current_thresholds, score[1])
+            final.append(new_score)
+        return np.array(final).mean(axis=0)
 
 class Evaluation:
     """
@@ -231,32 +259,3 @@ class Evaluation:
 
         cross_fold_thresholds = sorted(cross_fold_thresholds)
         return aggregate(metric_list, threshold_list, cross_fold_thresholds)
-
-    def aggregate(
-        scores: List[np.ndarray],
-        thresholds: List[np.ndarray],
-        target_thresholds: List[float],
-    ) -> np.ndarray:
-        """
-        Linearly interpolate metric values across a shared threshold grid
-        and average across folds.
-
-        Args:
-            scores (List[np.ndarray]): Arrays of shape (2, n_thresholds)
-                for each fold.
-            thresholds (List[np.ndarray]): The initial thresholds for each fold.
-            target_thresholds (List[float]):
-                Sorted list of unique thresholds to interpolate across.
-
-        Returns:
-            np.ndarray:
-                2D array of shape [2, n_thresholds] containing
-                    interpolated metrics.
-        """
-        final = []
-        for score, current_thresholds in zip(scores, thresholds):
-            new_score = np.empty(shape=(2, len(target_thresholds)))
-            new_score[0] = np.interp(target_thresholds, current_thresholds, score[0])
-            new_score[1] = np.interp(target_thresholds, current_thresholds, score[1])
-            final.append(new_score)
-        return np.array(final).mean(axis=0)

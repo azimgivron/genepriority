@@ -17,9 +17,9 @@ import numpy as np
 import pandas as pd
 import scipy.sparse as sp
 import tensorflow as tf
+from negaWsi import Result
 
 from genepriority.models.macau_session import MacauSession
-from negaWsi import Result
 from genepriority.preprocessing.dataloader import DataLoader
 from genepriority.preprocessing.side_information_loader import \
     SideInformationLoader

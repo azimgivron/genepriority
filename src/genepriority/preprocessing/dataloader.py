@@ -46,7 +46,7 @@ class DataLoader:
         num_folds (int): Number of folds for cross-validation in the OMIM2 dataset.
         omim (sp.csr_matrix): Sparse matrix combining positive and sampled negative
             associations for OMIM.
-        cv_masks (List[dict]): Masks for cross-validation folds.
+        omim_masks (TrainValTestMasks): The masks.
         logger (logging.Logger): Logger instance for tracking and debugging the
             preprocessing steps.
         validation_size (float, optional): Proportion of data used for validation in splits.
@@ -115,7 +115,6 @@ class DataLoader:
         sampling negative associations, and generating random splits for training and testing.
         """
         gene_disease = self.load_data()
-
         self.omim = convert_dataframe_to_sparse_matrix(
             gene_disease, shape=(self.nb_genes, self.nb_diseases)
         )
@@ -145,7 +144,12 @@ class DataLoader:
             np.mean([mask.data.sum() for mask in self.omim_masks.training_masks]),
             self.omim_masks.validation_mask.data.sum(),
             self.omim_masks.finetuning_mask.data.sum(),
-            np.mean([self.omim.toarray()[mask].sum() for mask in self.omim_masks.testing_masks]),
+            np.mean(
+                [
+                    self.omim.toarray()[mask].sum()
+                    for mask in self.omim_masks.testing_masks
+                ]
+            ),
             np.mean([mask.sum() for mask in self.omim_masks.testing_masks]),
         )
         self.logger.debug("Processed OMIM dataset. Shape: %s", self.omim.shape)

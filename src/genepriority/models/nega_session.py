@@ -15,9 +15,11 @@ from typing import Any, Literal, Tuple, Union
 
 import numpy as np
 import tensorflow as tf
+from negaWsi import Nega as BaseNega, NegaFS, NegaReg, Result
+
 from genepriority.models.utils import check_save_name, tsne_plot_to_tensor
 from genepriority.utils import calculate_auroc_auprc, serialize
-from negaWsi import Nega, NegaFS, NegaReg, Result
+
 
 def nega(inherit_from: Any):
     """Dynamic Inheritence
@@ -28,14 +30,19 @@ def nega(inherit_from: Any):
     Returns:
         Union[Nega, NegaFS, NegaReg]: The new class.
     """
+    name = f"Nega_{inherit_from.__name__}"
+
+    # If we already created it, reuse it (important for stable import path)
+    if name in globals():
+        return globals()[name]
+
     class Nega(inherit_from):
-        """Nega Class"""
         def __init__(
             self,
             *args,
             writer: tf.summary.SummaryWriter | None = None,
             save_name: str | None = None,
-            **kwargs
+            **kwargs,
         ):
             """
             Initializes the BaseNEGA instance with the provided configuration
@@ -50,7 +57,6 @@ def nega(inherit_from: Any):
             super().__init__(*args, **kwargs)
             self.save_name = check_save_name(save_name)
             self.writer = writer
-            
 
         def callback(
             self, ith_iteration: int, testing_loss: np.ndarray, grad_f_W_k: np.ndarray
@@ -126,7 +132,7 @@ def nega(inherit_from: Any):
                 except ValueError as e:
                     self.logger.warning("Tensorboard logging error: %s", e)
                     raise
-        
+
         def run(self, log_freq: int = 10) -> Result:
             """
             Performs matrix completion using adaptive step size optimization.
@@ -146,13 +152,29 @@ def nega(inherit_from: Any):
             training_data = super().run(log_freq)
             if self.save_name is not None:
                 # Avoid serializing the writer
-                writer = self.writer
-                self.writer = None
                 serialize(self, self.save_name)
-                self.writer = writer
             return training_data
+
+        def __getstate__(self):
+            st = self.__dict__.copy()
+            st["writer"] = None
+            return st
+
+        def __setstate__(self, st):
+            self.__dict__.update(st)
+            self.writer = None
+
+    # Create the class and register it at module scope
+    Nega.__module__ = __name__ # critical: make importable by module path
+    Nega.__name__   = name
+    Nega.__qualname__ = name
+    globals()[name] = Nega # critical: bind name in module globals
     return Nega
 
+
+Nega_Nega = nega(BaseNega)
+Nega_NegaFS = nega(NegaFS)
+Nega_NegaReg = nega(NegaReg)
 NegaSessionType = Union["Nega", "NegaIMC", "NegaGeneHound"]
 
 
@@ -194,7 +216,7 @@ class NegaSession:
                 f"Formulation can only be either 'imc' or 'genehound', got {formulation}"
             )
         if side_info is None:
-            model = nega(Nega)(*args, **kwargs)
+            model = nega(BaseNega)(*args, **kwargs)
         elif formulation == "imc":
             model = nega(NegaFS)(*args, side_info=side_info, **kwargs)
         else:

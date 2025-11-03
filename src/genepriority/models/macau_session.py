@@ -13,7 +13,6 @@ from typing import Any
 
 import scipy.sparse as sp
 import tensorflow as tf
-
 from negaWsi import Result
 
 try:
