@@ -10,7 +10,6 @@ from pathlib import Path
 from typing import Any, Tuple
 
 import numpy as np
-import scipy as sp
 import scipy.sparse as sp
 import tensorflow as tf
 from sklearn import metrics

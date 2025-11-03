@@ -19,9 +19,9 @@ import pandas as pd
 import scipy.sparse as sp
 import tensorflow as tf
 
-from genepriority.models.early_stopping import EarlyStopping
-from genepriority.models.flip_labels import FlipLabels
-from genepriority.models.matrix_completion_result import MatrixCompletionResult
+from negaWsi.early_stopping import EarlyStopping
+from negaWsi.flip_labels import FlipLabels
+from negaWsi import Result
 from genepriority.models.nega_session import NegaSession
 from genepriority.preprocessing.dataloader import DataLoader
 from genepriority.preprocessing.side_information_loader import \
@@ -310,7 +310,7 @@ class NEGTrainer(BaseTrainer):
 
     def post_training_callback(
         self,
-        training_status: MatrixCompletionResult,
+        training_status: Result,
         session: NegaSession,
         test_mask: sp.csr_matrix,
     ):

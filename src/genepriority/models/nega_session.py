@@ -7,17 +7,151 @@ Factory class that selects and returns an appropriate matrix completion session
 implementation based on the provided parameters.
 
 This class exposes a unified API for matrix completion. When creating an instance,
-if no side information is passed, an instance of Nega is
-is returned; otherwise, depending on the objective function formulation,
-IMC of Genehound like, an instance of NegaIMC of an instance of NegaGeneHound is returned.
+if no side information is passed, an instance of `Nega` is returned; otherwise,
+depending on the objective function formulation—IMC-like or GeneHound-like—an
+instance of `NegaFS` or `NegaReg` is returned (wrapped via the `nega` helper).
 """
-from typing import Literal, Tuple, Union
+from typing import Any, Literal, Tuple, Union
 
 import numpy as np
+import tensorflow as tf
+from genepriority.models.utils import check_save_name, tsne_plot_to_tensor
+from genepriority.utils import calculate_auroc_auprc, serialize
+from negaWsi import Nega, NegaFS, NegaReg, Result
 
-from genepriority.models.nega_genehound import NegaGeneHound
-from genepriority.models.nega_imc import NegaIMC
-from genepriority.models.nega_standard import Nega
+def nega(inherit_from: Any):
+    """Dynamic Inheritence
+
+    Args:
+        inherit_from (Any): Class to inherit from.
+
+    Returns:
+        Union[Nega, NegaFS, NegaReg]: The new class.
+    """
+    class Nega(inherit_from):
+        """Nega Class"""
+        def __init__(
+            self,
+            *args,
+            writer: tf.summary.SummaryWriter | None = None,
+            save_name: str | None = None,
+            **kwargs
+        ):
+            """
+            Initializes the BaseNEGA instance with the provided configuration
+            parameters for matrix approximation.
+
+            Args:
+                writer (tf.summary.SummaryWriter, optional): TensorFlow summary writer for logging
+                    training summaries. Defaults to None.
+                save_name (str or pathlib.Path, optional): File path where the model will be saved.
+                    If set to None, the model will not be saved after training. Defaults to None.
+            """
+            super().__init__(*args, **kwargs)
+            self.save_name = check_save_name(save_name)
+            self.writer = writer
+            
+
+        def callback(
+            self, ith_iteration: int, testing_loss: np.ndarray, grad_f_W_k: np.ndarray
+        ):
+            """
+            Logs training and evaluation metrics to Tensorboard for the current iteration.
+
+            This method gathers various performance metrics during the optimization process and logs
+            them to Tensorboard. It computes the training RMSE, logs the testing loss, and also logs
+            histograms and scalar summaries for different evaluation metrics including AUC and average
+            precision. In addition, it logs histograms of the predicted values on both
+            the training and  testing sets, as well as the flattened gradient values.
+
+            Args:
+                ith_iteration (int): The current iteration index at which the logging is performed.
+                testing_loss (np.ndarray): The computed loss value for the testing dataset at the
+                    current iteration.
+                grad_f_W_k (np.ndarray): The gradient of the loss with respect to the model weights
+                    at the current iteration.
+            """
+            if self.writer is not None:
+                try:
+                    with self.writer.as_default():
+                        training_rmse = self.calculate_rmse(self.train_mask)
+                        tf.summary.scalar(
+                            name="training_loss", data=training_rmse, step=ith_iteration
+                        )
+                        tf.summary.scalar(
+                            name="testing_loss", data=testing_loss, step=ith_iteration
+                        )
+
+                        # Extract observed test values and corresponding predictions
+                        test_values_actual = self.matrix[self.test_mask]
+                        pred = self.predict_all()
+                        test_predictions = pred[self.test_mask]
+                        if (self.matrix[self.test_mask] == 0).any():
+                            auc, avg_precision = calculate_auroc_auprc(
+                                test_values_actual, test_predictions
+                            )
+                            tf.summary.scalar(name="auc", data=auc, step=ith_iteration)
+                            tf.summary.scalar(
+                                name="average precision",
+                                data=avg_precision,
+                                step=ith_iteration,
+                            )
+                        tf.summary.histogram(
+                            "Values on test points",
+                            test_predictions,
+                            step=ith_iteration,
+                        )
+                        tf.summary.histogram(
+                            "Values on training points",
+                            pred[self.train_mask],
+                            step=ith_iteration,
+                        )
+                        tf.summary.histogram(
+                            "Gradient f(W^k)", grad_f_W_k.flatten(), step=ith_iteration
+                        )
+                        if ith_iteration % 1000:
+                            fig_h1 = tsne_plot_to_tensor(
+                                self.h1, color="#E69F00"
+                            )  # shape: (N x rank) or (g x rank)
+                            tf.summary.image(
+                                "t-SNE: Gene embedding", fig_h1, step=ith_iteration
+                            )
+                            fig_h2 = tsne_plot_to_tensor(
+                                self.h2.T, color="#009E73"
+                            )  # shape: (M x rank) or (d x rank)
+                            tf.summary.image(
+                                "t-SNE: Disease embedding", fig_h2, step=ith_iteration
+                            )
+                        tf.summary.flush()
+                except ValueError as e:
+                    self.logger.warning("Tensorboard logging error: %s", e)
+                    raise
+        
+        def run(self, log_freq: int = 10) -> Result:
+            """
+            Performs matrix completion using adaptive step size optimization.
+
+            Args:
+                log_freq (int, optional): Period at which to log data in Tensorboard.
+                    Default to 10 (iterations).
+
+            Returns:
+                Result: A dataclass containing:
+                    - completed_matrix: The reconstructed matrix (low-rank approximation).
+                    - loss_history: List of loss values at each iteration.
+                    - rmse_history: List of RMSE values at each iteration.
+                    - runtime: Total runtime of the optimization process.
+                    - iterations: Total number of iterations performed.
+            """
+            training_data = super().run(log_freq)
+            if self.save_name is not None:
+                # Avoid serializing the writer
+                writer = self.writer
+                self.writer = None
+                serialize(self, self.save_name)
+                self.writer = writer
+            return training_data
+    return Nega
 
 NegaSessionType = Union["Nega", "NegaIMC", "NegaGeneHound"]
 
@@ -60,11 +194,11 @@ class NegaSession:
                 f"Formulation can only be either 'imc' or 'genehound', got {formulation}"
             )
         if side_info is None:
-            model = Nega(*args, **kwargs)
+            model = nega(Nega)(*args, **kwargs)
         elif formulation == "imc":
-            model = NegaIMC(*args, side_info=side_info, **kwargs)
+            model = nega(NegaFS)(*args, side_info=side_info, **kwargs)
         else:
-            model = NegaGeneHound(
+            model = nega(NegaReg)(
                 *args,
                 side_info=side_info,
                 side_information_reg=side_information_reg,

@@ -14,7 +14,7 @@ from typing import Any
 import scipy.sparse as sp
 import tensorflow as tf
 
-from genepriority.models.matrix_completion_result import MatrixCompletionResult
+from negaWsi import Result
 
 try:
     import smurff
@@ -152,7 +152,7 @@ class MacauSession:
 
                 runtime = time.time() - start_time
 
-                return MatrixCompletionResult(
+                return Result(
                     loss_history=loss,
                     iterations=iterations_count,
                     rmse_history=rmse,

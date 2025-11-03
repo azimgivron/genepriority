@@ -19,7 +19,7 @@ import scipy.sparse as sp
 import tensorflow as tf
 
 from genepriority.models.macau_session import MacauSession
-from genepriority.models.matrix_completion_result import MatrixCompletionResult
+from negaWsi import Result
 from genepriority.preprocessing.dataloader import DataLoader
 from genepriority.preprocessing.side_information_loader import \
     SideInformationLoader
@@ -224,7 +224,7 @@ class MACAUTrainer(BaseTrainer):
 
     def post_training_callback(
         self,
-        training_status: MatrixCompletionResult,
+        training_status: Result,
         session: MacauSession,
         test_mask: sp.csr_matrix,
     ):
@@ -232,7 +232,7 @@ class MACAUTrainer(BaseTrainer):
         Post training callback used for monitoring and debugging purposes.
 
         Args:
-            training_status (MatrixCompletionResult): The predictions on
+            training_status (Result): The predictions on
                 the test set during training.
             session (MacauSession): Trained model session.
             test_mask (sp.csr_matrix): Sparse matrix serving as a mask to identify

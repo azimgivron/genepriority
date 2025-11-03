@@ -7,13 +7,20 @@ import argparse
 
 from genepriority.scripts.utils import csv_file, output_dir, yaml_file
 
-DEFAULT_PATHS = [
-    "/home/TheGreatestCoder/code/data/postprocessed/interpro.csv",
-    "/home/TheGreatestCoder/code/data/postprocessed/uniprot.csv",
-    "/home/TheGreatestCoder/code/data/postprocessed/go.csv",
-    "/home/TheGreatestCoder/code/data/postprocessed/gene-literature.csv",
-]
-
+DEFAULT_PATHS = {
+    "GENE": [
+        "/home/TheGreatestCoder/code/input/gene_rifs.csv",
+        "/home/TheGreatestCoder/code/input/go.csv",
+        "/home/TheGreatestCoder/code/input/reactome.csv",
+        "/home/TheGreatestCoder/code/input/swissprot.csv",
+    ],
+    "DISEASE": [
+        "/home/TheGreatestCoder/code/input/hpo.csv",
+        "/home/TheGreatestCoder/code/input/medgen.csv",
+        "/home/TheGreatestCoder/code/input/mondo.csv",
+    ],
+    "OMIM": "/home/TheGreatestCoder/code/input/gene_disease.csv"
+}
 
 def parse_genehound(subparsers: argparse.ArgumentParser):
     """
@@ -67,7 +74,7 @@ def parse_genehound(subparsers: argparse.ArgumentParser):
         metavar="FILE",
         nargs="+",
         type=csv_file,
-        default=[csv_file(file) for file in DEFAULT_PATHS],
+        default=[csv_file(file) for file in DEFAULT_PATHS["GENE"]],
         help="Paths to one or more gene-side information CSV files (default: %(default)s).",
     )
     parser.add_argument(
@@ -77,7 +84,7 @@ def parse_genehound(subparsers: argparse.ArgumentParser):
         type=csv_file,
         default=[
             csv_file(file)
-            for file in ["/home/TheGreatestCoder/code/data/postprocessed/phenotype.csv"]
+            for file in DEFAULT_PATHS["DISEASE"]
         ],
         help="Paths to one or more disease-side information CSV files (default: %(default)s).",
     )
@@ -86,7 +93,7 @@ def parse_genehound(subparsers: argparse.ArgumentParser):
         metavar="FILE",
         type=csv_file,
         default=csv_file(
-            "/home/TheGreatestCoder/code/data/postprocessed/gene-disease.csv"
+            DEFAULT_PATHS["OMIM"]
         ),
         help="Path of the gene disease matrix (default: %(default)s).",
     )
@@ -207,7 +214,7 @@ def parse_nega(subparsers: argparse._SubParsersAction):
             metavar="FILE",
             type=csv_file,
             default=csv_file(
-                "/home/TheGreatestCoder/code/data/postprocessed/gene-disease.csv"
+                DEFAULT_PATHS["OMIM"]
             ),
             help="Path of the gene disease matrix (default: %(default)s).",
         )
@@ -304,7 +311,7 @@ def parse_nega(subparsers: argparse._SubParsersAction):
             metavar="FILE",
             nargs="+",
             type=csv_file,
-            default=[csv_file(file) for file in DEFAULT_PATHS],
+            default=[csv_file(file) for file in DEFAULT_PATHS["GENE"]],
             help="Paths to one or more gene-side information CSV files (default: %(default)s).",
         )
         parser.add_argument(
@@ -314,9 +321,7 @@ def parse_nega(subparsers: argparse._SubParsersAction):
             type=csv_file,
             default=[
                 csv_file(file)
-                for file in [
-                    "/home/TheGreatestCoder/code/data/postprocessed/phenotype.csv"
-                ]
+                for file in DEFAULT_PATHS["DISEASE"]
             ],
             help="Paths to one or more disease-side information CSV files (default: %(default)s).",
         )

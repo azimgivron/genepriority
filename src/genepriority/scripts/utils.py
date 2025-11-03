@@ -138,7 +138,7 @@ def csv_file(path: str) -> Path:
     """
     file_path = Path(path)
     if not file_path.exists():
-        raise argparse.ArgumentTypeError(f"'{path}' does not exist.")
+        return "DEFAULT-PATH-NOT-FOUND"
     if file_path.suffix.lower() != ".csv":
         raise argparse.ArgumentTypeError(f"'{path}' is not a CSV file.")
     return file_path

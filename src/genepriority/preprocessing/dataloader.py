@@ -141,11 +141,12 @@ class DataLoader:
         )
         self.logger.debug(
             "%.2ipts for training (avg), %.2ipts for validation, "
-            "%.2ipts for finetuning, %.2ipts for testing (avg).",
-            np.mean([len(mask.data) for mask in self.omim_masks.training_masks]),
-            len(self.omim_masks.validation_mask.data),
-            len(self.omim_masks.finetuning_mask.data),
-            np.mean([len(mask.flatten()) for mask in self.omim_masks.testing_masks]),
+            "%.2ipts for finetuning, %.2i nnz pts and %.2i pts with zeros for testing (avg).",
+            np.mean([mask.data.sum() for mask in self.omim_masks.training_masks]),
+            self.omim_masks.validation_mask.data.sum(),
+            self.omim_masks.finetuning_mask.data.sum(),
+            np.mean([self.omim.toarray()[mask].sum() for mask in self.omim_masks.testing_masks]),
+            np.mean([mask.sum() for mask in self.omim_masks.testing_masks]),
         )
         self.logger.debug("Processed OMIM dataset. Shape: %s", self.omim.shape)
         counts = compute_statistics(self.omim, self.omim_masks)

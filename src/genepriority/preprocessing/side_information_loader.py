@@ -209,13 +209,13 @@ class SideInformationLoader:
             svd = TruncatedSVD(n_components=min_dim)
             self.gene_side_info = svd.fit_transform(gene_side_info)
             self.gene_side_info /= np.linalg.norm(self.gene_side_info, ord="fro")
+
+            min_dim = np.min([self.max_dims, *disease_side_info.shape])
             self.logger.debug(
                 "Using TruncatedSVD to reduce disease features from %d to %d",
                 disease_side_info.shape[1],
                 min_dim,
             )
-
-            min_dim = np.min([self.max_dims, *disease_side_info.shape])
             svd = TruncatedSVD(n_components=min_dim)
             self.disease_side_info = svd.fit_transform(disease_side_info)
             self.disease_side_info /= np.linalg.norm(self.disease_side_info, ord="fro")
