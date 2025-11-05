@@ -49,7 +49,7 @@ class Results:
 
         Returns:
             List[np.ndarray]: Length D list of 1D arrays where each array contains
-            y_true[:, i] at positions where mask[:, i] is True.
+                y_true[:, i] at positions where mask[:, i] is True.
         """
         return [
             self._y_true[:, i][self.mask[:, i]] for i in range(self._y_true.shape[1])
@@ -62,11 +62,15 @@ class Results:
 
         Returns:
             List[np.ndarray]: Length D list of 1D arrays where each array contains
-            y_pred[:, i] at positions where mask[:, i] is True.
+                y_pred[:, i] at positions where mask[:, i] is True.
         """
         return [
             self._y_pred[:, i][self.mask[:, i]] for i in range(self._y_pred.shape[1])
         ]
+    
+    @property
+    def filtered_mask(self) -> np.ndarray:
+        return self._y_true.sum(axis=0) >= self.threshold
 
     @property
     def y_true_filtered(self) -> List[np.ndarray]:
@@ -77,11 +81,10 @@ class Results:
             List[np.ndarray]: As in `y_true`, but only for diseases where
             total positives (sum of y_true) >= threshold.
         """
-        valid = self._y_true.sum(axis=0) >= self.threshold
         return [
             self._y_true[:, i][self.mask[:, i]]
             for i in range(self._y_true.shape[1])
-            if valid[i]
+            if self.filtered_mask[i]
         ]
 
     @property
@@ -93,11 +96,44 @@ class Results:
             List[np.ndarray]: As in `y_pred`, but only for diseases where
             total true positives >= threshold.
         """
-        valid = self._y_true.sum(axis=0) >= self.threshold
         return [
             self._y_pred[:, i][self.mask[:, i]]
             for i in range(self._y_pred.shape[1])
-            if valid[i]
+            if self.filtered_mask[i]
+        ]
+    
+    @property
+    def singleton_mask(self) -> np.ndarray:
+        return self._y_true.sum(axis=0) == 1
+    
+    @property
+    def y_true_singleton(self) -> List[np.ndarray]:
+        """
+        Extract masked true values for diseases with single association.
+
+        Returns:
+            List[np.ndarray]: As in `y_true`, but only for diseases where
+            total true positives == 1.
+        """
+        return [
+            self._y_true[:, i][self.mask[:, i]]
+            for i in range(self._y_true.shape[1])
+            if self.singleton_mask[i]
+        ]
+
+    @property
+    def y_pred_singleton(self) -> List[np.ndarray]:
+        """
+        Extract masked predicted values for diseases with single association.
+
+        Returns:
+            List[np.ndarray]: As in `y_pred`, but only for diseases where
+            total true positives == 1.
+        """
+        return [
+            self._y_pred[:, i][self.mask[:, i]]
+            for i in range(self._y_pred.shape[1])
+            if self.singleton_mask[i]
         ]
 
     @property

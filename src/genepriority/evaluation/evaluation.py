@@ -81,7 +81,7 @@ class Evaluation:
                 )
         self.results = results
 
-    def compute_bedroc_scores(self, filtered: bool = False) -> np.ndarray:
+    def compute_bedroc_scores(self, filtered: bool = False, over: int = 0) -> np.ndarray:
         """
         Calculate mean BEDROC scores over folds and diseases.
 
@@ -89,6 +89,7 @@ class Evaluation:
             filtered (bool): If True, only include diseases with at least
                 `self.threshold` associations (using `y_true_filtered`
                 / `y_pred_filtered`). Defaults to False.
+            over (int, optional): Axis over which to average. Default to 0.
 
         Returns:
             np.ndarray:
@@ -125,37 +126,40 @@ class Evaluation:
         bedroc = bedroc[:, :, valid]
 
         bedroc_masked = np.ma.array(bedroc, mask=~mask)
-        return bedroc_masked.mean(axis=0).data
+        bedroc_masked = np.transpose(bedroc_masked, (1, 0, 2)) # shape=(folds, diseases, alphas)
+        return bedroc_masked.mean(axis=over+1).data
 
-    def compute_avg_auc(self, filtered: bool = False) -> np.ndarray:
+    def compute_avg_auc(self, filtered: bool = False, over: int = 0) -> np.ndarray:
         """
         Compute per-disease average AUC across folds.
 
         Args:
             filtered (bool): If True, only include diseases meeting the
                 threshold criterion. Defaults to False.
+            over (int, optional): Axis over which to average. Default to 0.
 
         Returns:
             np.ndarray:
                 1D array of mean AUC scores, one value per disease.
         """
-        return self.compute_avg_metric(auc_per_disease, filtered)
+        return self.compute_avg_metric(auc_per_disease, filtered, over)
 
-    def compute_avg_precision(self, filtered: bool = False) -> np.ndarray:
+    def compute_avg_precision(self, filtered: bool = False, over: int = 0) -> np.ndarray:
         """
         Compute per-disease average precision across folds.
 
         Args:
             filtered (bool): If True, only include diseases meeting the
                 threshold criterion. Defaults to False.
-
+            over (int, optional): Axis over which to average. Default to 0.
+    
         Returns:
             np.ndarray:
                 1D array of mean precision scores, one value per disease.
         """
-        return self.compute_avg_metric(avg_precision_per_disease, filtered)
+        return self.compute_avg_metric(avg_precision_per_disease, filtered, over)
 
-    def compute_avg_metric(self, func: Callable, filtered: bool) -> np.ndarray:
+    def compute_avg_metric(self, func: Callable, filtered: bool, over: int) -> np.ndarray:
         """
         Compute the average of a binary metric over folds for each disease.
 
@@ -164,6 +168,7 @@ class Evaluation:
                 `(metric_per_fold, mask_per_fold)` given keyword args
                 `y_true`, `y_pred`, and `gene_number`.
             filtered (bool): If True, use filtered true/pred lists.
+            over (int): Axis over which to average.
 
         Returns:
             np.ndarray:
@@ -192,7 +197,7 @@ class Evaluation:
         metric = metric[:, valid]
 
         metric_masked = np.ma.array(metric, mask=~mask)
-        return metric_masked.mean(axis=0).data
+        return metric_masked.mean(axis=over).data
 
     def compute_avg_roc_curve(self, filtered: bool = False) -> np.ndarray:
         """
@@ -212,7 +217,7 @@ class Evaluation:
 
     def compute_avg_pr_curve(self, filtered: bool = False) -> np.ndarray:
         """
-        Compute the average Precision–Recall curve across folds and diseases.
+        Compute the average Precision-Recall curve across folds and diseases.
 
         Args:
             filtered (bool): If True, only include diseases meeting the
@@ -259,3 +264,41 @@ class Evaluation:
 
         cross_fold_thresholds = sorted(cross_fold_thresholds)
         return aggregate(metric_list, threshold_list, cross_fold_thresholds)
+    
+    def compute_avg_cdf(self, filtered: bool = False, max_r: int = 50) -> np.ndarray:
+        """Compute average cumulative distribution functions (CDFs) of
+            ranks for hidden positives.
+
+        Args:
+            filtered (bool): If True, use filtered true/pred lists.
+            max_r (int, optional): Maximum rank threshold for the CDF.
+                Defaults to 100.
+
+        Returns:
+            np.ndarray: Array of shape (n_folds, max_r) containing one CDF
+                curve per fold.
+        """
+        cdfs = []
+        for fold_res in self.results:
+            n, m = fold_res._y_pred.shape
+            # gene_id to rank for each disease
+            order = np.argsort(-fold_res._y_pred, axis=0)
+            # rank to gene_id for each disease
+            ranks = np.empty_like(order)
+            cols = np.tile(np.arange(m), (n, 1))  # (n, m) column indices
+            ranks[order, cols] = np.tile(np.arange(n)[:, None], (1, m))
+
+            # Extract ranks for the hidden positive pairs
+            hidden_pos_mask = fold_res._y_true.astype(bool) & fold_res.mask
+            if filtered:
+                hidden_pos_mask &= fold_res.filtered_mask
+            if not (hidden_pos_mask).any():
+                continue
+            total_hidden = int(hidden_pos_mask.sum())
+            pos_ranks = ranks[hidden_pos_mask] + 1  # 1-based ranks
+
+            # histogram on [1, max_r]; ranks > max_r contribute 0 to CDF by construction
+            counts, _ = np.histogram(pos_ranks, bins=np.arange(1, max_r + 2))
+            cdf = np.cumsum(counts) / total_hidden
+            cdfs.append(cdf)
+        return np.array(cdfs).mean(axis=0)

@@ -54,21 +54,22 @@ def plot_bedroc_boxplots(
             ax=axs[i],
             palette=COLORS[: bedroc.shape[-1]],
             showfliers=False,
+            width=.3,
+            linewidth=2
         )
         axs[i].set_xticks(range(len(model_names)))
         axs[i].set_xticklabels(["" for _ in model_names])
-        axs[i].yaxis.set_tick_params(labelsize=14)
-        axs[i].set_title(
-            f"$\\alpha={float(alpha):.1f}$\nTop {Evaluation.alpha_map[alpha]}",
-            fontsize=16,
-            weight="bold",
-        )
+        axs[i].yaxis.set_tick_params(labelsize=18)
+        # axs[i].set_title(
+        #     f"$\\alpha={float(alpha):.1f}$\nTop {Evaluation.alpha_map[alpha]}",
+        #     fontsize=20,
+        #     weight="bold",
+        # )
         axs[i].grid(axis="y", alpha=0.3)
         if box.legend_ is not None:
             box.legend_.remove()
-
-    axs[0].set_ylabel("BEDROC", fontsize=16)
-    fig.subplots_adjust(bottom=0.15)
+    axs[0].set_ylabel("BEDROC", fontsize=20)
+    fig.subplots_adjust(bottom=0.1, wspace=0.26, left=0.1)
     handles = [mpatches.Patch(color=c, label=m) for c, m in zip(COLORS, model_names)]
     fig.legend(
         handles,
@@ -76,7 +77,7 @@ def plot_bedroc_boxplots(
         loc="lower center",
         bbox_to_anchor=(0.5, 0),
         ncol=4,
-        fontsize=16,
+        fontsize=22,
     )
     plt.savefig(output_file, dpi=300, bbox_inches="tight")
     plt.close()
@@ -108,21 +109,23 @@ def plot_auc_boxplots(
         ax=axis,
         palette=COLORS[: auc.shape[-1]],
         showfliers=False,
+        width=.3,
+        linewidth=2
     )
-    axis.set_ylabel("AUROC", fontsize=16)
+    axis.set_ylabel("AUROC", fontsize=20)
     axis.set_xticks(range(len(model_names)))
     axis.set_xticklabels(["" for _ in model_names])
-    axis.yaxis.set_tick_params(labelsize=14)
+    axis.yaxis.set_tick_params(labelsize=18)
     axis.grid(axis="y", alpha=0.3)
-    fig.subplots_adjust(bottom=0.15)
+    fig.subplots_adjust(bottom=0.15, left=.2)
     handles = [mpatches.Patch(color=c, label=m) for c, m in zip(COLORS, model_names)]
     fig.legend(
         handles,
         model_names,
         loc="lower center",
         bbox_to_anchor=(0.5, 0),
-        ncol=2,
-        fontsize=16,
+        ncol=4,
+        fontsize=22,
     )
     plt.savefig(output_file, dpi=300, bbox_inches="tight")
     plt.close()
@@ -154,20 +157,23 @@ def plot_avg_precision_boxplots(
         ax=axis,
         palette=COLORS[: avg_pr.shape[-1]],
         showfliers=False,
+        width=.3,
+        linewidth=2
     )
     axis.set_xticks(range(len(model_names)))
     axis.set_xticklabels(["" for _ in model_names])
-    axis.yaxis.set_tick_params(labelsize=14)
+    axis.yaxis.set_tick_params(labelsize=18)
     axis.grid(axis="y", alpha=0.3)
-    axis.set_ylabel("AUPRC", fontsize=16)
-    fig.subplots_adjust(bottom=0.15)
+    axis.set_ylabel("AUPRC", fontsize=20)
+    fig.subplots_adjust(bottom=0.15, left=.2)
     handles = [mpatches.Patch(color=c, label=m) for c, m in zip(COLORS, model_names)]
     fig.legend(
         handles,
         model_names,
         loc="lower center",
         bbox_to_anchor=(0.5, 0),
-        ncol=2,
+        ncol=4,
+        fontsize=22,
     )
     plt.savefig(output_file, dpi=300, bbox_inches="tight")
     plt.close()
@@ -191,17 +197,19 @@ def plot_roc_curves(
     if len(model_names) > len(COLORS):
         raise ValueError("Not enough colors for the number of models.")
 
-    _, ax = plt.subplots(1, 1, figsize=figsize)
+    fig, ax = plt.subplots(1, 1, figsize=figsize)
     for i, name in enumerate(model_names):
         color = COLORS[i]
         ls = LINESTYLES[i % len(LINESTYLES)]
         ax.plot(
             roc[i][0], roc[i][1], linestyle=ls, color=color, linewidth=2, label=name
         )
-    ax.set_xlabel("False Positive Rate", fontsize=14)
-    ax.set_ylabel("True Positive Rate", fontsize=14)
+    ax.set_xlabel("False Positive Rate", fontsize=16)
+    ax.set_ylabel("True Positive Rate", fontsize=16)
+    ax.tick_params(labelsize=18)
     ax.grid(alpha=0.3)
-    ax.legend(fontsize=16)
+    ax.legend(fontsize=20)
+    fig.subplots_adjust(left=.2)
     plt.savefig(output_file, dpi=300, bbox_inches="tight")
     plt.close()
 
@@ -224,14 +232,83 @@ def plot_pr_curves(
     if len(model_names) > len(COLORS):
         raise ValueError("Not enough colors for the number of models.")
 
-    _, ax = plt.subplots(1, 1, figsize=figsize)
+    fig, ax = plt.subplots(1, 1, figsize=figsize)
     for i, name in enumerate(model_names):
         color = COLORS[i]
         ls = LINESTYLES[i % len(LINESTYLES)]
         ax.plot(pr[i][1], pr[i][0], linestyle=ls, color=color, linewidth=2, label=name)
-    ax.set_xlabel("Recall", fontsize=14)
-    ax.set_ylabel("Precision", fontsize=14)
+    ax.set_xlabel("Recall", fontsize=16)
+    ax.set_ylabel("Precision", fontsize=16)
+    ax.tick_params(labelsize=18)
     ax.grid(alpha=0.3)
-    ax.legend(fontsize=16)
+    ax.legend(fontsize=20)
+    fig.subplots_adjust(left=.2)
+    plt.savefig(output_file, dpi=300, bbox_inches="tight")
+    plt.close()
+
+def plot_roc_curves(
+    roc: List[np.ndarray],
+    model_names: List[str],
+    output_file: str,
+    figsize: Tuple[int, int],
+):
+    """
+    Plots ROC curves for multiple models with distinct linestyles.
+
+    Args:
+        roc (List[np.ndarray]): FPR-TPR values, shape (2, n_points), for each model.
+        model_names (List[str]): Names of the models being compared.
+        output_file (str): File path where the ROC curve figure will be saved.
+        figsize (Tuple[int, int]): Figure size in inches (width, height).
+    """
+    if len(model_names) > len(COLORS):
+        raise ValueError("Not enough colors for the number of models.")
+
+    fig, ax = plt.subplots(1, 1, figsize=figsize)
+    for i, name in enumerate(model_names):
+        color = COLORS[i]
+        ls = LINESTYLES[i % len(LINESTYLES)]
+        ax.plot(
+            roc[i][0], roc[i][1], linestyle=ls, color=color, linewidth=2, label=name
+        )
+    ax.set_xlabel("False Positive Rate", fontsize=16)
+    ax.set_ylabel("True Positive Rate", fontsize=16)
+    ax.tick_params(labelsize=18)
+    ax.grid(alpha=0.3)
+    ax.legend(fontsize=20)
+    fig.subplots_adjust(left=.2)
+    plt.savefig(output_file, dpi=300, bbox_inches="tight")
+    plt.close()
+
+
+def plot_cdf_curves(
+    cdf: List[np.ndarray],
+    model_names: List[str],
+    output_file: str,
+    figsize: Tuple[int, int],
+):
+    """
+    Plots CDF curves for multiple models with distinct linestyles.
+
+    Args:
+        pr (List[np.ndarray]): CDF values, shape (n_points), for each model.
+        model_names (List[str]): Names of the models being compared.
+        output_file (str): File path where the PR curve figure will be saved.
+        figsize (Tuple[int, int]): Figure size in inches (width, height).
+    """
+    if len(model_names) > len(COLORS):
+        raise ValueError("Not enough colors for the number of models.")
+
+    fig, ax = plt.subplots(1, 1, figsize=figsize)
+    for i, name in enumerate(model_names):
+        color = COLORS[i]
+        ls = LINESTYLES[i % len(LINESTYLES)]
+        ax.plot(np.arange(1, len(cdf[i])+1), cdf[i], linestyle=ls, color=color, linewidth=2, label=name)
+    ax.set_ylabel("P(hidden gene among genes looked at)", fontsize=16)
+    ax.set_xlabel("Number of genes looked at", fontsize=16)
+    ax.tick_params(labelsize=18)
+    ax.grid(alpha=0.3)
+    ax.legend(fontsize=20)
+    fig.subplots_adjust(left=.2)
     plt.savefig(output_file, dpi=300, bbox_inches="tight")
     plt.close()

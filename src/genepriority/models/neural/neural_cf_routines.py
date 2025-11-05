@@ -13,8 +13,6 @@ class GeneDiseaseDataset(Dataset):
     PyTorch Dataset for gene-disease association pairs.
 
     Each sample consists of:
-        - gene index (int)
-        - disease index (int)
         - gene side features (FloatTensor)
         - disease side features (FloatTensor)
         - label (FloatTensor)
@@ -67,16 +65,12 @@ class GeneDiseaseDataset(Dataset):
 
         Returns:
             Dict[str, torch.Tensor]: A dictionary containing:
-                'gene' (torch.LongTensor): Scalar gene index.
-                'disease' (torch.LongTensor): Scalar disease index.
                 'g_feat' (torch.FloatTensor): Gene feature vector of shape (F,).
                 'd_feat' (torch.FloatTensor): Disease feature vector of shape (F',).
                 'label' (torch.FloatTensor): Association label scalar.
         """
         g, d = self.idx_pairs[i]
         return {
-            "gene": torch.tensor(g, dtype=torch.long),
-            "disease": torch.tensor(d, dtype=torch.long),
             "g_feat": self.gene_feats[g],
             "d_feat": self.disease_feats[d],
             "label": torch.tensor(self.labels[i], dtype=torch.float32),
@@ -107,19 +101,17 @@ def train_epoch(
     total_loss = 0.0
     for batch in loader:
         optimizer.zero_grad()
-        g = batch["gene"].to(device)
-        d = batch["disease"].to(device)
         gf = batch["g_feat"].to(device)
         df = batch["d_feat"].to(device)
         y = batch["label"].to(device)
 
-        pred = model(g, d, gf, df)
+        pred = model(gf, df)
         loss = criterion(pred, y)
         loss.backward()
         optimizer.step()
 
         batch_loss = loss.item()
-        total_loss += batch_loss * g.size(0)
+        total_loss += batch_loss * gf.size(0)
     return total_loss / len(loader.dataset)
 
 
@@ -149,13 +141,11 @@ def validate_epoch(
     preds = []
     with torch.no_grad():
         for batch in loader:
-            g = batch["gene"].to(device)
-            d = batch["disease"].to(device)
             gf = batch["g_feat"].to(device)
             df = batch["d_feat"].to(device)
             y = batch["label"].to(device)
 
-            pred = model(g, d, gf, df)
+            pred = model(gf, df)
             ys.extend(y.tolist())
             preds.extend(pred.tolist())
     auroc, auprc = calculate_auroc_auprc(ys, preds)
@@ -173,7 +163,7 @@ def predict_full_matrix(
     batch_size: int = 1024,
 ) -> np.ndarray:
     """
-    Predict the full gene–disease association matrix.
+    Predict the full gene-disease association matrix.
 
     Args:
         model: Trained NeuralCF model.
@@ -192,12 +182,8 @@ def predict_full_matrix(
     with torch.no_grad():
         for g_start in range(0, G, batch_size):
             g_end = min(G, g_start + batch_size)
-            g_idx = torch.arange(g_start, g_end, device=device)
             gf = torch.tensor(
                 gene_feats[g_start:g_end], dtype=torch.float32, device=device
-            )
-            d_idx = (
-                torch.arange(D, device=device).unsqueeze(0).repeat(g_end - g_start, 1)
             )
             gf_full = gf.unsqueeze(1).repeat(1, D, 1).view(-1, gf.shape[1])
             df_full = torch.tensor(disease_feats, dtype=torch.float32, device=device)
@@ -206,7 +192,6 @@ def predict_full_matrix(
                 .repeat(g_end - g_start, 1, 1)
                 .view(-1, disease_feats.shape[1])
             )
-            g_idx_full = g_idx.unsqueeze(1).repeat(1, D).view(-1)
-            out = model(g_idx_full, d_idx.view(-1), gf_full, df_full)
+            out = model(gf_full, df_full)
             preds[g_start:g_end] = out.view(g_end - g_start, D).cpu().numpy()
     return preds

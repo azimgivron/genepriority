@@ -15,14 +15,15 @@ from pathlib import Path
 
 import yaml
 
-from genepriority import Evaluation
+from genepriority.evaluation import Evaluation
 from genepriority.postprocessing.dataframes import (generate_auc_loss_table,
                                                     generate_bedroc_table)
 from genepriority.postprocessing.figures import (plot_auc_boxplots,
                                                  plot_avg_precision_boxplots,
                                                  plot_bedroc_boxplots,
                                                  plot_pr_curves,
-                                                 plot_roc_curves)
+                                                 plot_roc_curves,
+                                                 plot_cdf_curves)
 from genepriority.postprocessing.model_evaluation_collection import \
     ModelEvaluationCollection
 
@@ -71,17 +72,17 @@ def post(args: argparse.Namespace):
         with Path(path_str).open("rb") as stream:
             results_data[name] = Evaluation(pickle.load(stream).results)
 
-    results = ModelEvaluationCollection(results_data)
+    results = ModelEvaluationCollection(results_data, over=args.over)
 
-    auc_csv_path = output_path / "auc.csv"
-    auc = results.compute_auc()
+    auc_csv_path = output_path / "auroc.csv"
+    auc = results.compute_avg_auc()
     generate_auc_loss_table(
         auc,
         model_names=results.model_names,
     ).to_csv(auc_csv_path)
     logger.info("AUC table saved: %s", auc_csv_path)
 
-    auc_plot_path = output_path / "auc.png"
+    auc_plot_path = output_path / "auroc.png"
     plot_auc_boxplots(
         auc,
         model_names=results.model_names,
@@ -91,7 +92,7 @@ def post(args: argparse.Namespace):
     logger.info("AUC boxplots saved: %s", auc_plot_path)
 
     average_pr = results.compute_avg_precision()
-    avg_pr_plot_path = output_path / "average_pr.png"
+    avg_pr_plot_path = output_path / "auprc.png"
     plot_avg_precision_boxplots(
         average_pr,
         model_names=results.model_names,
@@ -100,7 +101,7 @@ def post(args: argparse.Namespace):
     )
     logger.info("Average PR boxplots saved: %s", auc_plot_path)
 
-    roc = results.compute_roc()
+    roc = results.compute_avg_roc()
     roc_plot_path = output_path / "roc.png"
     plot_roc_curves(
         roc,
@@ -110,7 +111,7 @@ def post(args: argparse.Namespace):
     )
     logger.info("ROC curves saved: %s", roc_plot_path)
 
-    pr = results.compute_pr()
+    pr = results.compute_avg_pr()
     pr_plot_path = output_path / "pr.png"
     plot_pr_curves(
         pr,
@@ -120,19 +121,30 @@ def post(args: argparse.Namespace):
     )
     logger.info("PR curves saved: %s", pr_plot_path)
 
+    cdf = results.compute_avg_cdf()
+    cdf_plot_path = output_path / "cdf.png"
+    plot_cdf_curves(
+        cdf,
+        model_names=results.model_names,
+        output_file=cdf_plot_path,
+        figsize=(12, 10),
+    )
+    logger.info("CDF curves saved: %s", cdf_plot_path)
+
     bedroc_plot_path = output_path / "bedroc.png"
+    bed = results.compute_avg_bedroc_scores()
     plot_bedroc_boxplots(
-        results.compute_bedroc_scores(),
+        bed,
         model_names=results.model_names,
         output_file=bedroc_plot_path,
-        figsize=(30, 12),
+        figsize=(12, 10),
         sharey=args.no_sharey,
     )
     logger.info("BEDROC boxplots saved: %s", bedroc_plot_path)
 
     bedroc_csv_path = output_path / "bedroc.csv"
     generate_bedroc_table(
-        results.compute_bedroc_scores(),
+        bed,
         model_names=results.model_names,
         alpha_map=Evaluation.alpha_map,
     ).to_csv(bedroc_csv_path)

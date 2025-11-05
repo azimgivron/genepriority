@@ -24,7 +24,7 @@ from genepriority.scripts.genehound import genehound
 from genepriority.scripts.ncf import ncf
 from genepriority.scripts.nega import nega
 from genepriority.scripts.parsers import (parse_genehound, parse_nega,
-                                          parse_nn, parse_post)
+                                          parse_ncf, parse_post)
 from genepriority.scripts.post import post
 
 
@@ -90,7 +90,7 @@ def main():
     parse_genehound(subparsers)
     parse_nega(subparsers)
     parse_post(subparsers)
-    parse_nn(subparsers)
+    parse_ncf(subparsers)
 
     args: Any = parser.parse_args()
     try:

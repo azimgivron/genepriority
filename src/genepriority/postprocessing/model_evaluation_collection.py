@@ -10,11 +10,11 @@ and efficient manner.
 
 """
 
-from typing import Dict, Iterator, List, Tuple
+from typing import Dict, Iterator, List, Tuple, Literal
 
 import numpy as np
 
-from genepriority import Evaluation
+from genepriority.evaluation import Evaluation
 
 
 class ModelEvaluationCollection:
@@ -27,13 +27,16 @@ class ModelEvaluationCollection:
             and values are Evaluation objects containing metrics for the respective model.
     """
 
-    def __init__(self, model_results: Dict[str, Evaluation]):
+    axis = {"disease": 1, "fold": 0}
+
+    def __init__(self, model_results: Dict[str, Evaluation], over: Literal["disease", "fold"] = "disease"):
         """
         Initializes the ModelEvaluationCollection.
 
         Args:
             model_results (Dict[str, Evaluation]): A dictionary mapping model names
                 to their respective Evaluation objects.
+            over (Literal["disease", "fold"]): Axis over which to average.
         """
         for key, val in model_results.items():
             if not isinstance(key, str):
@@ -48,6 +51,7 @@ class ModelEvaluationCollection:
                     "of the `Evaluation` class."
                 )
         self.model_results = model_results
+        self.over = self.axis[over]
 
     @property
     def model_names(self) -> List[str]:
@@ -95,49 +99,60 @@ class ModelEvaluationCollection:
         """
         return iter(self.evaluations)
 
-    def compute_auc(self) -> np.ndarray:
+    def compute_avg_auc(self) -> np.ndarray:
         """
-        Calculates the AUC for each model and fold.
+        Calculates the average AUC for each model and disease, across folds.
 
         Returns:
             np.ndarray: A 2D array containing the AUC for
-                each model and for each fold. Shape: (fold, models).
+                each model and for each disease. Shape: (disease, models).
         """
-        auc = np.array([eval_res.compute_avg_auc() for eval_res in self.evaluations])
+        auc = np.array([eval_res.compute_avg_auc(over=self.over) for eval_res in self.evaluations])
         return auc.T
 
     def compute_avg_precision(self) -> np.ndarray:
         """
-        Calculates the Avgerage Precision for each model and fold.
+        Calculates the average Precision for each model and disease, across folds.
 
         Returns:
             np.ndarray: A 2D array containing the Average Precision for
-                each model and for each fold. Shape: (fold, models).
+                each model and for each disease. Shape: (disease, models).
         """
         avg_pr = np.array(
-            [eval_res.compute_avg_precision() for eval_res in self.evaluations]
+            [eval_res.compute_avg_precision(over=self.over) for eval_res in self.evaluations]
         )
         return avg_pr.T
 
-    def compute_bedroc_scores(self) -> np.ndarray:
+    def compute_avg_bedroc_scores(self) -> np.ndarray:
         """
-        Calculates the BEDROC scores for several alpah values per fold and
-        for each model.
+        Calculates the BEDROC scores for several alpah values per disease and
+        for each model, average across folds.
 
         Returns:
-            np.ndarray: A 3D array containing the BEDROC scores for each fold,
-            across different alpha values, for each model. Shape: (alphas, fold, models).
+            np.ndarray: A 3D array containing the BEDROC scores for each disease,
+            across different alpha values, for each model. Shape: (alphas, disease, models).
         """
         bedroc = np.array(
-            [eval_res.compute_bedroc_scores() for eval_res in self.evaluations]
-        )  # shape = (models, alphas, fold)
-        # reorder to (alphas, fold, models)
+            [eval_res.compute_bedroc_scores(over=self.over) for eval_res in self.evaluations]
+        )  # shape = (models, alphas, disease)
+        # reorder to (alphas, disease, models)
         bedroc = bedroc.transpose(1, 2, 0)
         return bedroc
 
-    def compute_roc(self) -> List[np.ndarray]:
+    def compute_avg_cdf(self) -> List[np.ndarray]:
         """
-        Calculates the ROC curve for each model.
+        Calculates the average ROC curve for each model, across folds.
+
+        Returns:
+            List[np.ndarray]: 1D arrays containing the CDF for
+                each model. Shape: (100,).
+        """
+        roc = [eval_res.compute_avg_cdf() for eval_res in self.evaluations]
+        return roc
+
+    def compute_avg_roc(self) -> List[np.ndarray]:
+        """
+        Calculates the average CDF curve for each model, across folds.
 
         Returns:
             List[np.ndarray]: 2D arrays containing the ROC for
@@ -146,9 +161,9 @@ class ModelEvaluationCollection:
         roc = [eval_res.compute_avg_roc_curve() for eval_res in self.evaluations]
         return roc
 
-    def compute_pr(self) -> List[np.ndarray]:
+    def compute_avg_pr(self) -> List[np.ndarray]:
         """
-        Calculates the PR curve for each model.
+        Calculates the average PR curve for each model, across folds.
 
         Returns:
             List[np.ndarray]: 2D arrays containing the PR for

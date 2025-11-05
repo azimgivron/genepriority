@@ -112,12 +112,12 @@ class MacauSession:
                 self.univariate = univariate
                 self.writer = writer
 
-            def run(self) -> MatrixCompletionResult:
+            def run(self) -> Result:
                 """
                 Executes matrix completion and logs training and testing metrics to TensorBoard.
 
                 Returns:
-                    MatrixCompletionResult: Contains training loss history, RMSE history,
+                    Result: Contains training loss history, RMSE history,
                     total iterations, and runtime.
                 """
                 start_time = time.time()

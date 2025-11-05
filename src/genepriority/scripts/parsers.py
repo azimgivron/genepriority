@@ -10,19 +10,20 @@ import numpy as np
 
 from genepriority.scripts.utils import csv_file, output_dir, yaml_file
 
+p = "3gene/"
 DEFAULT_PATHS = {
     "GENE": [
-        "/home/TheGreatestCoder/code/input/gene_rifs.csv",
-        "/home/TheGreatestCoder/code/input/go.csv",
-        "/home/TheGreatestCoder/code/input/reactome.csv",
-        "/home/TheGreatestCoder/code/input/swissprot.csv",
+        f"/home/TheGreatestCoder/code/input/{p}gene_rifs.csv",
+        f"/home/TheGreatestCoder/code/input/{p}go.csv",
+        f"/home/TheGreatestCoder/code/input/{p}reactome.csv",
+        f"/home/TheGreatestCoder/code/input/{p}swissprot.csv",
     ],
     "DISEASE": [
-        "/home/TheGreatestCoder/code/input/hpo.csv",
-        "/home/TheGreatestCoder/code/input/medgen.csv",
-        "/home/TheGreatestCoder/code/input/mondo.csv",
+        f"/home/TheGreatestCoder/code/input/{p}hpo.csv",
+        f"/home/TheGreatestCoder/code/input/{p}medgen.csv",
+        f"/home/TheGreatestCoder/code/input/{p}mondo.csv",
     ],
-    "OMIM": "/home/TheGreatestCoder/code/input/gene_disease.csv",
+    "OMIM": f"/home/TheGreatestCoder/code/input/{p}gene_disease.csv",
 }
 
 
@@ -377,9 +378,21 @@ def parse_post(subparsers: argparse._SubParsersAction):
             " test set only (default: %(default)s)."
         ),
     )
+    parser.add_argument(
+        "--over",
+        type=str,
+        choices=[
+            "disease",
+            "fold",
+        ],
+        default="disease",
+        required=False,
+        help="Dimension over which to average (default: %(default)s).",
+    )
 
 
-def parse_nn(subparsers: argparse._SubParsersAction):
+
+def parse_ncf(subparsers: argparse._SubParsersAction):
     """
     This command run the Deep matrix completion algorithm: Neural Collaborative Filtering.
 
@@ -407,7 +420,7 @@ def parse_nn(subparsers: argparse._SubParsersAction):
     parser.add_argument(
         "--batch-size",
         type=int,
-        default=64,
+        default=128,
         help="The batch size (default: %(default)s).",
     )
     parser.add_argument(
@@ -419,7 +432,7 @@ def parse_nn(subparsers: argparse._SubParsersAction):
     parser.add_argument(
         "--lr_patience",
         type=int,
-        default=50,
+        default=40,
         help="The learning rate patience before reducing it (default: %(default)s).",
     )
     parser.add_argument(
@@ -443,7 +456,7 @@ def parse_nn(subparsers: argparse._SubParsersAction):
     parser.add_argument(
         "--dropout",
         type=float,
-        default=0.3,
+        default=0.5,
         help="The dropout probability (default: %(default)s).",
     )
     parser.add_argument(
@@ -462,7 +475,7 @@ def parse_nn(subparsers: argparse._SubParsersAction):
         "--hidden-dims",
         type=int,
         nargs="+",
-        default=[128, 64, 32],
+        default=[64, 64, 32],
         help="List of MLP hidden layer sizes (default: %(default)s).",
     )
     parser.add_argument(

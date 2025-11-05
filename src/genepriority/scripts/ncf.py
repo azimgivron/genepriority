@@ -82,8 +82,6 @@ def run_fold(
     # Instantiate model per fold
     num_genes, num_diseases = gene_disease.shape
     model = NeuralCF(
-        num_genes=num_genes,
-        num_diseases=num_diseases,
         embedding_dim=args.embedding_dim,
         gene_feat_dim=gene_feats_scaled.shape[1],
         disease_feat_dim=disease_feats_scaled.shape[1],
@@ -93,13 +91,11 @@ def run_fold(
 
     # Summary
     batch = next(iter(train_loader))
-    g = batch["gene"].to(device)
-    d = batch["disease"].to(device)
     gf = batch["g_feat"].to(device)
     df = batch["d_feat"].to(device)
     model_summary = summary(
         model,
-        input_data=(g, d, gf, df),
+        input_data=(gf, df),
         col_names=("output_size", "num_params", "trainable"),
     )
     writer.add_text("hyperparameters", str(model_summary))

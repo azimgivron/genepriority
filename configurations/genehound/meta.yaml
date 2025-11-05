@@ -19,10 +19,10 @@
 #                  This period allows the sampler to reach convergence
 #                  before collecting samples for training.
 #   num_samples: (int) Number of samples to collect after the burn-in period,
-#                 during the active period. (default: 1000).
+#                 during the active period. (default: 500).
 ---
 direct: False
 univariate: True
-save_freq: 500
-num_samples: 2000
+save_freq: 100
+num_samples: 500
 burnin_period: 500
