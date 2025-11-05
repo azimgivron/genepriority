@@ -70,6 +70,13 @@ class Results:
     
     @property
     def filtered_mask(self) -> np.ndarray:
+        """Filtering mask.
+
+        Returns:
+            np.ndarray: Mask that indicate
+                for each disease whether it
+                has at least threshold associations.
+        """
         return self._y_true.sum(axis=0) >= self.threshold
 
     @property
@@ -104,6 +111,13 @@ class Results:
     
     @property
     def singleton_mask(self) -> np.ndarray:
+        """Singleton filtering.
+
+        Returns:
+            np.ndarray: Mask that indicate
+                for each disease whether it
+                has a single association.
+        """
         return self._y_true.sum(axis=0) == 1
     
     @property
