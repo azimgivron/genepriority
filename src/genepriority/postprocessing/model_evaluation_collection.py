@@ -29,7 +29,11 @@ class ModelEvaluationCollection:
 
     axis = {"disease": 1, "fold": 0}
 
-    def __init__(self, model_results: Dict[str, Evaluation], over: Literal["disease", "fold"] = "disease"):
+    def __init__(
+        self,
+        model_results: Dict[str, Evaluation],
+        over: Literal["disease", "fold"] = "disease",
+    ):
         """
         Initializes the ModelEvaluationCollection.
 
@@ -107,7 +111,9 @@ class ModelEvaluationCollection:
             np.ndarray: A 2D array containing the AUC for
                 each model and for each disease. Shape: (disease, models).
         """
-        auc = np.array([eval_res.compute_avg_auc(over=self.over) for eval_res in self.evaluations])
+        auc = np.array(
+            [eval_res.compute_avg_auc(over=self.over) for eval_res in self.evaluations]
+        )
         return auc.T
 
     def compute_avg_precision(self) -> np.ndarray:
@@ -119,7 +125,10 @@ class ModelEvaluationCollection:
                 each model and for each disease. Shape: (disease, models).
         """
         avg_pr = np.array(
-            [eval_res.compute_avg_precision(over=self.over) for eval_res in self.evaluations]
+            [
+                eval_res.compute_avg_precision(over=self.over)
+                for eval_res in self.evaluations
+            ]
         )
         return avg_pr.T
 
@@ -133,7 +142,10 @@ class ModelEvaluationCollection:
             across different alpha values, for each model. Shape: (alphas, disease, models).
         """
         bedroc = np.array(
-            [eval_res.compute_bedroc_scores(over=self.over) for eval_res in self.evaluations]
+            [
+                eval_res.compute_bedroc_scores(over=self.over)
+                for eval_res in self.evaluations
+            ]
         )  # shape = (models, alphas, disease)
         # reorder to (alphas, disease, models)
         bedroc = bedroc.transpose(1, 2, 0)

@@ -54,8 +54,8 @@ def plot_bedroc_boxplots(
             ax=axs[i],
             palette=COLORS[: bedroc.shape[-1]],
             showfliers=False,
-            width=.3,
-            linewidth=2
+            width=0.3,
+            linewidth=2,
         )
         axs[i].set_xticks(range(len(model_names)))
         axs[i].set_xticklabels(["" for _ in model_names])
@@ -109,15 +109,15 @@ def plot_auc_boxplots(
         ax=axis,
         palette=COLORS[: auc.shape[-1]],
         showfliers=False,
-        width=.3,
-        linewidth=2
+        width=0.3,
+        linewidth=2,
     )
     axis.set_ylabel("AUROC", fontsize=20)
     axis.set_xticks(range(len(model_names)))
     axis.set_xticklabels(["" for _ in model_names])
     axis.yaxis.set_tick_params(labelsize=18)
     axis.grid(axis="y", alpha=0.3)
-    fig.subplots_adjust(bottom=0.15, left=.2)
+    fig.subplots_adjust(bottom=0.15, left=0.2)
     handles = [mpatches.Patch(color=c, label=m) for c, m in zip(COLORS, model_names)]
     fig.legend(
         handles,
@@ -157,15 +157,15 @@ def plot_avg_precision_boxplots(
         ax=axis,
         palette=COLORS[: avg_pr.shape[-1]],
         showfliers=False,
-        width=.3,
-        linewidth=2
+        width=0.3,
+        linewidth=2,
     )
     axis.set_xticks(range(len(model_names)))
     axis.set_xticklabels(["" for _ in model_names])
     axis.yaxis.set_tick_params(labelsize=18)
     axis.grid(axis="y", alpha=0.3)
     axis.set_ylabel("AUPRC", fontsize=20)
-    fig.subplots_adjust(bottom=0.15, left=.2)
+    fig.subplots_adjust(bottom=0.15, left=0.2)
     handles = [mpatches.Patch(color=c, label=m) for c, m in zip(COLORS, model_names)]
     fig.legend(
         handles,
@@ -209,7 +209,7 @@ def plot_roc_curves(
     ax.tick_params(labelsize=18)
     ax.grid(alpha=0.3)
     ax.legend(fontsize=20)
-    fig.subplots_adjust(left=.2)
+    fig.subplots_adjust(left=0.2)
     plt.savefig(output_file, dpi=300, bbox_inches="tight")
     plt.close()
 
@@ -242,9 +242,10 @@ def plot_pr_curves(
     ax.tick_params(labelsize=18)
     ax.grid(alpha=0.3)
     ax.legend(fontsize=20)
-    fig.subplots_adjust(left=.2)
+    fig.subplots_adjust(left=0.2)
     plt.savefig(output_file, dpi=300, bbox_inches="tight")
     plt.close()
+
 
 def plot_roc_curves(
     roc: List[np.ndarray],
@@ -276,7 +277,7 @@ def plot_roc_curves(
     ax.tick_params(labelsize=18)
     ax.grid(alpha=0.3)
     ax.legend(fontsize=20)
-    fig.subplots_adjust(left=.2)
+    fig.subplots_adjust(left=0.2)
     plt.savefig(output_file, dpi=300, bbox_inches="tight")
     plt.close()
 
@@ -303,12 +304,19 @@ def plot_cdf_curves(
     for i, name in enumerate(model_names):
         color = COLORS[i]
         ls = LINESTYLES[i % len(LINESTYLES)]
-        ax.plot(np.arange(1, len(cdf[i])+1), cdf[i], linestyle=ls, color=color, linewidth=2, label=name)
+        ax.plot(
+            np.arange(1, len(cdf[i]) + 1),
+            cdf[i],
+            linestyle=ls,
+            color=color,
+            linewidth=2,
+            label=name,
+        )
     ax.set_ylabel("P(hidden gene among genes looked at)", fontsize=16)
     ax.set_xlabel("Number of genes looked at", fontsize=16)
     ax.tick_params(labelsize=18)
     ax.grid(alpha=0.3)
     ax.legend(fontsize=20)
-    fig.subplots_adjust(left=.2)
+    fig.subplots_adjust(left=0.2)
     plt.savefig(output_file, dpi=300, bbox_inches="tight")
     plt.close()

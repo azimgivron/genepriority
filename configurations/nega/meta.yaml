@@ -14,28 +14,38 @@
 # - rho_increase (float): Determines the factor by which the step size is increased dynamically during training for acceleration.
 # - rho_decrease (float): Specifies the factor for decreasing the step size to help stabilize convergence.
 #
-"ones-only":
-  regularization_parameter: 37.
-  symmetry_parameter: 0.99
-  smoothness_parameter: 0.001
-  rho_increase: 2.0
-  rho_decrease: 0.8
-"with-zeros":
-  regularization_parameter: 81.
-  symmetry_parameter: 0.99
-  smoothness_parameter: 0.001
-  rho_increase: 5.0
-  rho_decrease: 0.6
-"side-info-imc":
-  regularization_parameter: 0.06
+"default":
+  regularization_parameters: 
+    "λd": 0.003
+    "λg": 0.019
   symmetry_parameter: 0.99
   smoothness_parameter: 0.001
   rho_increase: 5.0
   rho_decrease: 0.9
-"side-info-genehound":
-  side_info_regularization: 9.91
-  regularization_parameter: 6.40
+"enega":
+  regularization_parameters: 
+    "λd": 0.00063
+    "λg": 0.0466
+    "λG": 0.000478
   symmetry_parameter: 0.99
   smoothness_parameter: 0.001
-  rho_increase: 6.0
-  rho_decrease: 0.8
+  rho_increase: 5.0
+  rho_decrease: 0.9
+"nega-fs":
+  regularization_parameters: 
+    "λd": 0.003
+    "λg": 0.019
+  symmetry_parameter: 0.99
+  smoothness_parameter: 0.001
+  rho_increase: 5.0
+  rho_decrease: 0.9
+"nega-reg":
+  regularization_parameters: 
+    "λd": 21.
+    "λg": 0.00028
+    "λ_βd": 27.
+    "λ_βg": 80.
+  symmetry_parameter: 0.99
+  smoothness_parameter: 0.001
+  rho_increase: 5.0
+  rho_decrease: 0.9

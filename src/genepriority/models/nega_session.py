@@ -8,14 +8,14 @@ implementation based on the provided parameters.
 
 This class exposes a unified API for matrix completion. When creating an instance,
 if no side information is passed, an instance of `Nega` is returned; otherwise,
-depending on the objective function formulation—IMC-like or GeneHound-like—an
+depending on the objective function formulation, an
 instance of `NegaFS` or `NegaReg` is returned (wrapped via the `nega` helper).
 """
 from typing import Any, Literal, Tuple, Union
 
 import numpy as np
 import tensorflow as tf
-from negaWsi import Nega as BaseNega, NegaFS, NegaReg, Result
+from negaWsi import Nega as BaseNega, ENegaFS, NegaFS, NegaReg, Result
 
 from genepriority.models.utils import check_save_name, tsne_plot_to_tensor
 from genepriority.utils import calculate_auroc_auprc, serialize
@@ -87,6 +87,8 @@ def nega(inherit_from: Any):
                         tf.summary.scalar(
                             name="testing_loss", data=testing_loss, step=ith_iteration
                         )
+                        for key, value in self.loss_terms.items():
+                            tf.summary.scalar(name=key, data=value, step=ith_iteration)
 
                         # Extract observed test values and corresponding predictions
                         test_values_actual = self.matrix[self.test_mask]
@@ -113,7 +115,7 @@ def nega(inherit_from: Any):
                             step=ith_iteration,
                         )
                         tf.summary.histogram(
-                            "Gradient f(W^k)", grad_f_W_k.flatten(), step=ith_iteration
+                            "∇f(W^k)", grad_f_W_k.flatten(), step=ith_iteration
                         )
                         if ith_iteration % 1000:
                             fig_h1 = tsne_plot_to_tensor(
@@ -165,17 +167,18 @@ def nega(inherit_from: Any):
             self.writer = None
 
     # Create the class and register it at module scope
-    Nega.__module__ = __name__ # critical: make importable by module path
-    Nega.__name__   = name
+    Nega.__module__ = __name__  # critical: make importable by module path
+    Nega.__name__ = name
     Nega.__qualname__ = name
-    globals()[name] = Nega # critical: bind name in module globals
+    globals()[name] = Nega  # critical: bind name in module globals
     return Nega
 
 
 Nega_Nega = nega(BaseNega)
 Nega_NegaFS = nega(NegaFS)
+Nega_ENegaFS = nega(ENegaFS)
 Nega_NegaReg = nega(NegaReg)
-NegaSessionType = Union["Nega", "NegaIMC", "NegaGeneHound"]
+NegaSessionType = Union["Nega_BaseNega", "Nega_ENegaFS", "Nega_NegaFS", "Nega_NegaReg"]
 
 
 class NegaSession:
@@ -188,8 +191,8 @@ class NegaSession:
         cls,
         *args,
         side_info: Tuple[np.ndarray, np.ndarray] = None,
-        side_information_reg: float = None,
-        formulation: Literal["imc", "GeneHound"] = "imc",
+        ppi_adjacency: np.ndarray = None,
+        formulation: Literal["nega-fs", "nega-reg", "enega"] = "nega-fs",
         **kwargs,
     ) -> NegaSessionType:
         """
@@ -199,31 +202,33 @@ class NegaSession:
             *args: Positional arguments for the underlying session class.
             side_info (Tuple[np.ndarray, np.ndarray], optional): A tuple containing side information
                 for genes and diseases.
-            side_information_reg (float, optional): Regularization weight for
-                for the side information.
+            ppi_adjacency (np.ndarray, optional): PPI graph adjacency matrix. Shape is (n x n).
             svd_init (bool, optional): Whether to initialize the latent
                 matrices with SVD decomposition. Default to False.
-            formulation: The type of loss formualtion, either "imc" or "genehound".
-                Default to "imc".
+            formulation: The type of loss formualtion, either "nega-fs", "nega-reg".
+                Default to "nega-fs".
             **kwargs: Keyword arguments for the underlying session class.
 
         Returns:
             NegaSessionType: An instance of StandardMatrixCompletion or
                 SideInfoMatrixCompletion based on the presence of side_info.
         """
-        if formulation not in ["imc", "genehound"]:
+        if formulation not in ["nega-fs", "nega-reg", "enega"]:
             raise ValueError(
-                f"Formulation can only be either 'imc' or 'genehound', got {formulation}"
+                f"Formulation can only be either 'nega-fs', 'enega' or 'nega-reg', got {formulation}"
             )
         if side_info is None:
             model = nega(BaseNega)(*args, **kwargs)
-        elif formulation == "imc":
+        elif formulation == "nega-fs":
             model = nega(NegaFS)(*args, side_info=side_info, **kwargs)
+        elif formulation == "enega":
+            model = nega(ENegaFS)(
+                *args, side_info=side_info, ppi_adjacency=ppi_adjacency, **kwargs
+            )
         else:
             model = nega(NegaReg)(
                 *args,
                 side_info=side_info,
-                side_information_reg=side_information_reg,
                 **kwargs,
             )
         return model

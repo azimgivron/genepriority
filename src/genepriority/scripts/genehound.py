@@ -20,8 +20,7 @@ from pathlib import Path
 import yaml
 
 from genepriority.preprocessing.dataloader import DataLoader
-from genepriority.preprocessing.side_information_loader import \
-    SideInformationLoader
+from genepriority.preprocessing.side_information_loader import SideInformationLoader
 from genepriority.scripts.utils import pre_processing
 from genepriority.trainer.macau_trainer import MACAUTrainer
 from genepriority.utils import serialize
@@ -117,7 +116,7 @@ def genehound(args: argparse.Namespace):
         seed=args.seed,
         omim_meta_path=args.omim_meta_path,
         side_info=args.side_info,
-        gene_side_info_paths=args.gene_side_info_paths,
+        gene_side_info_paths=args.gene_features_paths + [args.gene_graph_path],
         disease_side_info_paths=args.disease_side_info_paths,
         zero_sampling_factor=args.zero_sampling_factor,
         num_folds=args.num_folds,

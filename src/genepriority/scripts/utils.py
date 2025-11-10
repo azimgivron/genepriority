@@ -6,6 +6,7 @@ Contains utility functions for scripts.
 """
 
 import argparse
+
 # pylint: disable=R0913
 import logging
 from pathlib import Path
@@ -14,8 +15,7 @@ from typing import List, Tuple
 import yaml
 
 from genepriority.preprocessing.dataloader import DataLoader
-from genepriority.preprocessing.side_information_loader import \
-    SideInformationLoader
+from genepriority.preprocessing.side_information_loader import SideInformationLoader
 
 
 def load_omim_meta(omim_meta_path: Path) -> Tuple[int, int]:
@@ -57,6 +57,7 @@ def pre_processing(
     num_folds: int,
     validation_size: float,
     max_dims: int,
+    **kwargs,
 ) -> Tuple[DataLoader, SideInformationLoader]:
     """
     Loads configuration parameters, gene-disease association data, and side information.
@@ -119,6 +120,7 @@ def pre_processing(
         side_info_loader.process_side_info(
             gene_side_info_paths=gene_side_info_paths,
             disease_side_info_paths=disease_side_info_paths,
+            **kwargs,
         )
 
     return dataloader, side_info_loader

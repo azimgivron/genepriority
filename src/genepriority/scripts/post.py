@@ -16,16 +16,21 @@ from pathlib import Path
 import yaml
 
 from genepriority.evaluation import Evaluation
-from genepriority.postprocessing.dataframes import (generate_auc_loss_table,
-                                                    generate_bedroc_table)
-from genepriority.postprocessing.figures import (plot_auc_boxplots,
-                                                 plot_avg_precision_boxplots,
-                                                 plot_bedroc_boxplots,
-                                                 plot_pr_curves,
-                                                 plot_roc_curves,
-                                                 plot_cdf_curves)
-from genepriority.postprocessing.model_evaluation_collection import \
-    ModelEvaluationCollection
+from genepriority.postprocessing.dataframes import (
+    generate_auc_loss_table,
+    generate_bedroc_table,
+)
+from genepriority.postprocessing.figures import (
+    plot_auc_boxplots,
+    plot_avg_precision_boxplots,
+    plot_bedroc_boxplots,
+    plot_pr_curves,
+    plot_roc_curves,
+    plot_cdf_curves,
+)
+from genepriority.postprocessing.model_evaluation_collection import (
+    ModelEvaluationCollection,
+)
 
 
 def post(args: argparse.Namespace):

@@ -67,7 +67,7 @@ class Results:
         return [
             self._y_pred[:, i][self.mask[:, i]] for i in range(self._y_pred.shape[1])
         ]
-    
+
     @property
     def filtered_mask(self) -> np.ndarray:
         """Filtering mask.
@@ -108,7 +108,7 @@ class Results:
             for i in range(self._y_pred.shape[1])
             if self.filtered_mask[i]
         ]
-    
+
     @property
     def singleton_mask(self) -> np.ndarray:
         """Singleton filtering.
@@ -119,7 +119,7 @@ class Results:
                 has a single association.
         """
         return self._y_true.sum(axis=0) == 1
-    
+
     @property
     def y_true_singleton(self) -> List[np.ndarray]:
         """

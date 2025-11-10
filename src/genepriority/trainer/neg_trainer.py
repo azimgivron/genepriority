@@ -24,8 +24,7 @@ from negaWsi.flip_labels import FlipLabels
 
 from genepriority.models.nega_session import NegaSession
 from genepriority.preprocessing.dataloader import DataLoader
-from genepriority.preprocessing.side_information_loader import \
-    SideInformationLoader
+from genepriority.preprocessing.side_information_loader import SideInformationLoader
 from genepriority.trainer.base import BaseTrainer
 from genepriority.utils import create_tb_dir
 
@@ -42,9 +41,7 @@ class NEGTrainer(BaseTrainer):
     Attributes:
         dataloader (DataLoader): The data loader containing training and testing data.
         path (str): Directory path where model snapshots and results will be saved.
-        regularization_parameter (float): Regularization parameter.
-        side_information_reg (float): Regularization weight for
-            for the side information.
+        regularization_parameters (float): Regularization parameters.
         iterations (int): Maximum number of optimization iterations.
         symmetry_parameter (float): Regularization parameter for gradient adjustments.
         smoothness_parameter (float): Initial smoothness parameter.
@@ -66,8 +63,8 @@ class NEGTrainer(BaseTrainer):
         tensorboard_dir (Path): The base directory path where
             TensorBoard log files are saved.
         writer (tf.summary.SummaryWriter): A tensorflow log writer.
-        formulation (Literal["IMC", "GeneHound"]): The type of loss formualtion,
-                either "IMC" or "GeneHound".
+        formulation (Literal["nega-fs", "nega-reg"]): The type of loss formualtion,
+                either "nega-fs" or "nega-reg".
     """
 
     def __init__(
@@ -75,8 +72,7 @@ class NEGTrainer(BaseTrainer):
         dataloader: DataLoader,
         path: str,
         seed: int,
-        regularization_parameter: float = None,
-        side_information_reg: float = None,
+        regularization_parameters: Dict[str, float] = None,
         iterations: int = None,
         symmetry_parameter: float = None,
         smoothness_parameter: float = None,
@@ -89,7 +85,7 @@ class NEGTrainer(BaseTrainer):
         svd_init: bool = None,
         side_info_loader: SideInformationLoader = None,
         tensorboard_dir: Path = None,
-        formulation: Literal["imc", "genehound"] = "imc",
+        formulation: Literal["nega-fs", "nega-reg", "enega"] = "nega-fs",
     ):
         """
         Initializes the NEGTrainer class with the provided configuration.
@@ -99,10 +95,8 @@ class NEGTrainer(BaseTrainer):
                 data.
             path (str): Directory path where model snapshots and results will be saved.
             seed (int): Random seed to ensure reproducibility.
-            regularization_parameter (float, optional): Regularization parameter.
+            regularization_parameter (float, optional): Regularization parameters.
                 Defaults to None.
-            side_information_reg (float): Regularization weight for
-                for the side information. Defaults to None.
             iterations (int), optional: Maximum number of iterations for the optimization process.
                 Defaults to None.
             symmetry_parameter (float, optional): Regularization parameter for gradient adjustments.
@@ -131,8 +125,8 @@ class NEGTrainer(BaseTrainer):
             tensorboard_dir (Path, optional): The base directory path where
                 TensorBoard log files are saved. If None, TensorBoard logging is
                 disabled. Defaults to None.
-            formulation (Literal["imc", "genehound"], optional): The type of loss formualtion,
-                either "imc" or "genehound". Default to "imc".
+            formulation (Literal["nega-fs", "nega-reg", "enega"], optional): The type of loss formualtion,
+                either "nega-fs", "nega-reg" or "enega". Default to "nega-fs".
         """
         super().__init__(
             dataloader=dataloader,
@@ -141,7 +135,7 @@ class NEGTrainer(BaseTrainer):
             side_info_loader=side_info_loader,
         )
         self.logger = logging.getLogger(self.__class__.__name__)
-        self.regularization_parameter = regularization_parameter
+        self.regularization_parameters = regularization_parameters
         self.iterations = iterations
         self.symmetry_parameter = symmetry_parameter
         self.smoothness_parameter = smoothness_parameter
@@ -158,7 +152,6 @@ class NEGTrainer(BaseTrainer):
         self.flip_fraction = flip_fraction
         self.flip_frequency = flip_frequency
         self.patience = patience
-        self.side_information_reg = side_information_reg
         self.svd_init = svd_init
         self.tensorboard_dir = tensorboard_dir
         self.writer = None
@@ -175,14 +168,13 @@ class NEGTrainer(BaseTrainer):
                 regularization, and step size.
         """
         return {
-            "regularization_parameter": self.regularization_parameter,
+            "regularization_parameters": self.regularization_parameters,
             "iterations": self.iterations,
             "symmetry_parameter": self.symmetry_parameter,
             "smoothness_parameter": self.smoothness_parameter,
             "rho_increase": self.rho_increase,
             "rho_decrease": self.rho_decrease,
             "threshold": self.threshold,
-            "side_information_reg": self.side_information_reg,
             "svd_init": self.svd_init,
             "formulation": self.formulation,
         }
@@ -237,6 +229,8 @@ class NEGTrainer(BaseTrainer):
             )
         if self.patience is not None:
             kwargs["early_stopping"] = EarlyStopping(self.patience)
+        if self.formulation == "enega":
+            kwargs["ppi_adjacency"] = self.side_info_loader.ppi_adjacency.toarray()
         return NegaSession(
             **kwargs,
             rank=num_latent,
@@ -268,7 +262,6 @@ class NEGTrainer(BaseTrainer):
                 data = [
                     [
                         session.rank,
-                        session.regularization_parameter,
                         session.symmetry_parameter,
                         session.smoothness_parameter,
                         session.rho_increase,
@@ -279,7 +272,6 @@ class NEGTrainer(BaseTrainer):
                 ]
                 columns = [
                     "Rank",
-                    "Regularization Parameter",
                     "Symmetry Parameter",
                     "Smoothness Parameter",
                     "Rho Increase Factor",
@@ -287,6 +279,9 @@ class NEGTrainer(BaseTrainer):
                     "Inner Loop Threshold",
                     "svd_init",
                 ]
+                for reg_name, reg_val in self.regularization_parameters.items():
+                    data[0].append(reg_val)
+                    columns.append(f"Reg. Param.: {reg_name}")
                 if self.side_info_loader is not None:
                     data[0].insert(0, self.formulation)
                     columns.insert(0, "Formulation")
@@ -296,9 +291,6 @@ class NEGTrainer(BaseTrainer):
                 if hasattr(session, "patience"):
                     data[0].append(session.patience)
                     columns.append("Patience")
-                if hasattr(session, "side_information_reg"):
-                    data[0].append(session.side_information_reg)
-                    columns.append("Side Information Regularization")
                 hyperparameter_table = pd.DataFrame(
                     data,
                     columns=columns,
@@ -375,31 +367,48 @@ class NEGTrainer(BaseTrainer):
             train_mask: sp.csr_matrix,
             test_mask: sp.csr_matrix,
         ) -> float:
-            regularization_parameter = trial.suggest_float(
-                "Regularization parameter for the optimization.",
+            reg = {}
+            reg["λg"] = trial.suggest_float(
+                "λg",
                 low=1e-4,
-                high=1e1,
+                high=1e2,
+                log=True,
+            )
+            reg["λd"] = trial.suggest_float(
+                "λd",
+                low=1e-4,
+                high=1e2,
                 log=True,
             )
             symmetry_parameter = 0.99
             smoothness_parameter = 0.001
-            rho_increase = trial.suggest_float(
-                "Factor for increasing the step size dynamically.", 1.0, 10.0, step=1.0
-            )
-            rho_decrease = trial.suggest_float(
-                "Factor for decreasing the step size dynamically.", 0.1, 0.9, step=0.1
-            )
-            if self.formulation == "genehound":
-                kwargs["side_information_reg"] = trial.suggest_float(
-                    "Regularization coefficient on the side information.",
-                    low=1e-4,
-                    high=1e1,
+            rho_increase = 5.0
+            rho_decrease = 0.9
+            if self.formulation == "nega-reg":
+                reg["λ_βg"] = trial.suggest_float(
+                    "λ_βg",
+                    low=1e-2,
+                    high=1e2,
                     log=True,
                 )
+                reg["λ_βd"] = trial.suggest_float(
+                    "λ_βd",
+                    low=1e-2,
+                    high=1e2,
+                    log=True,
+                )
+            elif self.formulation == "enega":
+                reg["λG"] = trial.suggest_float(
+                    "λG",
+                    low=1e-4,
+                    high=1e2,
+                    log=True,
+                )
+                kwargs["ppi_adjacency"] = self.side_info_loader.ppi_adjacency.toarray()
             if self.patience is not None:
                 kwargs["early_stopping"] = EarlyStopping(self.patience)
             session = NegaSession(
-                regularization_parameter=regularization_parameter,
+                regularization_parameters=reg,
                 iterations=iterations,
                 symmetry_parameter=symmetry_parameter,
                 smoothness_parameter=smoothness_parameter,
@@ -418,6 +427,8 @@ class NEGTrainer(BaseTrainer):
             training_status = session.run()
             trial.set_user_attr("rmse on test set", training_status.rmse_history)
             trial.set_user_attr("loss on training set", training_status.loss_history)
+            if max(training_status.rmse_history) > 1e8:
+                return np.inf
             return training_status.rmse_history[-1]
 
         load = (self.path / "optuna_journal_storage.log").exists()
@@ -448,7 +459,6 @@ class NEGTrainer(BaseTrainer):
             if self.side_info_loader is not None
             else None
         )
-
         study.optimize(
             lambda trial: objective(
                 trial,

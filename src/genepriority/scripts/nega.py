@@ -4,7 +4,7 @@ Run non-Euclidean gradient-based method for gene prioritization.
 
 This script can perform either cross-validation (for hyperparameter tuning) or
 a train-evaluation cycle (for final model training/testing) using a Non-Euclidean Gradient
-approach for gene prioritization. It reads a gene–disease association file, splits the data into
+approach for gene prioritization. It reads a gene-disease association file, splits the data into
 train/validation/test sets, and then either runs an Optuna hyperparameter search (cross-validation)
 or a single train/test cycle (train-eval).
 """
@@ -12,14 +12,13 @@ or a single train/test cycle (train-eval).
 import argparse
 import logging
 from pathlib import Path
-from typing import Literal
+from typing import Dict, Literal
 
 import pint
 import yaml
 
 from genepriority.preprocessing.dataloader import DataLoader
-from genepriority.preprocessing.side_information_loader import \
-    SideInformationLoader
+from genepriority.preprocessing.side_information_loader import SideInformationLoader
 from genepriority.scripts.utils import pre_processing
 from genepriority.trainer.neg_trainer import NEGTrainer
 from genepriority.utils import serialize
@@ -40,7 +39,7 @@ def finetune(
     n_trials: int,
     timeout: float,
     svd_init: bool,
-    formulation: Literal["imc", "genehound"],
+    formulation: Literal["fs", "reg", "enega"],
 ):
     """
     Search for hyperparameter tuning of the NEGA model.
@@ -48,7 +47,7 @@ def finetune(
     Args:
         logger (logging.Logger): Logger for output messages.
         output_path (Path): Directory where output results will be saved.
-        dataloader (DataLoader): Preprocessed DataLoader with gene–disease data.
+        dataloader (DataLoader): Preprocessed DataLoader with gene-disease data.
         side_info_loader (SideInformationLoader): The loader for side information,
             if available.
         rank (int): Model rank (number of latent factors).
@@ -62,8 +61,8 @@ def finetune(
         n_trials (int): Number of trials for the hyperparameter search.
         timeout (float): Time out in hours.
         svd_init (bool): Whether to initialize the latent matrices with SVD decomposition.
-        formulation (Literal["imc", "genehound"]): The type of loss formualtion, either
-            "imc" or "genehound".
+        formulation (Literal["fs", "reg", "enega"]): The type of loss formualtion, either
+            "fs", "enega" "reg".
     """
     trainer = NEGTrainer(
         dataloader=dataloader,
@@ -76,7 +75,9 @@ def finetune(
         flip_frequency=flip_frequency,
         patience=patience,
         svd_init=svd_init,
-        formulation=formulation,
+        formulation=(
+            f"nega-{formulation}" if formulation in ["fs", "reg"] else formulation
+        ),
     )
     timeout_seconds = pint.Quantity(timeout, "h").to("s").m
     optuna_study = trainer.fine_tune(
@@ -106,16 +107,15 @@ def train_eval(
     flip_frequency: int,
     patience: int,
     seed: int,
-    regularization_parameter: float,
+    regularization_parameters: Dict[str, float],
     symmetry_parameter: float,
     smoothness_parameter: float,
     rho_increase: float,
     rho_decrease: float,
     tensorboard_dir: Path,
     results_filename: str,
-    side_information_reg: float,
     svd_init: bool,
-    formulation: Literal["imc", "genehound"],
+    formulation: Literal["fs", "reg", "enega"],
 ):
     """
     Trains the NEGA model on the training set and evaluates it on the test set.
@@ -126,7 +126,7 @@ def train_eval(
     Args:
         logger (logging.Logger): Logger for output messages.
         output_path (Path): Directory to save output results.
-        dataloader (DataLoader): Preprocessed DataLoader with gene–disease data.
+        dataloader (DataLoader): Preprocessed DataLoader with gene-disease data.
         side_info_loader (SideInformationLoader): The loader for side information,
             if available.
         rank (int): Model rank (number of latent factors).
@@ -137,19 +137,17 @@ def train_eval(
         flip_frequency (int): How often to resample positive training entries for flipping.
         patience (int): Number of recent epochs/iterations considered for early stopping.
         seed (int): Random seed for reproducibility.
-        regularization_parameter (float): Regularization parameter for training.
+        regularization_parameters (Dict[str, float]): Regularization parameters for training.
         symmetry_parameter (float): Symmetry parameter for training.
         smoothness_parameter (float): Smoothness parameter for training.
         rho_increase (float): Rho increase factor.
         rho_decrease (float): Rho decrease factor.
         tensorboard_dir (Path): Directory for TensorBoard logs.
         results_filename (str): Filename to use for saving results.
-        side_information_reg (float): Regularization weight for
-            for the side information.
         svd_init (bool): Whether to initialize the latent
                 matrices with SVD decomposition.
-        formulation (Literal["imc", "genehound"]): The type of loss formualtion, either
-            "imc" or "genehound".
+        formulation (Literal["fs", "reg", "enega"]): The type of loss formualtion, either
+            "fs", "reg" or "enega".
     """
     trainer = NEGTrainer(
         dataloader=dataloader,
@@ -161,15 +159,14 @@ def train_eval(
         flip_fraction=flip_fraction,
         flip_frequency=flip_frequency,
         patience=patience,
-        regularization_parameter=regularization_parameter,
+        regularization_parameters=regularization_parameters,
         symmetry_parameter=symmetry_parameter,
         smoothness_parameter=smoothness_parameter,
         rho_increase=rho_increase,
         rho_decrease=rho_decrease,
         tensorboard_dir=tensorboard_dir,
-        side_information_reg=side_information_reg,
         svd_init=svd_init,
-        formulation=formulation,
+        formulation=f"nega-{formulation}",
     )
     results_path = output_path / str(rank)
     results_path.mkdir(parents=True, exist_ok=True)
@@ -193,18 +190,25 @@ def nega(args: argparse.Namespace):
         args (argparse.Namespace): Parsed command-line arguments.
     """
     logger = logging.getLogger("NEGA")
-
+    kwargs = {}
+    if args.formulation == "enega":
+        kwargs["gene_graph_path"] = args.gene_graph_path
     dataloader, side_info_loader = pre_processing(
         gene_disease_path=args.gene_disease_path,
         seed=args.seed,
         omim_meta_path=args.omim_meta_path,
         side_info=args.side_info,
-        gene_side_info_paths=args.gene_side_info_paths,
+        gene_side_info_paths=(
+            args.gene_features_paths + [args.gene_graph_path]
+            if args.formulation != "enega"
+            else args.gene_features_paths
+        ),
         disease_side_info_paths=args.disease_side_info_paths,
         zero_sampling_factor=args.zero_sampling_factor,
         num_folds=args.num_folds,
         validation_size=args.validation_size,
         max_dims=args.max_dims,
+        **kwargs,
     )
 
     if args.nega_command == "fine-tune":
@@ -231,20 +235,15 @@ def nega(args: argparse.Namespace):
             config = yaml.safe_load(stream)
         if "side_info" in args and args.side_info is not None and args.side_info:
             key = (
-                "side-info-imc" if args.formulation == "imc" else "side-info-genehound"
+                f"nega-{args.formulation}"
+                if args.formulation in ["fs", "reg"]
+                else "enega"
             )
-        elif (
-            "zero_sampling_factor" in args
-            and args.zero_sampling_factor is not None
-            and args.zero_sampling_factor > 0
-        ):
-            key = "with-zeros"
         else:
-            key = "ones-only"
+            key = "default"
         config = config[key]
-        logger.debug("‘%s‘ configuration loaded.", key)
-        regularization_parameter = config.get("regularization_parameter")
-        side_info_reg = config.get("side_info_regularization", None)
+        logger.debug("'%s' configuration loaded.", key)
+        regularization_parameters = config.get("regularization_parameters")
         symmetry_parameter = config.get("symmetry_parameter")
         smoothness_parameter = config.get("smoothness_parameter")
         rho_increase = config.get("rho_increase")
@@ -261,7 +260,7 @@ def nega(args: argparse.Namespace):
             flip_frequency=args.flip_frequency,
             patience=args.patience,
             seed=args.seed,
-            regularization_parameter=regularization_parameter,
+            regularization_parameters=regularization_parameters,
             symmetry_parameter=symmetry_parameter,
             smoothness_parameter=smoothness_parameter,
             rho_increase=rho_increase,
@@ -269,7 +268,6 @@ def nega(args: argparse.Namespace):
             tensorboard_dir=args.tensorboard_dir,
             results_filename=args.results_filename,
             side_info_loader=side_info_loader,
-            side_information_reg=side_info_reg,
             svd_init=args.svd_init,
             formulation=args.formulation,
         )

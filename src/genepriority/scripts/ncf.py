@@ -14,12 +14,15 @@ from tqdm import tqdm
 
 from genepriority import Evaluation, Results
 from genepriority.models.neural.neural_cf import NeuralCF
-from genepriority.models.neural.neural_cf_routines import (GeneDiseaseDataset,
-                                                           predict_full_matrix,
-                                                           train_epoch,
-                                                           validate_epoch)
+from genepriority.models.neural.neural_cf_routines import (
+    GeneDiseaseDataset,
+    predict_full_matrix,
+    train_epoch,
+    validate_epoch,
+)
 from genepriority.scripts.utils import pre_processing
 from genepriority.utils import serialize
+
 
 def _pick_device() -> str:
     """Prefer Apple Silicon GPU (MPS), then CUDA, else CPU.
@@ -32,6 +35,7 @@ def _pick_device() -> str:
     if torch.cuda.is_available():
         return "cuda"
     return "cpu"
+
 
 def run_fold(
     device,
@@ -184,7 +188,7 @@ def ncf(args: argparse.Namespace) -> None:
         seed=args.seed,
         omim_meta_path=args.omim_meta_path,
         side_info=args.side_info,
-        gene_side_info_paths=args.gene_side_info_paths,
+        gene_side_info_paths=args.gene_features_paths + [args.gene_graph_path],
         disease_side_info_paths=args.disease_side_info_paths,
         zero_sampling_factor=args.zero_sampling_factor,
         num_folds=args.num_folds,
@@ -203,7 +207,7 @@ def ncf(args: argparse.Namespace) -> None:
         enumerate(dataloader.omim_masks), desc="Folds", unit="fold"
     ):
         # Device & TensorBoard
-        
+
         fold_log_dir: Path = args.log_dir / f"fold{fold+1}-NeuralCF"
         if fold_log_dir.exists():
             for file in fold_log_dir.iterdir():

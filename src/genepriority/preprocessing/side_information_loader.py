@@ -36,6 +36,7 @@ class SideInformationLoader:
             sparse matrices.
         max_dims (int, optional): Maximum number of dimensions of the side
             information.
+        ppi_adjacency (np.ndarray): PPI graph adjacency matrix.
 
     """
 
@@ -58,6 +59,7 @@ class SideInformationLoader:
         # Initialize attributes for processed data
         self.gene_side_info = None
         self.disease_side_info = None
+        self.ppi_adjacency = None
 
     @property
     def side_info(self) -> Tuple[np.ndarray, np.ndarray]:
@@ -160,15 +162,17 @@ class SideInformationLoader:
         self,
         gene_side_info_paths: List[Path],
         disease_side_info_paths: List[Path],
+        gene_graph_path: Path = None,
     ):
         """
-        Process gene- and disease-related side information files and store the results.
+        Process gene and disease-related side information files and store the results.
 
         Args:
             gene_side_info_paths (List[Path]): List of file paths for gene-side
                 information datasets.
             disease_side_info_paths (List[Path]): List of file paths for disease-side
                 information datasets.
+            gene_graph_path (Path, optional): The gene graph path.
 
         """
         names = [path.stem for path in gene_side_info_paths + disease_side_info_paths]
@@ -230,3 +234,6 @@ class SideInformationLoader:
             self.gene_side_info.shape,
             self.disease_side_info.shape,
         )
+        if gene_graph_path is not None:
+            df = read(path=gene_graph_path)
+            self.ppi_adjacency = self.to_coo(df, self.nb_genes)

@@ -5,9 +5,10 @@
 We’re using a family of matrix completion models:
 
 1. **Non-Euclidean Gradient Algorithm (NEGA)** – the original optimizer for standard matrix completion ([Ghaderi et al., 2022]()).
-2. **NEGA-GPFS** – NEGA with factorization in the feature spaces.
-3. **NEGA-GPR** – NEGA wit side information in regularization.
-4. **GeneHound** – A Bayesian matrix factorization method ([Zakeri et al., 2018](https://pubmed.ncbi.nlm.nih.gov/29949967/)).
+2. **NEGA-FS** – NEGA with factorization in the feature spaces.
+3. **ENEGA-FS** – ENEGA an extension of NEGA-FS with graph regularization.
+4. **NEGA-Reg** – NEGA wit side information in regularization.
+5. **GeneHound** – A Bayesian matrix factorization method ([Zakeri et al., 2018](https://pubmed.ncbi.nlm.nih.gov/29949967/)).
 
 ### Complete References
 - Ghaderi, S., Moreau, Y., & Ahookhosh, M. (2022). *Non-Euclidean Gradient Methods: Convergence, Complexity, and Applications*. JMLR, 23(2022):1-44.
@@ -93,7 +94,7 @@ usage: genepriority [-h] {genehound,nega-tuning,nega,post} ...
 **Subcommands:**
 - **genehound:** Run GeneHound with cross-validation on the OMIM dataset.
 - **nega-tuning:** Find the best hyperparameters for NEGA.
-- **nega:** Train and evaluate the appropriate NEGA variant (standard, IMC, or GeneHound) using cross-validation depending on the provided options.
+- **nega:** Train and evaluate the appropriate NEGA variant (standard, FS, or Reg) using cross-validation depending on the provided options.
 
 For more details, run:
 ```bash

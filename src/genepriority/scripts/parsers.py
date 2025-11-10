@@ -10,14 +10,17 @@ import numpy as np
 
 from genepriority.scripts.utils import csv_file, output_dir, yaml_file
 
-p = "3gene/"
+p = "2gene/"
 DEFAULT_PATHS = {
-    "GENE": [
-        f"/home/TheGreatestCoder/code/input/{p}gene_rifs.csv",
-        f"/home/TheGreatestCoder/code/input/{p}go.csv",
-        f"/home/TheGreatestCoder/code/input/{p}reactome.csv",
-        f"/home/TheGreatestCoder/code/input/{p}swissprot.csv",
-    ],
+    "GENE": {
+        "FEATURES": [
+            f"/home/TheGreatestCoder/code/input/{p}gene_rifs.csv",
+            f"/home/TheGreatestCoder/code/input/{p}go.csv",
+            f"/home/TheGreatestCoder/code/input/{p}reactome.csv",
+            f"/home/TheGreatestCoder/code/input/{p}swissprot.csv",
+        ],
+        "GRAPH": f"/home/TheGreatestCoder/code/input/{p}string.csv",
+    },
     "DISEASE": [
         f"/home/TheGreatestCoder/code/input/{p}hpo.csv",
         f"/home/TheGreatestCoder/code/input/{p}medgen.csv",
@@ -63,12 +66,20 @@ def data_info(parser: argparse.ArgumentParser):
         help="Include side information for genes and diseases (default: %(default)s).",
     )
     parser.add_argument(
-        "--gene-side-info-paths",
+        "--gene-features-paths",
         metavar="FILE",
         nargs="+",
         type=csv_file,
-        default=[csv_file(file) for file in DEFAULT_PATHS["GENE"]],
+        default=[csv_file(file) for file in DEFAULT_PATHS["GENE"]["FEATURES"]],
         help="Paths to one or more gene-side information CSV files (default: %(default)s).",
+    )
+    parser.add_argument(
+        "--gene-graph-path",
+        metavar="FILE",
+        nargs="+",
+        type=csv_file,
+        default=csv_file(DEFAULT_PATHS["GENE"]["GRAPH"]),
+        help="Paths to PPI as CSV file used only for ENEGA formulation (default: %(default)s).",
     )
     parser.add_argument(
         "--disease-side-info-paths",
@@ -267,11 +278,12 @@ def parse_nega(subparsers: argparse._SubParsersAction):
         )
         parser.add_argument(
             "--formulation",
-            choices=["imc", "genehound"],
-            default="imc",
+            choices=["fs", "reg", "enega"],
+            default="fs",
             help=(
-                "Whether to use the Genehound-like or IMC-like objective function"
-                " formulation of NEGA (default: %(default)s)."
+                "Include the side information by factorizing in Feature"
+                " Space (fs) or as regularization (reg)\n "
+                "or FS + laplacian regularization (enega) (default: %(default)s)."
             ),
         )
 
@@ -389,7 +401,6 @@ def parse_post(subparsers: argparse._SubParsersAction):
         required=False,
         help="Dimension over which to average (default: %(default)s).",
     )
-
 
 
 def parse_ncf(subparsers: argparse._SubParsersAction):
