@@ -14,12 +14,10 @@ from tqdm import tqdm
 
 from genepriority import Evaluation, Results
 from genepriority.models.neural.neural_cf import NeuralCF
-from genepriority.models.neural.neural_cf_routines import (
-    GeneDiseaseDataset,
-    predict_full_matrix,
-    train_epoch,
-    validate_epoch,
-)
+from genepriority.models.neural.neural_cf_routines import (GeneDiseaseDataset,
+                                                           predict_full_matrix,
+                                                           train_epoch,
+                                                           validate_epoch)
 from genepriority.scripts.utils import pre_processing
 from genepriority.utils import serialize
 
@@ -47,6 +45,7 @@ def run_fold(
     gene_disease,
     gene_feats_scaled,
     disease_feats_scaled,
+    print_summary,
 ) -> None:
     """
     Train and evaluate a NeuralCF model for a single cross-validation fold, then
@@ -68,6 +67,7 @@ def run_fold(
             side-information features.
         disease_feats_scaled (np.ndarray): Shape (D, F_d). Standardized disease
             side-information features.
+        print_summary (bool): Whether to give the model summary.
     """
     # Create index arrays
     train_idx = np.vstack(np.where(mask_train)).T
@@ -93,25 +93,20 @@ def run_fold(
         dropout=args.dropout,
     ).to(device)
 
-    # Summary
-    batch = next(iter(train_loader))
-    gf = batch["g_feat"].to(device)
-    df = batch["d_feat"].to(device)
-    model_summary = summary(
-        model,
-        input_data=(gf, df),
-        col_names=("output_size", "num_params", "trainable"),
-    )
-    writer.add_text("hyperparameters", str(model_summary))
+    if print_summary:
+        batch = next(iter(train_loader))
+        gf = batch["g_feat"].to(device)
+        df = batch["d_feat"].to(device)
+        print("\n📊  Model Summary\n" + "=" * 50)
+        model_summary = summary(
+            model,
+            input_data=(gf, df),
+            col_names=("output_size", "num_params", "trainable"),
+        )
+        print("=" * 50 + "\n")
+        writer.add_text("hyperparameters", str(model_summary))
 
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer,
-        mode="min",
-        factor=args.lr_factor,
-        patience=args.lr_patience,
-        min_lr=1e-5,
-    )
     criterion = nn.MSELoss()
 
     if args.load_model is not None:
@@ -126,15 +121,18 @@ def run_fold(
     best_state: Dict[str, torch.Tensor] = {}
     for epoch in range(1, args.epochs + 1):
         train_loss = train_epoch(model, train_loader, criterion, optimizer, device)
-        val_loss, auroc, auprc = validate_epoch(model, val_loader, criterion, device)
+        val_loss, auroc, auprc, preds = validate_epoch(model, val_loader, criterion, device)
         # Scheduler step on validation loss
-        scheduler.step(val_loss)
-        current_lr = optimizer.param_groups[0]["lr"]
-        writer.add_scalar("learning_rate", current_lr, epoch)
         writer.add_scalar("training_loss", np.sqrt(train_loss), epoch)
         writer.add_scalar("testing_loss", np.sqrt(val_loss), epoch)
         writer.add_scalar("auc", auroc, epoch)
         writer.add_scalar("average precision", auprc, epoch)
+        if epoch % 10 == 0:
+            writer.add_histogram(
+                "Values on test points",
+                preds,
+                epoch,
+            )
 
         # Early-stopping logic
         if val_loss < best_val:
@@ -204,11 +202,14 @@ def ncf(args: argparse.Namespace) -> None:
     disease_feats_scaled = scaler_d.transform(disease_feats)
     device = _pick_device()
     for fold, (train_mask, test_mask, validation_mask, _) in tqdm(
-        enumerate(dataloader.omim_masks), desc="Folds", unit="fold"
+        enumerate(dataloader.omim_masks),
+        desc="Folds",
+        unit="fold",
+        total=args.num_folds,
     ):
         # Device & TensorBoard
 
-        fold_log_dir: Path = args.log_dir / f"fold{fold+1}-NeuralCF"
+        fold_log_dir: Path = args.tensorboard_dir / f"fold{fold+1}-NeuralCF"
         if fold_log_dir.exists():
             for file in fold_log_dir.iterdir():
                 file.unlink()
@@ -224,6 +225,7 @@ def ncf(args: argparse.Namespace) -> None:
             dataloader.omim.toarray(),
             gene_feats_scaled,
             disease_feats_scaled,
+            print_summary=(fold == 0),
         )
         results.append(res)
         if args.save_model is not None:

@@ -10,7 +10,7 @@ and efficient manner.
 
 """
 
-from typing import Dict, Iterator, List, Tuple, Literal
+from typing import Dict, Iterator, List, Literal, Tuple
 
 import numpy as np
 

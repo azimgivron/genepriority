@@ -18,7 +18,8 @@ import pint
 import yaml
 
 from genepriority.preprocessing.dataloader import DataLoader
-from genepriority.preprocessing.side_information_loader import SideInformationLoader
+from genepriority.preprocessing.side_information_loader import \
+    SideInformationLoader
 from genepriority.scripts.utils import pre_processing
 from genepriority.trainer.neg_trainer import NEGTrainer
 from genepriority.utils import serialize
@@ -39,7 +40,7 @@ def finetune(
     n_trials: int,
     timeout: float,
     svd_init: bool,
-    formulation: Literal["fs", "reg", "enega"],
+    formulation: Literal["nega-fs", "nega-reg", "enega"],
 ):
     """
     Search for hyperparameter tuning of the NEGA model.
@@ -61,8 +62,8 @@ def finetune(
         n_trials (int): Number of trials for the hyperparameter search.
         timeout (float): Time out in hours.
         svd_init (bool): Whether to initialize the latent matrices with SVD decomposition.
-        formulation (Literal["fs", "reg", "enega"]): The type of loss formualtion, either
-            "fs", "enega" "reg".
+        formulation (Literal["nega-fs", "nega-reg", "enega"]): The type of loss formualtion, either
+            "nega-fs", "enega" "nega-reg".
     """
     trainer = NEGTrainer(
         dataloader=dataloader,
@@ -75,9 +76,7 @@ def finetune(
         flip_frequency=flip_frequency,
         patience=patience,
         svd_init=svd_init,
-        formulation=(
-            f"nega-{formulation}" if formulation in ["fs", "reg"] else formulation
-        ),
+        formulation=formulation,
     )
     timeout_seconds = pint.Quantity(timeout, "h").to("s").m
     optuna_study = trainer.fine_tune(
@@ -115,7 +114,7 @@ def train_eval(
     tensorboard_dir: Path,
     results_filename: str,
     svd_init: bool,
-    formulation: Literal["fs", "reg", "enega"],
+    formulation: Literal["nega-fs", "nega-reg", "enega"],
 ):
     """
     Trains the NEGA model on the training set and evaluates it on the test set.
@@ -146,8 +145,8 @@ def train_eval(
         results_filename (str): Filename to use for saving results.
         svd_init (bool): Whether to initialize the latent
                 matrices with SVD decomposition.
-        formulation (Literal["fs", "reg", "enega"]): The type of loss formualtion, either
-            "fs", "reg" or "enega".
+        formulation (Literal["nega-fs", "nega-reg", "enega"]): The type of loss formualtion, either
+            "nega-fs", "nega-reg" or "enega".
     """
     trainer = NEGTrainer(
         dataloader=dataloader,
@@ -166,14 +165,14 @@ def train_eval(
         rho_decrease=rho_decrease,
         tensorboard_dir=tensorboard_dir,
         svd_init=svd_init,
-        formulation=f"nega-{formulation}",
+        formulation=formulation,
     )
     results_path = output_path / str(rank)
     results_path.mkdir(parents=True, exist_ok=True)
     trainer.path = results_path
     result = trainer.train_test_cross_validation(
         rank,
-        save_name=f"nega-{formulation}:latent={rank}.pickle",
+        save_name=f"{formulation}:latent={rank}.pickle",
     )
     serialize(result, results_path / results_filename)
     logger.debug("Serialized results for latent dimension %s saved successfully.", rank)
@@ -211,6 +210,10 @@ def nega(args: argparse.Namespace):
         **kwargs,
     )
 
+    formulation = (
+        f"nega-{args.formulation}" if args.formulation in ["fs", "reg"] else "enega"
+    )
+
     if args.nega_command == "fine-tune":
         finetune(
             logger=logger,
@@ -227,18 +230,14 @@ def nega(args: argparse.Namespace):
             n_trials=args.n_trials,
             timeout=args.timeout,
             svd_init=args.svd_init,
-            formulation=args.formulation,
+            formulation=formulation,
         )
     elif args.nega_command == "cv":
         logger.debug("Loading configuration file: %s", args.config_path)
         with args.config_path.open("r", encoding="utf-8") as stream:
             config = yaml.safe_load(stream)
         if "side_info" in args and args.side_info is not None and args.side_info:
-            key = (
-                f"nega-{args.formulation}"
-                if args.formulation in ["fs", "reg"]
-                else "enega"
-            )
+            key = formulation
         else:
             key = "default"
         config = config[key]
@@ -269,7 +268,7 @@ def nega(args: argparse.Namespace):
             results_filename=args.results_filename,
             side_info_loader=side_info_loader,
             svd_init=args.svd_init,
-            formulation=args.formulation,
+            formulation=formulation,
         )
     else:
         raise ValueError(

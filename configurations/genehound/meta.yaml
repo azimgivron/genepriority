@@ -12,7 +12,7 @@
 # July 2018, Pages i447–i456, https://doi.org/10.1093/bioinformatics/bty289
 #
 # Parameters:
-#   direct: (bool) Whether to use a Cholesky or conjugate gradient (CG) solver.
+#   direct: (bool) Whether to use a Cholesky or conjugate gradient (CG) solver. The direct method is only feasible for a small (< 100K) number of features.
 #   univariate: (bool) Whether to use univariate or multivariate sampling.
 #   save_freq: (int) Frequency at which model state is saved (e.g., every N samples).
 #   burnin_period: (int) Number of initial samples to discard as burn-in.
@@ -21,8 +21,8 @@
 #   num_samples: (int) Number of samples to collect after the burn-in period,
 #                 during the active period. (default: 500).
 ---
-direct: False
-univariate: True
-save_freq: 100
-num_samples: 500
-burnin_period: 500
+direct: False #use CG
+univariate: False #use multivariate
+save_freq: 10
+num_samples: 500 #enough for mean estimator
+burnin_period: 800

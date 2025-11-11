@@ -441,37 +441,25 @@ def parse_ncf(subparsers: argparse._SubParsersAction):
         help="The learning rate (default: %(default)s).",
     )
     parser.add_argument(
-        "--lr_patience",
-        type=int,
-        default=40,
-        help="The learning rate patience before reducing it (default: %(default)s).",
-    )
-    parser.add_argument(
-        "--lr_factor",
-        type=float,
-        default=1 / np.sqrt(10),
-        help="The learning rate reduing factor (default: %(default)s).",
-    )
-    parser.add_argument(
         "--epochs",
         type=int,
-        default=1000,
+        default=5000,
         help="The number of epochs (default: %(default)s).",
     )
     parser.add_argument(
         "--patience",
         type=int,
-        default=100,
+        default=1000,
         help="The patience for early stopping (default: %(default)s).",
     )
     parser.add_argument(
         "--dropout",
         type=float,
-        default=0.5,
+        default=0.6,
         help="The dropout probability (default: %(default)s).",
     )
     parser.add_argument(
-        "--log-dir",
+        "--tensorboard-dir",
         type=Path,
         default=Path("/home/TheGreatestCoder/code/logs"),
         help="Base TensorBoard log directory (default: %(default)s).",
@@ -486,7 +474,7 @@ def parse_ncf(subparsers: argparse._SubParsersAction):
         "--hidden-dims",
         type=int,
         nargs="+",
-        default=[64, 64, 32],
+        default=[128, 64, 32],
         help="List of MLP hidden layer sizes (default: %(default)s).",
     )
     parser.add_argument(

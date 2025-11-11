@@ -179,6 +179,7 @@ class BaseTrainer(metaclass=ABCMeta):
         for i, (train_mask, test_mask, validation_mask, _) in tqdm(
             enumerate(self.dataloader.omim_masks),
             desc="Fold",
+            unit="fold",
             total=len(self.dataloader.omim_masks),
         ):
             self.logger.debug("Initiating training on fold %d", i + 1)

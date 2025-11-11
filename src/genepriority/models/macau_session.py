@@ -9,10 +9,11 @@ losses during matrix completion. If `smurff` is not installed, the class cannot 
 """
 
 import time
-from typing import Any
+from typing import Any, Tuple
 
 import scipy.sparse as sp
 import tensorflow as tf
+import numpy as np
 from negaWsi import Result
 
 try:
@@ -69,6 +70,7 @@ class MacauSession:
                 univariate: bool,
                 Ytrain: sp.csr_matrix,
                 Ytest: sp.csr_matrix,
+                side_info: Tuple[np.ndarray, np.ndarray],
                 writer: tf.summary.SummaryWriter = None,
                 center: bool = False,
                 **kwargs: Any,
@@ -103,6 +105,7 @@ class MacauSession:
                     Ytrain=Ytrain,
                     Ytest=Ytest,
                     threshold=0.5,
+                    side_info=[sp.csc_matrix(si) if isinstance(si, np.ndarray) else si for si in side_info], # CG for multivariate only exist for sparse side info.
                     **kwargs,
                 )
                 self.num_latent = num_latent
@@ -126,27 +129,28 @@ class MacauSession:
                 loss = []
                 status_item = self.step()
                 while status_item is not None:
-                    if self.writer is not None and status_item.phase == "Sample":
+                    if self.writer is not None:
                         with self.writer.as_default():
+                            if status_item.phase == "Sample":
+                                tf.summary.scalar(
+                                    "testing_loss",
+                                    status_item.rmse_avg,
+                                    step=status_item.iter,
+                                )
+                                tf.summary.scalar(
+                                    "auc",
+                                    status_item.auc_avg,
+                                    step=status_item.iter,
+                                )
+                                rmse.append(status_item.rmse_avg)
+                                loss.append(status_item.rmse_1sample)
                             tf.summary.scalar(
-                                "training_loss",
-                                status_item.train_rmse,
-                                step=status_item.iter,
-                            )
-                            tf.summary.scalar(
-                                "testing_loss",
-                                status_item.rmse_avg,
-                                step=status_item.iter,
-                            )
-                            tf.summary.scalar(
-                                "auc",
-                                status_item.auc_avg,
+                                f"rmse_1sample_{status_item.phase.lower()}",
+                                status_item.rmse_1sample,
                                 step=status_item.iter,
                             )
                             tf.summary.flush()
                     iterations_count = status_item.iter
-                    rmse.append(status_item.rmse_avg)
-                    loss.append(status_item.train_rmse)
                     status_item = self.step()
 
                 runtime = time.time() - start_time

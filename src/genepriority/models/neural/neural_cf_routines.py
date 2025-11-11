@@ -135,6 +135,7 @@ def validate_epoch(
             - Average validation loss over the epoch.
             - AUROC
             - AUPRC
+            - predictions
     """
     model.eval()
     ys = []
@@ -150,7 +151,7 @@ def validate_epoch(
             preds.extend(pred.tolist())
     auroc, auprc = calculate_auroc_auprc(ys, preds)
     loss = criterion(torch.Tensor(preds), torch.Tensor(ys)).item()
-    return loss, auroc, auprc
+    return loss, auroc, auprc, preds
 
 
 def predict_full_matrix(
