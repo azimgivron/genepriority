@@ -115,6 +115,7 @@ def bedroc_score(y_true: np.ndarray, y_pred: np.ndarray, alpha: float = 20.0) ->
     if rie_max != rie_min:
         score = (rie_value - rie_min) / (rie_max - rie_min)
         score = np.round(score, 10)
+        score = 1. if score > 1. else score
         assert 0 <= score <= 1, f"BEDROC must be in [0;1]. Found => {score}"
         return score
     return 1.0
@@ -299,10 +300,8 @@ def build_curves_per_disease(
         n_pos = int(labels.sum())
         if n_pos in (0, gene_number):
             continue
-
         first, second, _ = func(labels, scores_pred)
         scores.append((first, second))
-
     final = interpolate(scores, thr)
     return final, thr
 

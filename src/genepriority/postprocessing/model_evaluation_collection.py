@@ -27,12 +27,12 @@ class ModelEvaluationCollection:
             and values are Evaluation objects containing metrics for the respective model.
     """
 
-    axis = {"disease": 1, "fold": 0}
+    axis = {"diseases": 1, "folds": 0}
 
     def __init__(
         self,
         model_results: Dict[str, Evaluation],
-        over: Literal["disease", "fold"] = "disease",
+        over: Literal["diseases", "folds"] = "diseases",
     ):
         """
         Initializes the ModelEvaluationCollection.
@@ -40,7 +40,7 @@ class ModelEvaluationCollection:
         Args:
             model_results (Dict[str, Evaluation]): A dictionary mapping model names
                 to their respective Evaluation objects.
-            over (Literal["disease", "fold"]): Axis over which to average.
+            over (Literal["disease", "folds"]): Axis over which to average.
         """
         for key, val in model_results.items():
             if not isinstance(key, str):
@@ -153,14 +153,14 @@ class ModelEvaluationCollection:
 
     def compute_avg_cdf(self) -> List[np.ndarray]:
         """
-        Calculates the average ROC curve for each model, across folds.
+        Calculates the average CDF curve for each model, across diseases.
 
         Returns:
-            List[np.ndarray]: 1D arrays containing the CDF for
-                each model. Shape: (100,).
+            List[np.ndarray]: 1D arrays containing the mean 
+                CDF for each model. Shape: (100,).
         """
-        roc = [eval_res.compute_avg_cdf() for eval_res in self.evaluations]
-        return roc
+        cdf = [eval_res.compute_avg_cdf() for eval_res in self.evaluations]
+        return cdf
 
     def compute_avg_roc(self) -> List[np.ndarray]:
         """

@@ -13,6 +13,7 @@ import argparse
 import logging
 from pathlib import Path
 from typing import Dict, Literal
+from collections import defaultdict
 
 import pint
 import yaml
@@ -189,20 +190,23 @@ def nega(args: argparse.Namespace):
         args (argparse.Namespace): Parsed command-line arguments.
     """
     logger = logging.getLogger("NEGA")
-    kwargs = {}
-    if args.formulation == "enega":
-        kwargs["gene_graph_path"] = args.gene_graph_path
+    kwargs = defaultdict(list)
+    
+    if args.ppi:
+        if args.formulation == "enega":
+            kwargs["gene_graph_path"] = args.gene_graph_path
+        else:
+            kwargs["gene_side_info_paths"].append(args.gene_graph_path)
+    if args.gene_side_info:
+        kwargs["gene_side_info_paths"].extend(args.gene_features_paths)
+    if args.disease_side_info:
+        kwargs["gene_side_info_paths"].extend(args.disease_side_info_paths)
+
     dataloader, side_info_loader = pre_processing(
         gene_disease_path=args.gene_disease_path,
         seed=args.seed,
         omim_meta_path=args.omim_meta_path,
-        side_info=args.side_info,
-        gene_side_info_paths=(
-            args.gene_features_paths + [args.gene_graph_path]
-            if args.formulation != "enega"
-            else args.gene_features_paths
-        ),
-        disease_side_info_paths=args.disease_side_info_paths,
+        side_info=args.gene_side_info or args.disease_side_info or args.ppi,
         zero_sampling_factor=args.zero_sampling_factor,
         num_folds=args.num_folds,
         validation_size=args.validation_size,
@@ -236,7 +240,7 @@ def nega(args: argparse.Namespace):
         logger.debug("Loading configuration file: %s", args.config_path)
         with args.config_path.open("r", encoding="utf-8") as stream:
             config = yaml.safe_load(stream)
-        if "side_info" in args and args.side_info is not None and args.side_info:
+        if (("gene_side_info" in args) or ("disease_side_info" in args) or ("ppi" in args)):
             key = formulation
         else:
             key = "default"

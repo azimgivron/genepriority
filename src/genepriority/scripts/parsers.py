@@ -6,11 +6,9 @@ Parser Module
 import argparse
 from pathlib import Path
 
-import numpy as np
-
 from genepriority.scripts.utils import csv_file, output_dir, yaml_file
 
-p = "2gene/"
+p = "2gene/" 
 DEFAULT_PATHS = {
     "GENE": {
         "FEATURES": [
@@ -61,9 +59,19 @@ def data_info(parser: argparse.ArgumentParser):
         ),
     )
     parser.add_argument(
-        "--side-info",
+        "--gene-side-info",
         action="store_true",
-        help="Include side information for genes and diseases (default: %(default)s).",
+        help="Include side information for genes (default: %(default)s).",
+    )
+    parser.add_argument(
+        "--disease-side-info",
+        action="store_true",
+        help="Include side information for diseases (default: %(default)s).",
+    )
+    parser.add_argument(
+        "--ppi",
+        action="store_true",
+        help="Include PPI data (default: %(default)s).",
     )
     parser.add_argument(
         "--gene-features-paths",
@@ -394,10 +402,10 @@ def parse_post(subparsers: argparse._SubParsersAction):
         "--over",
         type=str,
         choices=[
-            "disease",
-            "fold",
+            "diseases",
+            "folds",
         ],
-        default="disease",
+        default="folds",
         required=False,
         help="Dimension over which to average (default: %(default)s).",
     )

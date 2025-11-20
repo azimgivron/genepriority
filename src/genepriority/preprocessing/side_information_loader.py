@@ -154,36 +154,51 @@ class SideInformationLoader:
                 / (side_info_mat.shape[0] * side_info_mat.shape[1])
                 * 100,
             )
-        stacked = sp.hstack(side_info)
-        normalized = stacked / sp.linalg.norm(stacked, ord="fro")
+        if len(side_info) > 0:
+            stacked = sp.hstack(side_info)
+            normalized = stacked / sp.linalg.norm(stacked, ord="fro")
+        else:
+            normalized = sp.identity(rows)
         return normalized
 
     def process_side_info(
         self,
-        gene_side_info_paths: List[Path],
-        disease_side_info_paths: List[Path],
+        gene_side_info_paths: List[Path] = None,
+        disease_side_info_paths: List[Path] = None,
         gene_graph_path: Path = None,
     ):
         """
         Process gene and disease-related side information files and store the results.
 
         Args:
-            gene_side_info_paths (List[Path]): List of file paths for gene-side
+            gene_side_info_paths (List[Path], optional): List of file paths for gene-side
                 information datasets.
-            disease_side_info_paths (List[Path]): List of file paths for disease-side
+            disease_side_info_paths (List[Path], optional): List of file paths for disease-side
                 information datasets.
             gene_graph_path (Path, optional): The gene graph path.
 
         """
-        names = [path.stem for path in gene_side_info_paths + disease_side_info_paths]
+        names = []
+        if gene_side_info_paths is not None:
+            for path in gene_side_info_paths:
+                names.append(path.stem)
+        if disease_side_info_paths is not None:
+            for path in disease_side_info_paths:
+                names.append(path.stem)
 
         def read(path: Path) -> pd.DataFrame:
             dataframe = pd.read_csv(path)
             dataframe.name = path.stem
             return dataframe
 
-        gene_dataframes = [read(path) for path in gene_side_info_paths]
-        disease_dataframes = [read(path) for path in disease_side_info_paths]
+        if gene_side_info_paths is not None:
+            gene_dataframes = [read(path) for path in gene_side_info_paths]
+        else:
+            gene_dataframes = []
+        if disease_side_info_paths is not None:
+            disease_dataframes = [read(path) for path in disease_side_info_paths]
+        else:
+            disease_dataframes = []
         shapes = [dataframe.shape for dataframe in gene_dataframes + disease_dataframes]
         log_df = pd.DataFrame(
             shapes, columns=["number of rows", "number of columns"]

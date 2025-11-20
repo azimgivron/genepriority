@@ -11,32 +11,32 @@ import numpy as np
 import pandas as pd
 
 
-def generate_auc_loss_table(
-    auc_loss: np.ndarray,
+def generate_table(
+    metric: np.ndarray,
     model_names: List[str],
-    avg_auc_loss_name: str = "Averaged 1-AUC error",
-    std_auc_loss_name: str = "Std 1-AUC error",
+    avg_name: str = "Averaged",
+    std_name: str = "Std",
 ) -> pd.DataFrame:
     """
-    Generates a table summarizing AUC loss averages and standard
+    Generates a table summarizing metric averages and standard
     deviations for each model.
 
     Args:
-        auc_loss (np.ndarray): A 2D array containing the AUC loss for
+        metric (np.ndarray): A 2D array containing the metric for
             each model and fold. Shape: (fold, models).
-        model_names (List[str]): Names of the models corresponding to the AUC losses.
-        avg_auc_loss_name (str, optional): Column name for averaged 1-AUC error.
-            Defaults to "Averaged 1-AUC error".
-        std_auc_loss_name (str, optional): Column name for standard deviation of 1-AUC error.
-            Defaults to "Std 1-AUC error".
+        model_names (List[str]): Names of the models corresponding to the metric.
+        avg_name (str, optional): Column name for averaged metric.
+            Defaults to "Averaged".
+        std_name (str, optional): Column name for standard deviation of metric.
+            Defaults to "Std".
 
     Returns:
-        pd.DataFrame: A dataframe summarizing AUC loss metrics.
+        pd.DataFrame: A dataframe summarizing AUC metrics.
     """
-    auc_loss = np.hstack((np.mean(auc_loss, axis=0), np.std(auc_loss, axis=0)))
-    auc_loss = auc_loss.reshape((2, -1)).T
+    metric = np.hstack((np.mean(metric, axis=0), np.std(metric, axis=0)))
+    metric = metric.reshape((2, -1)).T
     dataframe = pd.DataFrame(
-        auc_loss, columns=[avg_auc_loss_name, std_auc_loss_name], index=model_names
+        metric, columns=[avg_name, std_name], index=model_names
     ).map(lambda x: f"{x:.2e}")
     return dataframe
 

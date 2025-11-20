@@ -16,6 +16,7 @@ Dependencies:
 import argparse
 import logging
 from pathlib import Path
+from collections import defaultdict
 
 import yaml
 
@@ -111,19 +112,27 @@ def genehound(args: argparse.Namespace):
         args (argparse.Namespace): Parsed command-line arguments.
     """
     seed = args.seed
+    kwargs = defaultdict(list)
+
+    if args.ppi:
+        kwargs["gene_side_info_paths"].append(args.gene_graph_path)
+    if args.gene_side_info:
+        kwargs["gene_side_info_paths"].extend(args.gene_features_paths)
+    if args.disease_side_info:
+        kwargs["gene_side_info_paths"].extend(args.disease_side_info_paths)
 
     dataloader, side_info_loader = pre_processing(
         gene_disease_path=args.gene_disease_path,
         seed=args.seed,
         omim_meta_path=args.omim_meta_path,
-        side_info=args.side_info,
-        gene_side_info_paths=args.gene_features_paths + [args.gene_graph_path],
-        disease_side_info_paths=args.disease_side_info_paths,
+        side_info=args.gene_side_info or args.disease_side_info or args.ppi,
         zero_sampling_factor=args.zero_sampling_factor,
         num_folds=args.num_folds,
         validation_size=args.validation_size,
         max_dims=args.max_dims,
+        **kwargs,
     )
+
     run(
         dataloader=dataloader,
         side_info_loader=side_info_loader,

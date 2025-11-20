@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import argparse
 import logging
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Tuple
 
 import numpy as np
 import torch
@@ -11,6 +13,7 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from torchinfo import summary
 from tqdm import tqdm
+from collections import defaultdict
 
 from genepriority import Evaluation, Results
 from genepriority.models.neural.neural_cf import NeuralCF
@@ -36,17 +39,17 @@ def _pick_device() -> str:
 
 
 def run_fold(
-    device,
-    writer,
+    device: str,
+    writer: SummaryWriter,
     args: argparse.Namespace,
-    mask_train,
-    mask_val,
-    mask_test,
-    gene_disease,
-    gene_feats_scaled,
-    disease_feats_scaled,
-    print_summary,
-) -> None:
+    mask_train: np.ndarray,
+    mask_val: np.ndarray,
+    mask_test: np.ndarray,
+    gene_disease: np.ndarray,
+    gene_feats_scaled: np.ndarray,
+    disease_feats_scaled: np.ndarray,
+    print_summary: bool,
+) -> Tuple[NeuralCF, Results]:
     """
     Train and evaluate a NeuralCF model for a single cross-validation fold, then
     produce a full gene-disease score matrix.
@@ -121,7 +124,9 @@ def run_fold(
     best_state: Dict[str, torch.Tensor] = {}
     for epoch in range(1, args.epochs + 1):
         train_loss = train_epoch(model, train_loader, criterion, optimizer, device)
-        val_loss, auroc, auprc, preds = validate_epoch(model, val_loader, criterion, device)
+        val_loss, auroc, auprc, preds = validate_epoch(
+            model, val_loader, criterion, device
+        )
         # Scheduler step on validation loss
         writer.add_scalar("training_loss", np.sqrt(train_loss), epoch)
         writer.add_scalar("testing_loss", np.sqrt(val_loss), epoch)
@@ -181,17 +186,25 @@ def ncf(args: argparse.Namespace) -> None:
 
     results = []
 
+    kwargs = defaultdict(list)
+
+    if args.ppi:
+        kwargs["gene_side_info_paths"].append(args.gene_graph_path)
+    if args.gene_side_info:
+        kwargs["gene_side_info_paths"].extend(args.gene_features_paths)
+    if args.disease_side_info:
+        kwargs["gene_side_info_paths"].extend(args.disease_side_info_paths)
+
     dataloader, side_info_loader = pre_processing(
         gene_disease_path=args.gene_disease_path,
         seed=args.seed,
         omim_meta_path=args.omim_meta_path,
-        side_info=args.side_info,
-        gene_side_info_paths=args.gene_features_paths + [args.gene_graph_path],
-        disease_side_info_paths=args.disease_side_info_paths,
+        side_info=args.gene_side_info or args.disease_side_info or args.ppi,
         zero_sampling_factor=args.zero_sampling_factor,
         num_folds=args.num_folds,
         validation_size=args.validation_size,
         max_dims=args.max_dims,
+        **kwargs,
     )
 
     gene_feats, disease_feats = side_info_loader.side_info

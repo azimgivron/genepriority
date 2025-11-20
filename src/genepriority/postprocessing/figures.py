@@ -55,7 +55,7 @@ def plot_bedroc_boxplots(
             palette=COLORS[: bedroc.shape[-1]],
             showfliers=False,
             width=0.3,
-            linewidth=2,
+            linewidth=3,
         )
         axs[i].set_xticks(range(len(model_names)))
         axs[i].set_xticklabels(["" for _ in model_names])
@@ -68,17 +68,15 @@ def plot_bedroc_boxplots(
         axs[i].grid(axis="y", alpha=0.3)
         if box.legend_ is not None:
             box.legend_.remove()
-    axs[0].set_ylabel("BEDROC", fontsize=20)
-    fig.subplots_adjust(bottom=0.1, wspace=0.26, left=0.1)
+    axs[0].set_ylabel(f"BEDROC@{alpha}", fontsize=20)
     handles = [mpatches.Patch(color=c, label=m) for c, m in zip(COLORS, model_names)]
     fig.legend(
         handles,
         model_names,
-        loc="lower center",
-        bbox_to_anchor=(0.5, 0),
-        ncol=4,
+        loc="upper right",
         fontsize=22,
     )
+    plt.tight_layout()
     plt.savefig(output_file, dpi=300, bbox_inches="tight")
     plt.close()
 
@@ -110,23 +108,21 @@ def plot_auc_boxplots(
         palette=COLORS[: auc.shape[-1]],
         showfliers=False,
         width=0.3,
-        linewidth=2,
+        linewidth=3,
     )
     axis.set_ylabel("AUROC", fontsize=20)
     axis.set_xticks(range(len(model_names)))
     axis.set_xticklabels(["" for _ in model_names])
     axis.yaxis.set_tick_params(labelsize=18)
     axis.grid(axis="y", alpha=0.3)
-    fig.subplots_adjust(bottom=0.15, left=0.2)
     handles = [mpatches.Patch(color=c, label=m) for c, m in zip(COLORS, model_names)]
     fig.legend(
         handles,
         model_names,
-        loc="lower center",
-        bbox_to_anchor=(0.5, 0),
-        ncol=4,
+        loc="upper right",
         fontsize=22,
     )
+    plt.tight_layout()
     plt.savefig(output_file, dpi=300, bbox_inches="tight")
     plt.close()
 
@@ -158,23 +154,21 @@ def plot_avg_precision_boxplots(
         palette=COLORS[: avg_pr.shape[-1]],
         showfliers=False,
         width=0.3,
-        linewidth=2,
+        linewidth=3,
     )
     axis.set_xticks(range(len(model_names)))
     axis.set_xticklabels(["" for _ in model_names])
     axis.yaxis.set_tick_params(labelsize=18)
     axis.grid(axis="y", alpha=0.3)
     axis.set_ylabel("AUPRC", fontsize=20)
-    fig.subplots_adjust(bottom=0.15, left=0.2)
     handles = [mpatches.Patch(color=c, label=m) for c, m in zip(COLORS, model_names)]
     fig.legend(
         handles,
         model_names,
-        loc="lower center",
-        bbox_to_anchor=(0.5, 0),
-        ncol=4,
+        loc="upper right",
         fontsize=22,
     )
+    plt.tight_layout()
     plt.savefig(output_file, dpi=300, bbox_inches="tight")
     plt.close()
 
@@ -202,10 +196,10 @@ def plot_roc_curves(
         color = COLORS[i]
         ls = LINESTYLES[i % len(LINESTYLES)]
         ax.plot(
-            roc[i][0], roc[i][1], linestyle=ls, color=color, linewidth=2, label=name
+            roc[i][0], roc[i][1], linestyle=ls, color=color, linewidth=3, label=name
         )
-    ax.set_xlabel("False Positive Rate", fontsize=16)
-    ax.set_ylabel("True Positive Rate", fontsize=16)
+    ax.set_xlabel("False Positive Rate", fontsize=18)
+    ax.set_ylabel("True Positive Rate", fontsize=18)
     ax.tick_params(labelsize=18)
     ax.grid(alpha=0.3)
     ax.legend(fontsize=20)
@@ -236,9 +230,9 @@ def plot_pr_curves(
     for i, name in enumerate(model_names):
         color = COLORS[i]
         ls = LINESTYLES[i % len(LINESTYLES)]
-        ax.plot(pr[i][1], pr[i][0], linestyle=ls, color=color, linewidth=2, label=name)
-    ax.set_xlabel("Recall", fontsize=16)
-    ax.set_ylabel("Precision", fontsize=16)
+        ax.semilogx(pr[i][1], pr[i][0], linestyle=ls, color=color, linewidth=3, label=name)
+    ax.set_xlabel("Recall", fontsize=18)
+    ax.set_ylabel("Precision", fontsize=18)
     ax.tick_params(labelsize=18)
     ax.grid(alpha=0.3)
     ax.legend(fontsize=20)
@@ -270,10 +264,10 @@ def plot_roc_curves(
         color = COLORS[i]
         ls = LINESTYLES[i % len(LINESTYLES)]
         ax.plot(
-            roc[i][0], roc[i][1], linestyle=ls, color=color, linewidth=2, label=name
+            roc[i][0], roc[i][1], linestyle=ls, color=color, linewidth=3, label=name
         )
-    ax.set_xlabel("False Positive Rate", fontsize=16)
-    ax.set_ylabel("True Positive Rate", fontsize=16)
+    ax.set_xlabel("False Positive Rate", fontsize=18)
+    ax.set_ylabel("True Positive Rate", fontsize=18)
     ax.tick_params(labelsize=18)
     ax.grid(alpha=0.3)
     ax.legend(fontsize=20)
@@ -294,7 +288,7 @@ def plot_cdf_curves(
     Args:
         pr (List[np.ndarray]): CDF values, shape (n_points), for each model.
         model_names (List[str]): Names of the models being compared.
-        output_file (str): File path where the PR curve figure will be saved.
+        output_file (str): File path where the CDF curve figure will be saved.
         figsize (Tuple[int, int]): Figure size in inches (width, height).
     """
     if len(model_names) > len(COLORS):
@@ -309,11 +303,53 @@ def plot_cdf_curves(
             cdf[i],
             linestyle=ls,
             color=color,
-            linewidth=2,
+            linewidth=3,
             label=name,
         )
-    ax.set_ylabel("P(hidden gene among genes looked at)", fontsize=16)
-    ax.set_xlabel("Number of genes looked at", fontsize=16)
+    ax.set_ylabel("P(hidden gene among genes looked at)", fontsize=18)
+    ax.set_xlabel("Number of genes looked at", fontsize=18)
+    ax.tick_params(labelsize=18)
+    ax.grid(alpha=0.3)
+    ax.legend(fontsize=20)
+    fig.subplots_adjust(left=0.2)
+    plt.savefig(output_file, dpi=300, bbox_inches="tight")
+    plt.close()
+
+
+def plot_bedroc_curves(
+    bed: List[np.ndarray],
+    alpha_map: np.ndarray,
+    model_names: List[str],
+    output_file: str,
+    figsize: Tuple[int, int],
+):
+    """
+    Plots BEDROC curves for multiple models with distinct linestyles.
+
+    Args:
+        bed (List[np.ndarray]): BEDROC values, shape (model, bedroc).
+        alpha_map (np.ndarray): X-axis of Top N genes looked at.
+        model_names (List[str]): Names of the models being compared.
+        output_file (str): File path where the BEDROC curve figure will be saved.
+        figsize (Tuple[int, int]): Figure size in inches (width, height).
+    """
+    if len(model_names) > len(COLORS):
+        raise ValueError("Not enough colors for the number of models.")
+
+    fig, ax = plt.subplots(1, 1, figsize=figsize)
+    for i, name in enumerate(model_names):
+        color = COLORS[i]
+        ls = LINESTYLES[i % len(LINESTYLES)]
+        ax.plot(
+            alpha_map,
+            bed[i],
+            linestyle=ls,
+            color=color,
+            linewidth=3,
+            label=name,
+        )
+    ax.set_ylabel("BEDROC", fontsize=18)
+    ax.set_xlabel("Number of genes covering 99% of the BEDROC weight", fontsize=18)
     ax.tick_params(labelsize=18)
     ax.grid(alpha=0.3)
     ax.legend(fontsize=20)

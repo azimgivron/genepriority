@@ -51,8 +51,6 @@ def pre_processing(
     seed: int,
     omim_meta_path: Path,
     side_info: bool,
-    gene_side_info_paths: List[Path],
-    disease_side_info_paths: List[Path],
     zero_sampling_factor: int,
     num_folds: int,
     validation_size: float,
@@ -77,10 +75,6 @@ def pre_processing(
             Path to the OMIM metadata file (e.g., containing counts and thresholds).
         side_info (bool):
             Whether to load and process side information files.
-        gene_side_info_paths (List[Path]):
-            List of Paths to gene-side information CSV files (only used if side_info=True).
-        disease_side_info_paths (List[Path]):
-            List of Paths to disease-side information CSV files (only used if side_info=True).
         zero_sampling_factor (int):
             Factor by which to oversample negative (zero) examples.
         num_folds (int):
@@ -118,8 +112,6 @@ def pre_processing(
             nb_genes=nb_genes, nb_diseases=nb_diseases, max_dims=max_dims
         )
         side_info_loader.process_side_info(
-            gene_side_info_paths=gene_side_info_paths,
-            disease_side_info_paths=disease_side_info_paths,
             **kwargs,
         )
 

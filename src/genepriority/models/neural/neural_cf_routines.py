@@ -84,18 +84,17 @@ def train_epoch(
     optimizer: torch.optim.Optimizer,
     device: torch.device,
 ) -> float:
-    """
-    Run one epoch of training.
+    """Run one epoch of training.
 
     Args:
-        model: NeuralCF model.
-        loader: DataLoader for training set.
-        criterion: Loss function (e.g., nn.MSELoss()).
-        optimizer: Optimizer (e.g., Adam).
-        device: Computation device.
+        model (nn.Module): NeuralCF model.
+        loader (DataLoader): DataLoader for training set.
+        criterion (nn.Module): Loss function (e.g., nn.MSELoss()).
+        optimizer (torch.optim.Optimizer): Optimizer (e.g., Adam).
+        device (torch.device): Computation device.
 
     Returns:
-        Average training loss over the epoch.
+        float: Average training loss over the epoch.
     """
     model.train()
     total_loss = 0.0
@@ -125,10 +124,10 @@ def validate_epoch(
     Run one epoch of validation.
 
     Args:
-        model: NeuralCF model.
-        loader: DataLoader for validation set.
-        criterion: Loss function.
-        device: Computation device.
+        model (nn.Module): NeuralCF model.
+        loader (DataLoader): DataLoader for validation set.
+        criterion (nn.Module): Loss function.
+        device (torch.device): Computation device.
 
     Returns:
          Tuple[float, float, float]:
@@ -167,16 +166,16 @@ def predict_full_matrix(
     Predict the full gene-disease association matrix.
 
     Args:
-        model: Trained NeuralCF model.
-        G: Number of genes.
-        D: Number of diseases.
-        gene_feats: Array (G, F) of gene features.
-        disease_feats: Array (D, F') of disease features.
-        device: Computation device.
-        batch_size: Batch size for scanning genes.
+        model (nn.Module): Trained NeuralCF model.
+        G (int): Number of genes.
+        D (int): Number of diseases.
+        gene_feats (np.ndarray): Array (G, F) of gene features.
+        disease_feats (np.ndarray): Array (D, F') of disease features.
+        device (torch.device): Computation device.
+        batch_size (int): Batch size for scanning genes.
 
     Returns:
-        preds: NumPy array of shape (G, D) with predicted scores.
+        np.ndarray: NumPy array of shape (G, D) with predicted scores.
     """
     model.eval()
     preds = np.zeros((G, D), dtype=np.float32)

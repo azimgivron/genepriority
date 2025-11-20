@@ -110,6 +110,7 @@ class Evaluation:
             else:
                 y_true = fold_res.y_true
                 y_pred = fold_res.y_pred
+            
             bedroc.append([])
             masks.append([])
             for alpha in self.alphas:
@@ -275,7 +276,7 @@ class Evaluation:
         cross_fold_thresholds = sorted(cross_fold_thresholds)
         return aggregate(metric_list, threshold_list, cross_fold_thresholds)
 
-    def compute_avg_cdf(self, filtered: bool = False, max_r: int = 50) -> np.ndarray:
+    def compute_avg_cdf(self, filtered: bool = False, max_r: int = 100) -> np.ndarray:
         """Compute average cumulative distribution functions (CDFs) of
             ranks for hidden positives.
 
@@ -285,30 +286,39 @@ class Evaluation:
                 Defaults to 100.
 
         Returns:
-            np.ndarray: Array of shape (n_folds, max_r) containing one CDF
-                curve per fold.
+            np.ndarray: Array of shape (max_r,) containing the mean CDF
+                    curve.
         """
-        cdfs = []
+        cdf_per_fold = []
         for fold_res in self.results:
             n, m = fold_res._y_pred.shape
-            # gene_id to rank for each disease
             order = np.argsort(-fold_res._y_pred, axis=0)
-            # rank to gene_id for each disease
             ranks = np.empty_like(order)
-            cols = np.tile(np.arange(m), (n, 1))  # (n, m) column indices
+            cols = np.tile(np.arange(m), (n, 1))
             ranks[order, cols] = np.tile(np.arange(n)[:, None], (1, m))
 
-            # Extract ranks for the hidden positive pairs
+            # hidden positives mask
             hidden_pos_mask = fold_res._y_true.astype(bool) & fold_res.mask
             if filtered:
                 hidden_pos_mask &= fold_res.filtered_mask
-            if not (hidden_pos_mask).any():
-                continue
-            total_hidden = int(hidden_pos_mask.sum())
-            pos_ranks = ranks[hidden_pos_mask] + 1  # 1-based ranks
 
-            # histogram on [1, max_r]; ranks > max_r contribute 0 to CDF by construction
-            counts, _ = np.histogram(pos_ranks, bins=np.arange(1, max_r + 2))
-            cdf = np.cumsum(counts) / total_hidden
-            cdfs.append(cdf)
-        return np.array(cdfs).mean(axis=0)
+            # CDF per disease: shape (max_r, m); NaN for diseases with no hidden positives
+            cdf_per_disease = np.full((max_r, m), np.nan, dtype=float)
+
+            # compute per disease
+            for j in range(m):
+                mask_j = hidden_pos_mask[:, j]
+                if not mask_j.any():
+                    continue
+                # 1-based ranks for hidden positives of disease j
+                pos_ranks_j = ranks[mask_j, j] + 1
+                # histogram on [1, max_r]; ranks > max_r contribute 0 to CDF
+                counts_j, _ = np.histogram(pos_ranks_j, bins=np.arange(1, max_r + 2))
+                cdf_j = np.cumsum(counts_j) / mask_j.sum()
+
+                cdf_per_disease[:, j] = cdf_j
+            cdf_per_fold.append(cdf_per_disease)
+        cdfs = np.stack(cdf_per_fold, axis=0)
+        fold_avg = np.ma.mean(np.ma.masked_invalid(cdfs), axis=0).filled(np.nan)
+        cdf = np.ma.mean(np.ma.masked_invalid(fold_avg), axis=1).filled(np.nan)
+        return cdf
