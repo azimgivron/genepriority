@@ -11,12 +11,14 @@ and model snapshots can be saved for reproducibility.
 
 import logging
 from pathlib import Path
-from typing import Dict, Literal, Tuple, Union
+from typing import Any, Dict, Literal, Tuple, Union
 
 import numpy as np
+import optuna
 import pandas as pd
 import scipy.sparse as sp
 import tensorflow as tf
+from negaWsi import Result
 
 from genepriority.models.macau_session import MacauSession
 from genepriority.preprocessing.dataloader import DataLoader
@@ -25,7 +27,6 @@ from genepriority.preprocessing.side_information_loader import \
 from genepriority.trainer.base import BaseTrainer
 from genepriority.utils import (calculate_auroc_auprc, create_tb_dir,
                                 mask_sparse_containing_0s)
-from negaWsi import Result
 
 
 class MACAUTrainer(BaseTrainer):
@@ -46,7 +47,6 @@ class MACAUTrainer(BaseTrainer):
             posterior samples.
         direct (bool): Whether to use a Cholesky or conjugate gradient (CG) solver.
         univariate (bool): Whether to use univariate or multivariate sampling.
-        seed (int): The random seed for reproducibility.
         save_freq (int): Frequency at which model state is saved (e.g., every N samples).
         verbose (Literal[0, 1, 2]): Verbosity level of the algorithm
             (0: Silent, 1: Minimal, 2: Detailed).
@@ -60,11 +60,11 @@ class MACAUTrainer(BaseTrainer):
         self,
         dataloader: DataLoader,
         path: str,
+        seed: int,
         num_samples: int,
         burnin_period: int,
         direct: bool,
         univariate: bool,
-        seed: int,
         save_freq: int,
         verbose: Literal[0, 1, 2],
         side_info_loader: SideInformationLoader = None,
@@ -77,6 +77,7 @@ class MACAUTrainer(BaseTrainer):
             dataloader (DataLoader): The data loader containing all data for
                 training and testing.
             path (str): The path to the directory where model snapshots will be saved.
+            seed (int): Random seed to pass to MACAU runs.
             num_samples (int): The number of posterior samples to draw during training.
             burnin_period (int): The number of burn-in iterations before collecting
                 posterior samples.
@@ -94,8 +95,8 @@ class MACAUTrainer(BaseTrainer):
         super().__init__(
             dataloader=dataloader,
             path=path,
-            seed=seed,
             side_info_loader=side_info_loader,
+            seed=seed,
         )
         self.logger = logging.getLogger(self.__class__.__name__)
         self.num_samples = num_samples
@@ -123,7 +124,6 @@ class MACAUTrainer(BaseTrainer):
             "univariate": self.univariate,
             "burnin": self.burnin_period,
             "nsamples": self.num_samples,
-            "seed": self.seed,
             "save_freq": self.save_freq,
             "verbose": self.verbose,
         }
@@ -181,6 +181,7 @@ class MACAUTrainer(BaseTrainer):
             Ytest=testing_data,
             save_name=str(self.path / f"{iteration}:{save_name}"),
             side_info=side_info,
+            seed=iteration
         )
 
     def pre_training_callback(

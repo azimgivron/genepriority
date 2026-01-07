@@ -7,5 +7,5 @@
 #   nb_diseases: (int) Number of diseases in OMIM.
 #
 ---
-nb_genes: 829
-nb_diseases: 172
+nb_genes: 8540
+nb_diseases: 87

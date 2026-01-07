@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+from collections import defaultdict
 from pathlib import Path
 from typing import Dict, Tuple
 
@@ -13,7 +14,6 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from torchinfo import summary
 from tqdm import tqdm
-from collections import defaultdict
 
 from genepriority import Evaluation, Results
 from genepriority.models.neural.neural_cf import NeuralCF

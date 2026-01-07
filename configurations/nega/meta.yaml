@@ -10,42 +10,42 @@
 # - regularization_parameter (float): Regulates the strength of the regularization term to prevent overfitting.
 # - side_info_regularization (float): Regularization term on the regression term.
 # - symmetry_parameter (float): Quantify the asymmetry  of the bregman distance.
-# - smoothness_parameter (float): Sets the initial smoothness of the optimization landscape, influencing the step size.
+# - lipschitz_smoothness (float): Sets the initial smoothness of the optimization landscape, influencing the step size.
 # - rho_increase (float): Determines the factor by which the step size is increased dynamically during training for acceleration.
 # - rho_decrease (float): Specifies the factor for decreasing the step size to help stabilize convergence.
 #
 "default":
-  regularization_parameters: 
-    "λd": 0.003
-    "λg": 0.019
+  regularization_parameters:
+    'λg': 2.3640269928962176
+    'λd': 1.025185994119589
   symmetry_parameter: 0.99
-  smoothness_parameter: 0.001
-  rho_increase: 5.0
-  rho_decrease: 0.9
+  lipschitz_smoothness: 0.001
+  rho_increase: 2.0
+  rho_decrease: 0.1
 "enega":
-  regularization_parameters: 
-    "λd": 0.00063
-    "λg": 0.0466
-    "λG": 0.000478
+  regularization_parameters:
+    'λg': 2.3640269928962176
+    'λd': 1.025185994119589
+    'λG': 10.0001065934080
   symmetry_parameter: 0.99
-  smoothness_parameter: 0.001
-  rho_increase: 5.0
-  rho_decrease: 0.9
+  lipschitz_smoothness: 0.001
+  rho_increase: 2.0
+  rho_decrease: 0.1
 "nega-fs":
   regularization_parameters: 
-    "λd": 0.003
-    "λg": 0.019
+    'λg': 2.2369764111729826
+    'λd': 0.00017700604520052838
   symmetry_parameter: 0.99
-  smoothness_parameter: 0.001
-  rho_increase: 5.0
-  rho_decrease: 0.9
+  lipschitz_smoothness: 0.001
+  rho_increase: 2.0
+  rho_decrease: 0.1
 "nega-reg":
   regularization_parameters: 
-    "λd": 21.
-    "λg": 0.00028
-    "λ_βd": 27.
-    "λ_βg": 80.
+    'λg': 65.75433290710455
+    'λd': 73.48537777348042
+    'λ_βg': 1.4405574444604472
+    'λ_βd': 2.571487098041742
   symmetry_parameter: 0.99
-  smoothness_parameter: 0.001
-  rho_increase: 5.0
-  rho_decrease: 0.9
+  lipschitz_smoothness: 0.001
+  rho_increase: 2.0
+  rho_decrease: 0.1

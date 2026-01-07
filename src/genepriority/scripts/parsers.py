@@ -8,7 +8,7 @@ from pathlib import Path
 
 from genepriority.scripts.utils import csv_file, output_dir, yaml_file
 
-p = "2gene/" 
+p = "2gene/"
 DEFAULT_PATHS = {
     "GENE": {
         "FEATURES": [
@@ -84,10 +84,9 @@ def data_info(parser: argparse.ArgumentParser):
     parser.add_argument(
         "--gene-graph-path",
         metavar="FILE",
-        nargs="+",
         type=csv_file,
         default=csv_file(DEFAULT_PATHS["GENE"]["GRAPH"]),
-        help="Paths to PPI as CSV file used only for ENEGA formulation (default: %(default)s).",
+        help="Path to the PPI as CSV file (default: %(default)s).",
     )
     parser.add_argument(
         "--disease-side-info-paths",
@@ -245,7 +244,7 @@ def parse_nega(subparsers: argparse._SubParsersAction):
         parser.add_argument(
             "--threshold",
             type=int,
-            default=10,
+            default=100,
             help="Threshold parameter for the model (default: %(default)s).",
         )
         parser.add_argument(
@@ -287,7 +286,7 @@ def parse_nega(subparsers: argparse._SubParsersAction):
         parser.add_argument(
             "--formulation",
             choices=["fs", "reg", "enega"],
-            default="fs",
+            default=None,
             help=(
                 "Include the side information by factorizing in Feature"
                 " Space (fs) or as regularization (reg)\n "
@@ -332,6 +331,138 @@ def parse_nega(subparsers: argparse._SubParsersAction):
     fine_tune_parser.add_argument(
         "--timeout",
         type=int,
+        default=12,
+        help="Number of hours after which to stop the search (default: %(default)s).",
+    )
+
+
+def parse_imc(subparsers: argparse._SubParsersAction):
+    """
+    Adds the IMC subcommand with two subsubcommands: "cv" and "fine-tune".
+
+    Subsubcommands:
+      - "cv": Train and evaluate the IMC model using a cross-validation setting.
+      - "fine-tune": Run hyperparameter tuning for IMC.
+
+    Args:
+        subparsers (argparse._SubParsersAction): The subparsers object to which
+            the IMC command will be added.
+    """
+    imc_parser = subparsers.add_parser(
+        "imc",
+        help="Run IMC on the OMIM dataset.",
+    )
+    imc_subparsers = imc_parser.add_subparsers(dest="imc_command", required=True)
+
+    fine_tune_parser = imc_subparsers.add_parser(
+        "fine-tune", help="Perform search for IMC hyperparameter tuning."
+    )
+    cv_parser = imc_subparsers.add_parser(
+        "cv", help="Train and evaluate the IMC model with cross-validation."
+    )
+
+    for parser in [fine_tune_parser, cv_parser]:
+        parser.add_argument(
+            "--output-path",
+            metavar="FILE",
+            type=output_dir,
+            required=True,
+            help="Directory to save output results.",
+        )
+        data_info(parser)
+        parser.add_argument(
+            "--log-filename",
+            type=str,
+            default="pipeline.log",
+            help="Filename for log output (default: %(default)s).",
+        )
+        parser.add_argument(
+            "--rank",
+            type=int,
+            default=40,
+            help="Rank (number of latent factors) for the model (default: %(default)s).",
+        )
+        parser.add_argument(
+            "--iterations",
+            type=int,
+            default=50,
+            help="Number of alternating minimization iterations (default: %(default)s).",
+        )
+        parser.add_argument(
+            "--max-inner-iter",
+            type=int,
+            default=100,
+            help="Maximum number of conjugate gradient steps per update (default: %(default)s).",
+        )
+        parser.add_argument(
+            "--flip_fraction",
+            type=float,
+            default=None,
+            help=(
+                "Fraction of observed positive training entries to flip to negatives "
+                "(zeros) to simulate label noise. Must be between 0 and 1. (default: %(default)s)."
+            ),
+        )
+        parser.add_argument(
+            "--flip_frequency",
+            type=int,
+            default=None,
+            help=(
+                "The frequency at which to resample the observed positive entries in the training "
+                "mask to be flipped to negatives. (default: %(default)s)."
+            ),
+        )
+        parser.add_argument(
+            "--patience",
+            type=int,
+            default=None,
+            help=(
+                "The number of recent epochs/iterations to consider when evaluating the stopping "
+                "condition. Default is None, meaning no early stopping is used. "
+                "(default: %(default)s)."
+            ),
+        )
+        parser.add_argument(
+            "--svd-init",
+            action="store_true",
+            help=(
+                "Instantiate the matrix factorization using SVD decomposition "
+                "rather than a random initialization (default: %(default)s)."
+            ),
+        )
+
+    cv_parser.add_argument(
+        "--tensorboard-dir",
+        metavar="FILE",
+        type=output_dir,
+        default=output_dir("/home/TheGreatestCoder/code/logs"),
+        help="Directory for TensorBoard logs (default: %(default)s).",
+    )
+    cv_parser.add_argument(
+        "--config-path",
+        metavar="FILE",
+        type=yaml_file,
+        default=yaml_file(
+            "/home/TheGreatestCoder/code/genepriority/configurations/imc/meta.yaml"
+        ),
+        help="Path to the IMC YAML configuration file (default: %(default)s).",
+    )
+    cv_parser.add_argument(
+        "--results-filename",
+        type=str,
+        default="results.pickle",
+        help="Filename for serialized results (default: %(default)s).",
+    )
+
+    fine_tune_parser.add_argument(
+        "--n-trials",
+        type=int,
+        default=100,
+        help="Number of trials for hyperparameter tuning (default: %(default)s).",
+    )
+    fine_tune_parser.add_argument(
+        "--timeout",
+        type=float,
         default=12,
         help="Number of hours after which to stop the search (default: %(default)s).",
     )

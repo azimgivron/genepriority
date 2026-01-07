@@ -17,36 +17,6 @@ from genepriority.evaluation.metrics import (auc_per_disease,
 from genepriority.evaluation.results import Results
 
 
-def aggregate(
-    scores: List[np.ndarray],
-    thresholds: List[np.ndarray],
-    target_thresholds: List[float],
-) -> np.ndarray:
-    """
-    Linearly interpolate metric values across a shared threshold grid
-    and average across folds.
-
-    Args:
-        scores (List[np.ndarray]): Arrays of shape (2, n_thresholds)
-            for each fold.
-        thresholds (List[np.ndarray]): The initial thresholds for each fold.
-        target_thresholds (List[float]):
-            Sorted list of unique thresholds to interpolate across.
-
-    Returns:
-        np.ndarray:
-            2D array of shape [2, n_thresholds] containing
-                interpolated metrics.
-    """
-    final = []
-    for score, current_thresholds in zip(scores, thresholds):
-        new_score = np.empty(shape=(2, len(target_thresholds)))
-        new_score[0] = np.interp(target_thresholds, current_thresholds, score[0])
-        new_score[1] = np.interp(target_thresholds, current_thresholds, score[1])
-        final.append(new_score)
-    return np.array(final).mean(axis=0)
-
-
 class Evaluation:
     """
     Represents the evaluation metrics for model predictions.
@@ -110,7 +80,7 @@ class Evaluation:
             else:
                 y_true = fold_res.y_true
                 y_pred = fold_res.y_pred
-            
+
             bedroc.append([])
             masks.append([])
             for alpha in self.alphas:
@@ -125,7 +95,6 @@ class Evaluation:
 
         mask = np.stack(masks).astype(bool)
         bedroc = np.stack(bedroc).astype(np.float64)  # shape=(folds, alphas, diseases)
-
         valid = mask.any(axis=(0, 1))
         mask = mask[:, :, valid]
         bedroc = bedroc[:, :, valid]
@@ -133,8 +102,8 @@ class Evaluation:
         bedroc_masked = np.ma.array(bedroc, mask=~mask)
         bedroc_masked = np.transpose(
             bedroc_masked, (1, 0, 2)
-        )  # shape=(folds, diseases, alphas)
-        return bedroc_masked.mean(axis=over + 1).data
+        )  # shape=(alphas, folds, diseases)
+        return bedroc_masked.mean(axis=over+1).data
 
     def compute_avg_auc(self, filtered: bool = False, over: int = 0) -> np.ndarray:
         """
@@ -237,8 +206,8 @@ class Evaluation:
         Returns:
             np.ndarray:
                 2xT array where T is the number of thresholds:
-                - [0, :] is the mean precision.
-                - [1, :] is the mean recall.
+                - [0, :] is the mean recall.
+                - [1, :] is the mean precision.
         """
         return self.compute_avg_metric_curve(pr_per_disease, filtered)
 
@@ -256,9 +225,7 @@ class Evaluation:
             np.ndarray:
                 2xT array of the mean metric values at T aggregated thresholds.
         """
-        metric_list = []
-        threshold_list = []
-        cross_fold_thresholds = set()
+        metric_per_fold = []
         for fold_res in self.results:
             if filtered:
                 y_true = fold_res.y_true_filtered
@@ -266,15 +233,10 @@ class Evaluation:
             else:
                 y_true = fold_res.y_true
                 y_pred = fold_res.y_pred
-            metric_per_fold, thresholds = func(
-                y_true=y_true, y_pred=y_pred, gene_number=fold_res.gene_number
+            metric_per_fold.append(
+                func(y_true=y_true, y_pred=y_pred, gene_number=fold_res.gene_number)
             )
-            cross_fold_thresholds |= set(thresholds)
-            metric_list.append(metric_per_fold)
-            threshold_list.append(thresholds)
-
-        cross_fold_thresholds = sorted(cross_fold_thresholds)
-        return aggregate(metric_list, threshold_list, cross_fold_thresholds)
+        return np.mean(metric_per_fold, axis=0)
 
     def compute_avg_cdf(self, filtered: bool = False, max_r: int = 100) -> np.ndarray:
         """Compute average cumulative distribution functions (CDFs) of
@@ -319,6 +281,6 @@ class Evaluation:
                 cdf_per_disease[:, j] = cdf_j
             cdf_per_fold.append(cdf_per_disease)
         cdfs = np.stack(cdf_per_fold, axis=0)
-        fold_avg = np.ma.mean(np.ma.masked_invalid(cdfs), axis=0).filled(np.nan)
-        cdf = np.ma.mean(np.ma.masked_invalid(fold_avg), axis=1).filled(np.nan)
+        fold_avg = np.ma.mean(np.ma.masked_invalid(cdfs), axis=0).filled(np.nan) # over folds
+        cdf = np.ma.mean(np.ma.masked_invalid(fold_avg), axis=1).filled(np.nan) # over diseases
         return cdf

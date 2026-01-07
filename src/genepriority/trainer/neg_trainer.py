@@ -18,6 +18,9 @@ import optuna
 import pandas as pd
 import scipy.sparse as sp
 import tensorflow as tf
+from negaWsi import Result
+from negaWsi.early_stopping import EarlyStopping
+from negaWsi.flip_labels import FlipLabels
 
 from genepriority.models.nega_session import NegaSession
 from genepriority.preprocessing.dataloader import DataLoader
@@ -25,9 +28,6 @@ from genepriority.preprocessing.side_information_loader import \
     SideInformationLoader
 from genepriority.trainer.base import BaseTrainer
 from genepriority.utils import create_tb_dir
-from negaWsi import Result
-from negaWsi.early_stopping import EarlyStopping
-from negaWsi.flip_labels import FlipLabels
 
 
 class NEGTrainer(BaseTrainer):
@@ -42,12 +42,13 @@ class NEGTrainer(BaseTrainer):
     Attributes:
         dataloader (DataLoader): The data loader containing training and testing data.
         path (str): Directory path where model snapshots and results will be saved.
-        regularization_parameters (float): Regularization parameters.
+        regularization_parameters (Dict[str, float]): Regularization parameters.
         iterations (int): Maximum number of optimization iterations.
         symmetry_parameter (float): Regularization parameter for gradient adjustments.
-        smoothness_parameter (float): Initial smoothness parameter.
+        lipschitz_smoothness (float): Initial smoothness parameter.
         rho_increase (float): Factor for increasing step size dynamically.
         rho_decrease (float): Factor for decreasing step size dynamically.
+        tau (float):
         threshold (int): Maximum number of iterations allowed for the inner loop.
         flip_fraction (float): The fraction of observed positive entries
             (ones) in the training mask that will be flipped to negatives (zeros) to simulate
@@ -76,9 +77,10 @@ class NEGTrainer(BaseTrainer):
         regularization_parameters: Dict[str, float] = None,
         iterations: int = None,
         symmetry_parameter: float = None,
-        smoothness_parameter: float = None,
+        lipschitz_smoothness: float = None,
         rho_increase: float = None,
         rho_decrease: float = None,
+        tau: float = None,
         threshold: int = None,
         flip_fraction: float = None,
         flip_frequency: int = None,
@@ -102,12 +104,13 @@ class NEGTrainer(BaseTrainer):
                 Defaults to None.
             symmetry_parameter (float, optional): Regularization parameter for gradient adjustments.
                 Defaults to None.
-            smoothness_parameter (float, optional): Initial smoothness parameter.
+            lipschitz_smoothness (float, optional): Initial smoothness parameter.
                 Defaults to None.
             rho_increase (float, optional): Multiplicative factor for increasing step
                 size dynamically. Defaults to None.
             rho_decrease (float, optional): Multiplicative factor for decreasing step
                 size dynamically. Defaults to None.
+            tau (float, optional): Defaults to None.
             threshold (int, optional): Maximum number of iterations allowed for the inner loop.
                 Defaults to None.
             flip_fraction (float, optional): The fraction of observed positive entries
@@ -139,9 +142,10 @@ class NEGTrainer(BaseTrainer):
         self.regularization_parameters = regularization_parameters
         self.iterations = iterations
         self.symmetry_parameter = symmetry_parameter
-        self.smoothness_parameter = smoothness_parameter
+        self.lipschitz_smoothness = lipschitz_smoothness
         self.rho_increase = rho_increase
         self.rho_decrease = rho_decrease
+        self.tau = tau
         self.threshold = threshold
         if (flip_fraction is None) ^ (flip_frequency is None):
             raise ValueError(
@@ -172,12 +176,13 @@ class NEGTrainer(BaseTrainer):
             "regularization_parameters": self.regularization_parameters,
             "iterations": self.iterations,
             "symmetry_parameter": self.symmetry_parameter,
-            "smoothness_parameter": self.smoothness_parameter,
+            "lipschitz_smoothness": self.lipschitz_smoothness,
             "rho_increase": self.rho_increase,
             "rho_decrease": self.rho_decrease,
             "threshold": self.threshold,
             "svd_init": self.svd_init,
             "formulation": self.formulation,
+            "tau": self.tau,
         }
 
     def predict(
@@ -240,6 +245,7 @@ class NEGTrainer(BaseTrainer):
             test_mask=test_mask.toarray().astype(bool),
             save_name=str(self.path / f"{iteration}:{save_name}"),
             side_info=side_info,
+            seed=iteration
         )
 
     def pre_training_callback(
@@ -264,7 +270,7 @@ class NEGTrainer(BaseTrainer):
                     [
                         session.rank,
                         session.symmetry_parameter,
-                        session.smoothness_parameter,
+                        session.lipschitz_smoothness,
                         session.rho_increase,
                         session.rho_decrease,
                         session.threshold,
@@ -375,6 +381,7 @@ class NEGTrainer(BaseTrainer):
                 high=1e2,
                 log=True,
             )
+            tau = None
             reg["λd"] = trial.suggest_float(
                 "λd",
                 low=1e-4,
@@ -382,9 +389,9 @@ class NEGTrainer(BaseTrainer):
                 log=True,
             )
             symmetry_parameter = 0.99
-            smoothness_parameter = 0.001
-            rho_increase = 5.0
-            rho_decrease = 0.9
+            lipschitz_smoothness = 0.001
+            rho_increase = 2.0
+            rho_decrease = 0.1
             if self.formulation == "nega-reg":
                 reg["λ_βg"] = trial.suggest_float(
                     "λ_βg",
@@ -412,9 +419,10 @@ class NEGTrainer(BaseTrainer):
                 regularization_parameters=reg,
                 iterations=iterations,
                 symmetry_parameter=symmetry_parameter,
-                smoothness_parameter=smoothness_parameter,
+                lipschitz_smoothness=lipschitz_smoothness,
                 rho_increase=rho_increase,
                 rho_decrease=rho_decrease,
+                tau=tau,
                 threshold=threshold,
                 rank=rank,
                 matrix=matrix.toarray(),
@@ -423,6 +431,7 @@ class NEGTrainer(BaseTrainer):
                 test_mask=test_mask.toarray().astype(bool),
                 svd_init=self.svd_init,
                 formulation=self.formulation,
+                seed=trial._trial_id,
                 **kwargs,
             )
             training_status = session.run()

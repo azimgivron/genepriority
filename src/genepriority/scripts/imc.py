@@ -1,19 +1,17 @@
-# pylint: disable=R0914, R0915, R0801, R0913
+# pylint: disable=R0913,R0914,R0915
 """
-Run non-Euclidean gradient-based method for gene prioritization.
+Run Inductive Matrix Completion (IMC) training workflows.
 
-This script can perform either cross-validation (for hyperparameter tuning) or
-a train-evaluation cycle (for final model training/testing) using a Non-Euclidean Gradient
-approach for gene prioritization. It reads a gene-disease association file, splits the data into
-train/validation/test sets, and then either runs an Optuna hyperparameter search (cross-validation)
-or a single train/test cycle (train-eval).
+This launcher provides high-level commands for:
+  * Hyper-parameter search via Optuna (``fine-tune`` subcommand).
+  * Cross-validated training/evaluation using predefined configurations (``cv`` subcommand).
 """
 
 import argparse
 import logging
 from collections import defaultdict
 from pathlib import Path
-from typing import Dict, Literal
+from typing import Dict
 
 import pint
 import yaml
@@ -22,7 +20,7 @@ from genepriority.preprocessing.dataloader import DataLoader
 from genepriority.preprocessing.side_information_loader import \
     SideInformationLoader
 from genepriority.scripts.utils import pre_processing
-from genepriority.trainer.neg_trainer import NEGTrainer
+from genepriority.trainer.imc_trainer import IMCTrainer
 from genepriority.utils import serialize
 
 
@@ -33,7 +31,7 @@ def finetune(
     side_info_loader: SideInformationLoader,
     rank: int,
     iterations: int,
-    threshold: int,
+    max_inner_iter: int,
     flip_fraction: float,
     flip_frequency: int,
     patience: int,
@@ -41,10 +39,9 @@ def finetune(
     n_trials: int,
     timeout: float,
     svd_init: bool,
-    formulation: Literal["nega-fs", "nega-reg", "enega"],
 ):
     """
-    Search for hyperparameter tuning of the NEGA model.
+    Runs Optuna-based hyperparameter tuning for IMC.
 
     Args:
         logger (logging.Logger): Logger for output messages.
@@ -54,7 +51,7 @@ def finetune(
             if available.
         rank (int): Model rank (number of latent factors).
         iterations (int): Number of training iterations.
-        threshold (int): Threshold parameter for the model.
+        max_inner_iter (int): Maximum number of iterations for the inner optimization loop.
         flip_fraction (float): Fraction (0 to 1) of positive training entries to flip,
             simulating label noise.
         flip_frequency (int): How often to resample positive training entries for flipping.
@@ -63,21 +60,21 @@ def finetune(
         n_trials (int): Number of trials for the hyperparameter search.
         timeout (float): Time out in hours.
         svd_init (bool): Whether to initialize the latent matrices with SVD decomposition.
-        formulation (Literal["nega-fs", "nega-reg", "enega"]): The type of loss formualtion, either
-            "nega-fs", "enega" "nega-reg".
     """
-    trainer = NEGTrainer(
+    if side_info_loader is None:
+        raise ValueError("IMC fine-tuning requires gene and disease side information.")
+
+    trainer = IMCTrainer(
         dataloader=dataloader,
         side_info_loader=side_info_loader,
         path=output_path,
+        seed=seed,
         iterations=iterations,
-        threshold=threshold,
+        max_inner_iter=max_inner_iter,
         flip_fraction=flip_fraction,
         flip_frequency=flip_frequency,
         patience=patience,
         svd_init=svd_init,
-        formulation=formulation,
-        seed=seed,
     )
     timeout_seconds = pint.Quantity(timeout, "h").to("s").m
     optuna_study = trainer.fine_tune(
@@ -85,9 +82,7 @@ def finetune(
         timeout=timeout_seconds,
         num_latent=rank,
     )
-    filename = f"nega-{formulation}-finetune-rank{rank}"
-    if side_info_loader is None:
-        filename += "-no-side-info"
+    filename = f"imc-finetune-rank{rank}"
     if not dataloader.zero_sampling_factor > 0:
         filename += "-no-0s"
     study_file = output_path / f"{filename}.pickle"
@@ -99,119 +94,92 @@ def train_eval(
     logger: logging.Logger,
     output_path: Path,
     dataloader: DataLoader,
-    seed: int,
     side_info_loader: SideInformationLoader,
     rank: int,
     iterations: int,
-    threshold: int,
+    max_inner_iter: int,
     flip_fraction: float,
     flip_frequency: int,
     patience: int,
+    seed: int,
     regularization_parameters: Dict[str, float],
-    symmetry_parameter: float,
-    lipschitz_smoothness: float,
-    rho_increase: float,
-    rho_decrease: float,
-    tau: float,
     tensorboard_dir: Path,
     results_filename: str,
     svd_init: bool,
-    formulation: Literal["nega-fs", "nega-reg", "enega"],
 ):
     """
-    Trains the NEGA model on the training set and evaluates it on the test set.
-
-    This function initializes a NEGTrainer with the specified hyperparameters, runs the
-    training and evaluation cycle, and serializes the evaluation results.
+    Trains the IMC model on cross-validation folds and serializes evaluation results.
 
     Args:
         logger (logging.Logger): Logger for output messages.
         output_path (Path): Directory to save output results.
         dataloader (DataLoader): Preprocessed DataLoader with gene-disease data.
-        seed (int): Random seed for reproducibility.
         side_info_loader (SideInformationLoader): The loader for side information,
             if available.
         rank (int): Model rank (number of latent factors).
         iterations (int): Number of training iterations.
-        threshold (int): Threshold parameter for the model.
+        max_inner_iter (int): Maximum number of iterations for the inner optimization loop.
         flip_fraction (float): Fraction (0 to 1) of positive training entries to flip,
             simulating label noise.
         flip_frequency (int): How often to resample positive training entries for flipping.
         patience (int): Number of recent epochs/iterations considered for early stopping.
+        seed (int): Random seed for reproducibility.
         regularization_parameters (Dict[str, float]): Regularization parameters for training.
-        symmetry_parameter (float): Symmetry parameter for training.
-        lipschitz_smoothness (float): Smoothness parameter for training.
-        rho_increase (float): Rho increase factor.
-        rho_decrease (float): Rho decrease factor.
-        tau (float):
         tensorboard_dir (Path): Directory for TensorBoard logs.
         results_filename (str): Filename to use for saving results.
         svd_init (bool): Whether to initialize the latent
                 matrices with SVD decomposition.
-        formulation (Literal["nega-fs", "nega-reg", "enega"]): The type of loss formualtion, either
-            "nega-fs", "nega-reg" or "enega".
     """
-    trainer = NEGTrainer(
+    if side_info_loader is None:
+        raise ValueError("IMC training requires gene and disease side information.")
+
+    trainer = IMCTrainer(
         dataloader=dataloader,
         side_info_loader=side_info_loader,
         path=output_path,
+        seed=seed,
         iterations=iterations,
-        threshold=threshold,
+        max_inner_iter=max_inner_iter,
         flip_fraction=flip_fraction,
         flip_frequency=flip_frequency,
         patience=patience,
-        regularization_parameters=regularization_parameters,
-        symmetry_parameter=symmetry_parameter,
-        lipschitz_smoothness=lipschitz_smoothness,
-        rho_increase=rho_increase,
-        rho_decrease=rho_decrease,
-        tau=tau,
         tensorboard_dir=tensorboard_dir,
+        regularization_parameters=regularization_parameters,
         svd_init=svd_init,
-        formulation=formulation,
-        seed=seed,
     )
     results_path = output_path / str(rank)
     results_path.mkdir(parents=True, exist_ok=True)
     trainer.path = results_path
-    if formulation is None:
-        formulation = "nega_nosi"
     result = trainer.train_test_cross_validation(
         rank,
-        save_name=f"{formulation}:latent={rank}.pickle",
+        save_name=f"imc:latent={rank}.pickle",
     )
     serialize(result, results_path / results_filename)
     logger.debug("Serialized results for latent dimension %s saved successfully.", rank)
 
 
-def nega(args: argparse.Namespace):
+def imc(args: argparse.Namespace):
     """
-    Main entry point for the NEGA script.
-
-    This function parses command-line arguments, sets up logging, loads and preprocesses data,
-    and triggers either cross-validation or train-evaluation mode based on the selected subcommand.
-
-    Args:
-        args (argparse.Namespace): Parsed command-line arguments.
+    Entry point for the IMC launcher.
     """
-    logger = logging.getLogger("NEGA")
+    logger = logging.getLogger("IMC")
     kwargs = defaultdict(list)
 
+    if not args.gene_side_info or not args.disease_side_info:
+        raise ValueError(
+            "IMC requires both gene and disease side information. "
+            "Use --gene-side-info and --disease-side-info flags.",
+        )
     if args.ppi:
-        if args.formulation == "enega":
-            kwargs["gene_graph_path"] = args.gene_graph_path
-        else:
-            kwargs["gene_side_info_paths"].append(args.gene_graph_path)
-    if args.gene_side_info:
-        kwargs["gene_side_info_paths"].extend(args.gene_features_paths)
-    if args.disease_side_info:
-        kwargs["gene_side_info_paths"].extend(args.disease_side_info_paths)
+        kwargs["gene_side_info_paths"].append(args.gene_graph_path)
+    kwargs["gene_side_info_paths"].extend(args.gene_features_paths)
+    kwargs["disease_side_info_paths"].extend(args.disease_side_info_paths)
 
     dataloader, side_info_loader = pre_processing(
         gene_disease_path=args.gene_disease_path,
         seed=args.seed,
         omim_meta_path=args.omim_meta_path,
-        side_info=args.gene_side_info or args.disease_side_info or args.ppi,
+        side_info=True,
         zero_sampling_factor=args.zero_sampling_factor,
         num_folds=args.num_folds,
         validation_size=args.validation_size,
@@ -219,13 +187,7 @@ def nega(args: argparse.Namespace):
         **kwargs,
     )
 
-    formulation = (
-        (f"nega-{args.formulation}" if args.formulation in ["fs", "reg"] else "enega")
-        if args.formulation is not None
-        else None
-    )
-
-    if args.nega_command == "fine-tune":
+    if args.imc_command == "fine-tune":
         finetune(
             logger=logger,
             output_path=args.output_path,
@@ -233,57 +195,40 @@ def nega(args: argparse.Namespace):
             side_info_loader=side_info_loader,
             rank=args.rank,
             iterations=args.iterations,
-            threshold=args.threshold,
-            seed=args.seed,
+            max_inner_iter=args.max_inner_iter,
             flip_fraction=args.flip_fraction,
             flip_frequency=args.flip_frequency,
             patience=args.patience,
+            seed=args.seed,
             n_trials=args.n_trials,
             timeout=args.timeout,
             svd_init=args.svd_init,
-            formulation=formulation,
         )
-    elif args.nega_command == "cv":
-        logger.debug("Loading configuration file: %s", args.config_path)
+    elif args.imc_command == "cv":
+        logger.debug("Loading IMC configuration file: %s", args.config_path)
         with args.config_path.open("r", encoding="utf-8") as stream:
             config = yaml.safe_load(stream)
-        if formulation:
-            key = formulation
-        else:
-            key = "default"
-        config = config[key]
-        logger.debug("'%s' configuration loaded.", key)
+        config = config["default"]
         regularization_parameters = config.get("regularization_parameters")
-        symmetry_parameter = config.get("symmetry_parameter")
-        lipschitz_smoothness = config.get("lipschitz_smoothness")
-        rho_increase = config.get("rho_increase")
-        rho_decrease = config.get("rho_decrease")
-        tau = config.get("tau")
 
+        if regularization_parameters is None:
+            raise ValueError("Missing 'regularization_parameters' in IMC config.")
         train_eval(
             logger=logger,
             output_path=args.output_path,
             dataloader=dataloader,
             seed=args.seed,
+            side_info_loader=side_info_loader,
             rank=args.rank,
             iterations=args.iterations,
-            threshold=args.threshold,
+            max_inner_iter=args.max_inner_iter,
             flip_fraction=args.flip_fraction,
             flip_frequency=args.flip_frequency,
             patience=args.patience,
             regularization_parameters=regularization_parameters,
-            symmetry_parameter=symmetry_parameter,
-            lipschitz_smoothness=lipschitz_smoothness,
-            rho_increase=rho_increase,
-            tau=tau,
-            rho_decrease=rho_decrease,
             tensorboard_dir=args.tensorboard_dir,
             results_filename=args.results_filename,
-            side_info_loader=side_info_loader,
             svd_init=args.svd_init,
-            formulation=formulation,
         )
     else:
-        raise ValueError(
-            "Invalid mode must be either 'cross-validation' or 'train-eval'."
-        )
+        raise ValueError("Invalid IMC command.")

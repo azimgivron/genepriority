@@ -1,6 +1,6 @@
 """Postprocessing Module"""
 
-from .dataframes import generate_table, generate_bedroc_table
+from .dataframes import generate_bedroc_table, generate_table
 from .figures import (plot_auc_boxplots, plot_avg_precision_boxplots,
                       plot_bedroc_boxplots, plot_bedroc_curves)
 from .model_evaluation_collection import ModelEvaluationCollection

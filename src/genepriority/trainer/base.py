@@ -187,7 +187,6 @@ class BaseTrainer(metaclass=ABCMeta):
             session = self.create_session(
                 i, train_mask, validation_mask, num_latent, save_name, side_info
             )
-
             run_name = f"fold{i+1}-latent{num_latent}"
             if self.side_info_loader is None:
                 run_name += "-no-side-info"

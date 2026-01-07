@@ -73,7 +73,7 @@ def plot_bedroc_boxplots(
     fig.legend(
         handles,
         model_names,
-        loc="upper right",
+        loc="lower right",
         fontsize=22,
     )
     plt.tight_layout()
@@ -119,7 +119,7 @@ def plot_auc_boxplots(
     fig.legend(
         handles,
         model_names,
-        loc="upper right",
+        loc="lower right",
         fontsize=22,
     )
     plt.tight_layout()
@@ -165,7 +165,7 @@ def plot_avg_precision_boxplots(
     fig.legend(
         handles,
         model_names,
-        loc="upper right",
+        loc="lower right",
         fontsize=22,
     )
     plt.tight_layout()
@@ -230,44 +230,9 @@ def plot_pr_curves(
     for i, name in enumerate(model_names):
         color = COLORS[i]
         ls = LINESTYLES[i % len(LINESTYLES)]
-        ax.semilogx(pr[i][1], pr[i][0], linestyle=ls, color=color, linewidth=3, label=name)
+        ax.plot(pr[i][0], pr[i][1], linestyle=ls, color=color, linewidth=3, label=name)
     ax.set_xlabel("Recall", fontsize=18)
     ax.set_ylabel("Precision", fontsize=18)
-    ax.tick_params(labelsize=18)
-    ax.grid(alpha=0.3)
-    ax.legend(fontsize=20)
-    fig.subplots_adjust(left=0.2)
-    plt.savefig(output_file, dpi=300, bbox_inches="tight")
-    plt.close()
-
-
-def plot_roc_curves(
-    roc: List[np.ndarray],
-    model_names: List[str],
-    output_file: str,
-    figsize: Tuple[int, int],
-):
-    """
-    Plots ROC curves for multiple models with distinct linestyles.
-
-    Args:
-        roc (List[np.ndarray]): FPR-TPR values, shape (2, n_points), for each model.
-        model_names (List[str]): Names of the models being compared.
-        output_file (str): File path where the ROC curve figure will be saved.
-        figsize (Tuple[int, int]): Figure size in inches (width, height).
-    """
-    if len(model_names) > len(COLORS):
-        raise ValueError("Not enough colors for the number of models.")
-
-    fig, ax = plt.subplots(1, 1, figsize=figsize)
-    for i, name in enumerate(model_names):
-        color = COLORS[i]
-        ls = LINESTYLES[i % len(LINESTYLES)]
-        ax.plot(
-            roc[i][0], roc[i][1], linestyle=ls, color=color, linewidth=3, label=name
-        )
-    ax.set_xlabel("False Positive Rate", fontsize=18)
-    ax.set_ylabel("True Positive Rate", fontsize=18)
     ax.tick_params(labelsize=18)
     ax.grid(alpha=0.3)
     ax.legend(fontsize=20)

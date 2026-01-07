@@ -45,7 +45,7 @@ The following key parameters control the optimization process within the NEGA pi
 - **symmetry_parameter (float)**  
   Adjusts the gradient update to ensure symmetric behavior in the optimization process.
 
-- **smoothness_parameter (float)**  
+- **lipschitz_smoothness (float)**  
   Sets the initial smoothness of the optimization landscape, influencing convergence.
 
 - **rho_increase (float)**  

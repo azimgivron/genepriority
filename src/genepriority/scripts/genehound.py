@@ -1,23 +1,18 @@
 # pylint: disable=R0914, R0915, R0801, R0913
 """
-Reproduce GeneHound results using a MACAU-based approach.
+Run GeneHound training workflows.
 
-This script performs the following steps:
-1. Loads gene–disease association data.
-2. Loads side information for genes and diseases.
-3. Trains multiple MACAU models using different latent dimensions.
-
-Dependencies:
-    - A YAML configuration file (e.g., meta.yaml) for GeneHound parameters.
-    - CSV files for gene–disease associations and side information.
-    - MACAUTrainer from genepriority.trainer.macau_trainer.
+This launcher provides high-level commands for:
+  * Hyper-parameter search via Optuna (``fine-tune`` subcommand).
+  * Cross-validated training/evaluation using predefined configurations (``cv`` subcommand).
 """
 
 import argparse
 import logging
-from pathlib import Path
 from collections import defaultdict
+from pathlib import Path
 
+import pint
 import yaml
 
 from genepriority.preprocessing.dataloader import DataLoader
@@ -27,8 +22,8 @@ from genepriority.scripts.utils import pre_processing
 from genepriority.trainer.macau_trainer import MACAUTrainer
 from genepriority.utils import serialize
 
-
-def run(
+def train_eval(
+    logger: logging.Logger,
     dataloader: DataLoader,
     side_info_loader: SideInformationLoader,
     output_path: Path,
@@ -36,7 +31,11 @@ def run(
     seed: int,
     latent_dimension: int,
     results_filename: str,
-    config_path: Path,
+    num_samples: int,
+    burnin_period: int,
+    direct: bool,
+    univariate: bool,
+    save_freq: int,
 ):
     """
     Configures and runs the MACAU training session.
@@ -46,27 +45,22 @@ def run(
     serialized and saved to disk.
 
     Args:
+        logger (logging.Logger): Logger for output messages.
         dataloader (DataLoader): The DataLoader containing gene–disease association data.
         side_info_loader (SideInformationLoader): The loader for side information,
             if available.
         output_path (Path): Directory where training outputs will be saved.
         tensorboard_dir (Path): Directory for TensorBoard logs.
-        seed (int): Seed for reproducibility.
         latent_dimension (int): Latent dimension of model.
         results_filename (str): Filename to use for saving results.
-        config_path (Path): Path to the YAML configuration file.
+        num_samples (int): The number of posterior samples to draw during training.
+        burnin_period (int): The number of burn-in iterations before collecting
+            posterior samples.
+        direct (bool): Whether to use a Cholesky or CG solver.
+        univariate (bool): Whether to use univariate or multivariate sampling.
+        seed (int): The random seed for reproducibility.
+        save_freq (int): The frequency at which the model state is saved.
     """
-    logger = logging.getLogger("run")
-    logger.debug("Loading configuration file: %s", config_path)
-    with config_path.open("r", encoding="utf-8") as stream:
-        config = yaml.safe_load(stream)
-
-    direct = config.get("direct")
-    univariate = config.get("univariate")
-    save_freq = config.get("save_freq")
-    num_samples = config.get("num_samples")
-    burnin_period = config.get("burnin_period")
-
     logger.debug("Configuring MACAU training session.")
     trainer = MACAUTrainer(
         dataloader=dataloader,
@@ -111,7 +105,7 @@ def genehound(args: argparse.Namespace):
     Args:
         args (argparse.Namespace): Parsed command-line arguments.
     """
-    seed = args.seed
+    logger = logging.getLogger("GeneHound")
     kwargs = defaultdict(list)
 
     if args.ppi:
@@ -133,13 +127,28 @@ def genehound(args: argparse.Namespace):
         **kwargs,
     )
 
-    run(
+    logger.debug("Loading configuration file: %s", args.config_path)
+    with args.config_path.open("r", encoding="utf-8") as stream:
+        config = yaml.safe_load(stream)
+
+    direct = config.get("direct")
+    univariate = config.get("univariate")
+    save_freq = config.get("save_freq")
+    num_samples = config.get("num_samples")
+    burnin_period = config.get("burnin_period")
+
+    train_eval(
+        logger=logger,
         dataloader=dataloader,
         side_info_loader=side_info_loader,
+        seed=args.seed,
         output_path=args.output_path,
         tensorboard_dir=args.tensorboard_dir,
-        seed=seed,
         latent_dimension=args.latent_dimension,
         results_filename=args.results_filename,
-        config_path=args.config_path,
+        direct=direct,
+        univariate=univariate,
+        save_freq=save_freq,
+        num_samples=num_samples,
+        burnin_period=burnin_period,
     )

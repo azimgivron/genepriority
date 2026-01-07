@@ -9,23 +9,24 @@ It relies on:
 """
 
 import argparse
+import copy
 import logging
 import pickle
 from pathlib import Path
+
 import numpy as np
 import yaml
-import copy
 
 from genepriority.evaluation import Evaluation
-from genepriority.postprocessing.dataframes import (generate_table,
-                                                    generate_bedroc_table)
+from genepriority.postprocessing.dataframes import (generate_bedroc_table,
+                                                    generate_table)
 from genepriority.postprocessing.figures import (plot_auc_boxplots,
                                                  plot_avg_precision_boxplots,
                                                  plot_bedroc_boxplots,
+                                                 plot_bedroc_curves,
                                                  plot_cdf_curves,
                                                  plot_pr_curves,
-                                                 plot_roc_curves,
-                                                 plot_bedroc_curves)
+                                                 plot_roc_curves)
 from genepriority.postprocessing.model_evaluation_collection import \
     ModelEvaluationCollection
 
@@ -74,12 +75,12 @@ def post(args: argparse.Namespace):
         with Path(path_str).open("rb") as stream:
             res = pickle.load(stream).results
             results_data[name] = Evaluation(res)
-    base_res = []
-    for r in res:
-        baseline = copy.deepcopy(r)
-        baseline._y_pred = np.zeros_like(baseline._y_pred)
-        base_res.append(baseline)
-    results_data["Baseline"] = Evaluation(base_res)
+    # base_res = []
+    # for r in res:
+    #     baseline = copy.deepcopy(r)
+    #     baseline._y_pred = np.zeros_like(baseline._y_pred)
+    #     base_res.append(baseline)
+    # results_data["Baseline"] = Evaluation(base_res)
 
     results = ModelEvaluationCollection(results_data, over=args.over)
 
@@ -167,8 +168,10 @@ def post(args: argparse.Namespace):
     logger.info("BEDROC table saved: %s", bedroc_csv_path)
 
     nb_genes = results.evaluations[0].results[0]._y_true.shape[0]
-    mapping = lambda alpha: -1/alpha * np.log(1-.99+.99*np.exp(-alpha)) * nb_genes
-    Evaluation.alphas = np.linspace(90, 400, 50)
+    mapping = (
+        lambda alpha: -1 / alpha * np.log(1 - 0.99 + 0.99 * np.exp(-alpha)) * nb_genes
+    )
+    Evaluation.alphas = np.linspace(90, 700, 60)
     Evaluation.alpha_map = [mapping(alpha) for alpha in Evaluation.alphas]
     bed = results.compute_avg_bedroc_scores()
     bed = bed.mean(axis=1).T

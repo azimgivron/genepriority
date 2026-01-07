@@ -156,7 +156,7 @@ class ModelEvaluationCollection:
         Calculates the average CDF curve for each model, across diseases.
 
         Returns:
-            List[np.ndarray]: 1D arrays containing the mean 
+            List[np.ndarray]: 1D arrays containing the mean
                 CDF for each model. Shape: (100,).
         """
         cdf = [eval_res.compute_avg_cdf() for eval_res in self.evaluations]

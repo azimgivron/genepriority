@@ -7,8 +7,10 @@ and disease phenotypes) to enhance prediction accuracy.
 
 Implemented subcommands:
   1. GeneHound (based on MACAU)
-  2. Non-Euclidean Gradient Algorithm (NEGA)
-  3. Post-processing of evaluation results
+  2. Inductive Matrix Completion (IMC)
+  3. Non-Euclidean Gradient Algorithm (NEGA)
+  4. Neural Collaborative Filtering (NCF)
+  5. Post-processing of evaluation results
 """
 
 import argparse
@@ -21,10 +23,11 @@ from typing import Any
 import pytz
 
 from genepriority.scripts.genehound import genehound
+from genepriority.scripts.imc import imc
 from genepriority.scripts.ncf import ncf
 from genepriority.scripts.nega import nega
-from genepriority.scripts.parsers import (parse_genehound, parse_ncf,
-                                          parse_nega, parse_post)
+from genepriority.scripts.parsers import (parse_genehound, parse_imc,
+                                          parse_ncf, parse_nega, parse_post)
 from genepriority.scripts.post import post
 
 
@@ -79,8 +82,10 @@ def main():
             "features and disease phenotypes, to improve prediction accuracy.\n\n"
             "Implemented subcommands:\n"
             "  1. GeneHound (based on MACAU)\n"
-            "  2. Non-Euclidean Gradient Algorithm (NEGA)\n"
-            "  3. Post-processing of evaluation results"
+            "  2. Inductive Matrix Completion (IMC)\n"
+            "  3. Non-Euclidean Gradient Algorithm (NEGA)\n"
+            "  4. Neural Collaborative Filtering (NCF)\n"
+            "  5. Post-processing of evaluation results"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -88,6 +93,7 @@ def main():
 
     # Set up subparsers for each subcommand
     parse_genehound(subparsers)
+    parse_imc(subparsers)
     parse_nega(subparsers)
     parse_post(subparsers)
     parse_ncf(subparsers)
@@ -97,6 +103,9 @@ def main():
         if "genehound" in args.algorithm_command:
             setup_logger(args)
             genehound(args)
+        elif "imc" in args.algorithm_command:
+            setup_logger(args)
+            imc(args)
         elif "nega" in args.algorithm_command:
             setup_logger(args)
             nega(args)

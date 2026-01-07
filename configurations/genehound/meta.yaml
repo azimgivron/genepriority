@@ -21,7 +21,7 @@
 #   num_samples: (int) Number of samples to collect after the burn-in period,
 #                 during the active period. (default: 500).
 ---
-direct: False #use CG
+direct:  False #use CG
 univariate: False #use multivariate
 save_freq: 10
 num_samples: 500 #enough for mean estimator

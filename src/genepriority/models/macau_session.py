@@ -14,7 +14,6 @@ from typing import Any, Tuple
 import numpy as np
 import scipy.sparse as sp
 import tensorflow as tf
-
 from negaWsi import Result
 
 try:
@@ -97,6 +96,12 @@ class MacauSession:
                     )
                     Ytest.data -= global_mean
 
+                if side_info is not None:
+                    side_info = [
+                        sp.csc_matrix(si) if isinstance(si, np.ndarray) else si
+                        for si in side_info
+                    ]  # CG for multivariate only exist for sparse side info.
+
                 super().__init__(
                     num_latent=num_latent,
                     nsamples=nsamples,
@@ -106,10 +111,7 @@ class MacauSession:
                     Ytrain=Ytrain,
                     Ytest=Ytest,
                     threshold=0.5,
-                    side_info=[
-                        sp.csc_matrix(si) if isinstance(si, np.ndarray) else si
-                        for si in side_info
-                    ],  # CG for multivariate only exist for sparse side info.
+                    side_info=side_info,
                     **kwargs,
                 )
                 self.num_latent = num_latent

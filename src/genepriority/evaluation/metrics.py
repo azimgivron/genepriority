@@ -115,7 +115,7 @@ def bedroc_score(y_true: np.ndarray, y_pred: np.ndarray, alpha: float = 20.0) ->
     if rie_max != rie_min:
         score = (rie_value - rie_min) / (rie_max - rie_min)
         score = np.round(score, 10)
-        score = 1. if score > 1. else score
+        score = 1.0 if score > 1.0 else score
         assert 0 <= score <= 1, f"BEDROC must be in [0;1]. Found => {score}"
         return score
     return 1.0
@@ -240,9 +240,8 @@ def roc_per_disease(
 
     Returns:
         Tuple[np.ndarray, np.ndarray]:
-            - 2D array of interpolated mean Precision/Recall values across diseases
-                (shape: [2, n_thresholds]).
-            - 1D array of thresholds.
+            - thresholds (shape: (, n_thresholds)).
+            - interpolated metric values (shape: (, n_thresholds)).
     """
     return build_curves_per_disease(y_true, y_pred, gene_number, metrics.roc_curve)
 
@@ -259,13 +258,16 @@ def pr_per_disease(
 
     Returns:
         Tuple[np.ndarray, np.ndarray]:
-            - 2D array of interpolated mean FPR/TPR values across diseases
-                (shape: [2, n_thresholds]).
-            - 1D array of thresholds.
+            - thresholds (shape: (, n_thresholds)).
+            - interpolated metric values (shape: (, n_thresholds)).
     """
-    return build_curves_per_disease(
-        y_true, y_pred, gene_number, metrics.precision_recall_curve
-    )
+
+    def precision_recall_curve(*args, **kwargs):
+        y, x, _ = metrics.precision_recall_curve(*args, **kwargs)
+        idx = np.argsort(x)
+        return x[idx][1:], y[idx][1:], None
+
+    return build_curves_per_disease(y_true, y_pred, gene_number, precision_recall_curve)
 
 
 def build_curves_per_disease(
@@ -290,9 +292,8 @@ def build_curves_per_disease(
 
     Returns:
         Tuple[np.ndarray, np.ndarray]:
-            - 2D array of interpolated metric values
-                (shape: [2, n_thresholds]).
-            - 1D array of thresholds.
+            - thresholds (shape: (, n_thresholds)).
+            - interpolated metric values (shape: (, n_thresholds)).
     """
     scores = []
     thr = np.linspace(0, 1, 1000)
@@ -300,14 +301,14 @@ def build_curves_per_disease(
         n_pos = int(labels.sum())
         if n_pos in (0, gene_number):
             continue
-        first, second, _ = func(labels, scores_pred)
-        scores.append((first, second))
+        x, y, _ = func(labels, scores_pred)
+        scores.append((x, y))
     final = interpolate(scores, thr)
-    return final, thr
+    return thr, final
 
 
 def interpolate(
-    scores: List[Tuple[np.ndarray, np.ndarray]], grid: List[float]
+    scores: List[Tuple[np.ndarray, np.ndarray]], grid: np.ndarray
 ) -> np.ndarray:
     """
     Linearly interpolate metric values (e.g., TPR/FPR or Precision/Recall)
@@ -315,16 +316,16 @@ def interpolate(
 
     Args:
         scores (List[Tuple[np.ndarray, np.ndarray]]):
-            Per-disease tuples of (first_metric, second_metric).
-        grid (List[float]): Interpolation grid.
+            Per-disease tuples of (x, y).
+        grid (np.ndarray): Interpolation grid.
 
     Returns:
         np.ndarray:
-            2D array of shape [2, grid_bins] containing
+            1D array of shape (,grid_bins) containing
                 interpolated metrics.
     """
     final = []
-    for first, second in scores:
-        second_interp = np.interp(grid, first, second)
-        final.append([grid, second_interp])
+    for x, y in scores:
+        y_interp = np.interp(grid, x, y)
+        final.append(y_interp)
     return np.array(final).mean(0)
